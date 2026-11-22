@@ -2,7 +2,7 @@ name: Python and Cyrillic checks
 
 on:
   push:
-    branches: ["feature/russian-game-ui", "feature/zoo-lab-pip", "feature/zoo-sprite-pipeline", "feature/zoo-sprite-runtime"]
+    branches: ["feature/russian-game-ui", "feature/zoo-lab-pip", "feature/zoo-sprite-pipeline", "feature/zoo-sprite-runtime", "feature/zoo-giraffe-first-pack"]
   pull_request:
 
 jobs:
@@ -16,11 +16,26 @@ jobs:
       - name: Install host sprite tool dependency
         run: python -m pip install "Pillow>=10,<13"
       - name: Check Python syntax
-        run: python -m compileall -q main.py vida.py desenho.py font_ru.py portal.py companion zoo/sprites.py zoo/pip zoo/tests zoo/tools
+        run: python -m compileall -q main.py vida.py desenho.py font_ru.py portal.py companion zoo/sprites.py zoo/pip zoo/giraffe zoo/tests zoo/tools
       - name: Check Cyrillic bitmap font and app tests
         run: python -m unittest discover -s tests -p 'test_*.py'
       - name: Run Zoo/Pip integration and regression tests
         run: python -m unittest discover -s zoo/tests -p 'test_*.py'
+      - name: Generate original giraffe IPS and AMOLED preview resources
+        run: |
+          python -m zoo.tools.generate_giraffe --source-out build/giraffe/source --pack-out build/giraffe/ips
+          python -m zoo.tools.generate_giraffe --source-out build/giraffe/source-amoled --pack-out build/giraffe/amoled-v1 --target amoled-v1
+          python -m zoo.tools.preview_sprites --pack build/giraffe/ips --out build/giraffe/preview-ips-normal.png --board ips
+          python -m zoo.tools.preview_sprites --pack build/giraffe/ips --out build/giraffe/preview-ips-happy.png --board ips --frame happy
+          python -m zoo.tools.preview_sprites --pack build/giraffe/ips --out build/giraffe/preview-ips-sleeping.png --board ips --frame sleeping
+          python -m zoo.tools.preview_sprites --pack build/giraffe/amoled-v1 --out build/giraffe/preview-amoled-v1.png --board amoled-v1
+      - name: Upload reproducible giraffe pack and previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: medvegoshi-giraffe-preview-and-ips-pack
+          path: build/giraffe/
+          retention-days: 30
+          if-no-files-found: error
       - name: Run original Pip-KeyPet C reference tests
         run: sh zoo/upstream/pip/run_tests.sh
       - name: Check installer profile routing
