@@ -2,7 +2,7 @@ name: Python and Cyrillic checks
 
 on:
   push:
-    branches: ["feature/russian-game-ui"]
+    branches: ["feature/russian-game-ui", "feature/zoo-lab-pip"]
   pull_request:
 
 jobs:
@@ -14,9 +14,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: Check Python syntax
-        run: python -m compileall -q main.py vida.py desenho.py font_ru.py portal.py companion
-      - name: Check Cyrillic bitmap font
+        run: python -m compileall -q main.py vida.py desenho.py font_ru.py portal.py companion zoo/pip zoo/tests
+      - name: Check Cyrillic bitmap font and app tests
         run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run Zoo/Pip integration and regression tests
+        run: python -m unittest discover -s zoo/tests -p 'test_*.py'
       - name: Check installer profile routing
         run: |
           sh -n install.sh
