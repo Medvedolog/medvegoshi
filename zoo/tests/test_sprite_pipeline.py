@@ -162,6 +162,23 @@ class SpriteCompilerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source_commit"):
             compile_pack(self.source, self.base / "out")
 
+    def test_keep_unrelated_file_in_generated_pack(self):
+        out = self.base / "pack"
+        compile_pack(self.source, out)
+        (out / "notes.txt").write_text("DO NOT DELETE", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "non-generated files"):
+            compile_pack(self.source, out, overwrite=True)
+        self.assertEqual((out / "notes.txt").read_text(), "DO NOT DELETE")
+
+    def test_source_and_output_cannot_nest(self):
+        with self.assertRaisesRegex(ValueError, "separate"):
+            compile_pack(self.source, self.source)
+        with self.assertRaisesRegex(ValueError, "separate"):
+            compile_pack(self.source, self.source / "compiled")
+        with self.assertRaisesRegex(ValueError, "separate"):
+            compile_pack(self.source, self.base)
+        self.assertTrue((self.source / "pack.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
