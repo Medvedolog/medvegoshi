@@ -10,8 +10,9 @@ ACORDA_MS = 60000           # barulho, sacudida ou toque dormindo: fica 1 min ac
 OCIOSO = None               # main.py troca pelo cerebro no modo Olhar: f(L, agora, per) no lugar do sorteio
 HTOP = {'capi': 77, 'pato': 95, 'elefante': 75, 'polvo': 71, 'calopsita': 84, 'cachorro': 75,
         'gato': 75, 'et': 81, 'sapinho': 65, 'naufrago': 79}
-NOMES = {'capi': 'Capi', 'pato': 'Pato', 'elefante': 'Elefante', 'polvo': 'Polvo', 'calopsita': 'Calopsita',
-         'cachorro': 'Caramelo', 'gato': 'Gato', 'et': 'ET', 'sapinho': 'Sapinho', 'naufrago': 'Naufrago'}
+NOMES = {'capi': 'Капи', 'pato': 'Утка', 'elefante': 'Слон', 'polvo': 'Осьминог',
+         'calopsita': 'Попугай', 'cachorro': 'Карамелька', 'gato': 'Кот',
+         'et': 'Пришелец', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон'}
 
 
 # ------------------------------------------------------------ curvas
@@ -273,81 +274,81 @@ MOVES = {
 }
 
 # fala do proprio movimento: (chance, atraso ms, tipo, frases)
+# Each visible line of a bubble should fit the original 240px display.
+# Internal event/period keys stay unchanged for saved-game compatibility.
 MOVE_FALAS = {
-    'andar': (0.3, 0, 'say', ('vou ali|e ja volto', 'passeando...', 'um, dois,|um, dois')),
-    'olhar': (0.5, 0, 'say', ('ouvi algo?', 'cade todo|mundo?', 'hmm...')),
-    'espreguicar': (0.6, 1500, 'say', ('aaah...|que bom', 'estiiica!')),
-    'bocejar': (0.7, 500, 'say', ('aaaahm...', 'que sono...')),
-    'dancar': (0.6, 0, 'say', ('la la la!', 'danca|comigo!', 'tum tum tss')),
-    'girar': (0.7, 0, 'shout', ('wiii!', 'uiii!')),
-    'comemorar': (0.7, 0, 'shout', ('uhuu!', 'viva!', 'eba!')),
-    'tropecar': (0.9, 2300, 'say', ('to bem!|to bem!', 'tropecei...', 'quem botou|isso ai?')),
-    'tremer': (0.8, 0, 'say', ('brrr...', 'que frio!')),
-    'cochilar': (0.6, 800, 'say', ('so 5|minutinhos', 'zzz...')),
-    'espirrar': (1.0, 1300, 'shout', ('atchim!',)),
-    'soluco': (0.8, 400, 'say', ('hic!', 'hic! que|soluco!')),
-    'rir': (0.6, 0, 'say', ('hahaha!', 'hihihi!')),
-    'chorar': (0.8, 0, 'say', ('buaaa!', 'quero colo...')),
-    'susto': (0.8, 0, 'shout', ('ah!', 'ui!')),
-    'tonto': (0.7, 0, 'say', ('to tonto...', 'tudo|girando...')),
-    'chegarPerto': (0.9, 900, 'say', ('oi! ta me|vendo?', 'que vidro|sujo...', 'to aqui|dentro!')),
-    'esconder': (0.9, 3500, 'shout', ('achou!', 'buu!')),
-    'cavar': (0.9, 2600, 'say', ('achei um|tesouro!', 'olha o que|eu achei!')),
-    'cheirarFlor': (0.8, 2400, 'say', ('que|cheirinho!', 'uma flor!|pra voce')),
-    'cambalhota': (0.8, 1500, 'say', ('tcharam!', 'viu essa?', 'de novo?|de novo!')),
-    'pular': (0.4, 0, 'shout', ('upa!', 'boing!')),
+    'andar': (0.3, 0, 'say', ('Я погуляю!', 'Топ-топ!', 'Иду гулять!')),
+    'olhar': (0.5, 0, 'say', ('Кто там?', 'Где все?', 'Хм...')),
+    'espreguicar': (0.6, 1500, 'say', ('Как хорошо!', 'Потянусь!')),
+    'bocejar': (0.7, 500, 'say', ('А-а-а...', 'Хочу спать!')),
+    'dancar': (0.6, 0, 'say', ('Ля-ля-ля!', 'Танцуй|со мной!')),
+    'girar': (0.7, 0, 'shout', ('Ура!', 'Ух ты!')),
+    'comemorar': (0.7, 0, 'shout', ('Ура!', 'Победа!', 'Е-е-е!')),
+    'tropecar': (0.9, 2300, 'say', ('Я цел!', 'Ой, упал!', 'Кто тут|поставил?!')),
+    'tremer': (0.8, 0, 'say', ('Бр-р-р!', 'Холодно!')),
+    'cochilar': (0.6, 800, 'say', ('Ещё|пять минут', 'Хр-р-р...')),
+    'espirrar': (1.0, 1300, 'shout', ('Апчхи!',)),
+    'soluco': (0.8, 400, 'say', ('Ик!', 'Ик! Опять!')),
+    'rir': (0.6, 0, 'say', ('Ха-ха!', 'Хи-хи!')),
+    'chorar': (0.8, 0, 'say', ('Уа-а-а!', 'Обними меня!')),
+    'susto': (0.8, 0, 'shout', ('Ах!', 'Ой!')),
+    'tonto': (0.7, 0, 'say', ('Голова|кружится...', 'Ой, всё|вертится!')),
+    'chegarPerto': (0.9, 900, 'say', ('Привет!|Ты меня видишь?', 'Протри|экран!', 'Я тут!')),
+    'esconder': (0.9, 3500, 'shout', ('Нашёл!', 'Бу-у!')),
+    'cavar': (0.9, 2600, 'say', ('Нашёл клад!', 'Смотри,|что нашёл!')),
+    'cheirarFlor': (0.8, 2400, 'say', ('Как пахнет!', 'Цветок тебе!')),
+    'cambalhota': (0.8, 1500, 'say', ('Та-дам!', 'Видел?', 'Ещё раз!')),
+    'pular': (0.4, 0, 'shout', ('Прыг!', 'Бум!')),
 }
 
 FRASES = {
-    'ocioso': ('que dia|bonito!', 'brinca|comigo?', 'oi, amigo!', 'hmm...', 'que tedio...', 'vamos|passear?',
-               'tive uma|ideia!', 'esqueci a|ideia...', 'conta uma|historia?', 'me da um|abraco?', 'olha o ceu!',
-               'to com fome?|acho que sim'),
-    'manha': ('bom dia!', 'acordei!', 'que solzinho!', 'cafe da|manha?'),
-    'dia': ('que calor!', 'hora de|brincar!', 'dia lindo!'),
-    'noite': ('que sono...', 'boa noite,|lua!', 'ta escuro...', 'conta|estrelas?'),
-    'sacudido': ('socorro!', 'aaaah!', 'para!', 'uoooh!', 'iiih!', 'epa!'),
-    'depoisSacudir': ('to tonto...', 'o mundo|ta girando', 'de novo!|de novo!', 'quase|voei!', 'onde eu|to?',
-                      'que|terremoto!'),
-    'sacudidoMuito': ('to enjoado...', 'chega de|sacudir!', 'minha cabeca|ta rodando'),
-    'barulhoGrito': ('ui!', 'ah!', 'epa!'),
-    'barulho': ('que foi|isso?!', 'quem ta ai?', 'ai que|susto!', 'trovao?!', 'ouvi alguma|coisa...',
-                'shhh!|silencio!'),
-    'barulhoDormindo': ('zzz... que?', 'me|acordou...', 'ja e de|manha?', 'sonhei com|um barulho'),
-    'barulhoRepetido': ('que|barulheira!', 'meus|ouvidos!', 'fala mais|baixo!'),
-    'carinho': ('hihi!', 'cosquinha!', 'faz de novo!', 'gostei!', 'que bom!', 'eba!'),
-    'carinhoDemais': ('chega de|cosquinha!', 'ta bom, ta|bom!', 'hahaha|para!'),
-    'pego': ('me solta!', 'to voando!', 'que alto!', 'cuidado!'),
-    'solto': ('ufa!', 'chao! que|bom', 'de novo?'),
-    'ignorado': ('ei! to|aqui!', 'alguem?', 'to sozinho...', 'olha pra|mim!'),
-    'voltou': ('voce voltou!', 'que saudade!'),
-    'acordou': ('ja e de|manha?', 'hmm...|5 minutinhos'),
-    'toqueFora': ('ouvi algo?', 'quem ta ai?', 'hein?'),
-    'dormir': ('vou dormir...', 'boa noite!'),
+    'ocioso': ('Какой день!', 'Поиграем?', 'Привет, друг!', 'Хм...', 'Мне скучно...',
+               'Гулять пойдём?', 'Есть идея!', 'Забыл идею...',
+               'Сказку|расскажешь?', 'Обними меня!', 'Смотри, небо!', 'Я голодный?'),
+    'manha': ('Доброе утро!', 'Я проснулся!', 'Солнышко!', 'Где завтрак?'),
+    'dia': ('Ох, жарко!', 'Поиграем!', 'День чудесный!'),
+    'noite': ('Хочу спать...', 'Спокойной|ночи, Луна!', 'Темно...', 'Считаем|звёзды?'),
+    'sacudido': ('Спасите!', 'А-а-а!', 'Стой!', 'Ой-ой!', 'Эй!', 'Ух!'),
+    'depoisSacudir': ('Кружится|голова...', 'Всё вертится!', 'Ещё раз!', 'Чуть|не взлетел!', 'Где я?'),
+    'sacudidoMuito': ('Меня укачало', 'Хватит трясти!', 'Голова|кружится!'),
+    'barulhoGrito': ('Ой!', 'Ах!', 'Эй!'),
+    'barulho': ('Что это?!', 'Кто там?', 'Я испугался!', 'Гром?!', 'Что-то слышу...', 'Тише!'),
+    'barulhoDormindo': ('Хр-р... Что?', 'Разбудили...', 'Уже утро?', 'Мне снился|шум...'),
+    'barulhoRepetido': ('Очень шумно!', 'Мои ушки!', 'Говори тише!'),
+    'carinho': ('Хи-хи!', 'Щекотно!', 'Ещё раз!', 'Мне нравится!', 'Как приятно!', 'Ура!'),
+    'carinhoDemais': ('Хватит|щекотать!', 'Ну всё!', 'Ха-ха!|Перестань!'),
+    'pego': ('Осторожно!', 'Я лечу!', 'Как высоко!', 'Не урони!'),
+    'solto': ('Уф!', 'Земля! Ура!', 'Ещё?'),
+    'ignorado': ('Эй, я здесь!', 'Есть кто?', 'Мне одиноко...', 'Посмотри|на меня!'),
+    'voltou': ('Ты вернулся!', 'Я скучал!'),
+    'acordou': ('Уже утро?', 'Ещё|пять минут'),
+    'toqueFora': ('Что там?', 'Кто здесь?', 'А?'),
+    'dormir': ('Пойду спать...', 'Спокойной ночи!'),
 }
 
 FRASES_CHAR = {
-    'capi': {'ocioso': ('quero|capim', 'vamos nadar?', 'meus fones|sao novos', 'sossego...', 'ouvindo|musica'),
-             'carinho': ('hmmm|que bom', 'capi feliz!')},
-    'elefante': {'ocioso': ('trouxe|melancia!', 'prruu!', 'tromba|cheirosa', 'abraco de|elefante!', 'nunca|esqueco nada'),
-                 'carinho': ('abraco!', 'prruu!|gostei')},
-    'pato': {'ocioso': ('vi um cometa!', 'abracadabra!', 'meu chapeu|e magico', 'quack quack!', 'achei uma|pedrinha'),
-             'carinho': ('quack!', 'magia!')},
-    'polvo': {'ocioso': ('tenho 8|abracos!', 'blub blub', 'vou mergulhar', 'adoro o lago', 'tinta? hoje|nao'),
-              'carinho': ('abraco de|polvo!', 'blub!')},
-    'calopsita': {'ocioso': ('fiu fiu!', 'bom dia, bom|dia!', 'canta comigo', 'meu topete|ta lindo?', 'piu!'),
-                  'carinho': ('piu piu!', 'fiu!|gostei')},
-    'cachorro': {'ocioso': ('bora brincar?', 'joga a bola!', 'au au!', 'cade meu|osso?', 'rabinho|feliz!'),
-                 'carinho': ('au! mais!', 'barriguinha!')},
-    'gato': {'ocioso': ('quero|sardinha', 'miau...', 'hora da|soneca', 'nao me|perturbe', 'ronron...'),
-             'carinho': ('ronron...', 'so mais|um pouco')},
-    'et': {'ocioso': ('leve-me ao|seu lider', 'blip blop!', 'saudade de|marte', 'terraqueo|legal!', 'bip bip!'),
-           'carinho': ('blip!|gostei', 'cosquinha|alienigena')},
-    'sapinho': {'ocioso': ('pula comigo!', 'croac!', 'mosca? onde?', 'o lago e|meu', 'boing boing!'),
-                'carinho': ('croac!', 'pulo de|alegria!')},
-    'naufrago': {'ocioso': ('vi um navio!', 'cade minha|jangada?', 'coco de|novo...', 'garrafa ao|mar!', 'terra a|vista!',
-                            'saudade da|ilha'),
-                 'carinho': ('companhia!|que bom', 'nao to mais|sozinho!')},
+    'capi': {'ocioso': ('Хочу травы!', 'Плавать пойдём?', 'Новые уши!', 'Тишина...', 'Слушаю музыку'),
+             'carinho': ('Как приятно!', 'Капи рад!')},
+    'elefante': {'ocioso': ('Принёс арбуз!', 'Тру-ру!', 'Весёлый хобот!', 'Обниму тебя!', 'Помню всё!'),
+                 'carinho': ('Обнимашки!', 'Тру-ру!')},
+    'pato': {'ocioso': ('Видел комету!', 'Абракадабра!', 'Шляпа волшебная', 'Кря-кря!', 'Нашёл камушек'),
+             'carinho': ('Кря!', 'Волшебство!')},
+    'polvo': {'ocioso': ('У меня|8 объятий!', 'Буль-буль!', 'Поплыли!', 'Люблю озеро!', 'Чернила?|Не сегодня!'),
+              'carinho': ('Обнимаю!', 'Буль!')},
+    'calopsita': {'ocioso': ('Фью-фью!', 'Доброе утро!', 'Спой со мной!', 'Как мой хохолок?', 'Чик-чирик!'),
+                  'carinho': ('Чик-чирик!', 'Мне приятно!')},
+    'cachorro': {'ocioso': ('Поиграем?', 'Брось мячик!', 'Гав-гав!', 'Где моя|косточка?', 'Хвостик|виляет!'),
+                 'carinho': ('Гав! Ещё!', 'Почеши пузико!')},
+    'gato': {'ocioso': ('Хочу рыбку!', 'Мяу...', 'Пора дремать', 'Не мешай...', 'Мур-мур...'),
+             'carinho': ('Мур-р-р!', 'Ещё немножко!')},
+    'et': {'ocioso': ('Где ваш вождь?', 'Бип-бип!', 'Скучаю|по Марсу', 'Земляне — класс!', 'Бип!'),
+           'carinho': ('Бип! Ура!', 'Щекотно!')},
+    'sapinho': {'ocioso': ('Прыгай со мной!', 'Ква-ква!', 'Где муха?', 'Озеро моё!', 'Прыг-прыг!'),
+                'carinho': ('Ква!', 'Скачу от|радости!')},
+    'naufrago': {'ocioso': ('Вижу корабль!', 'Где мой плот?', 'Опять кокос!', 'Бутылка|в море!', 'Земля! Ура!', 'Скучаю|по острову'),
+                 'carinho': ('Как хорошо|вместе!', 'Я не один!')},
 }
+
 
 POOLS = {
     'manha': ('espreguicar', 'espreguicar', 'bocejar', 'bocejar', 'andar', 'andar', 'olhar', 'dancar',
@@ -508,7 +509,7 @@ def toque(L, agora, no_corpo):
     L['queue'] = []
     L['taps'] = [x for x in L['taps'] if agora - x < 4000] + [agora]
     if len(L['taps']) == 3 and random.random() < 0.5:
-        tocar(L, agora, 'cambalhota', say=_escolher(L, ('olha so|o que sei!', 'tcharam!')))
+        tocar(L, agora, 'cambalhota', say=_escolher(L, ('Смотри, умею!', 'Та-дам!')))
     elif len(L['taps']) >= 5:
         L['taps'] = []
         tocar(L, agora, 'rir', say=_escolher(L, FRASES['carinhoDemais']))
@@ -569,7 +570,7 @@ def trocar(L, agora, id):
     L['queue'] = []
     L['shakeStart'] = L['shakeUntil'] = 0
     acordar(L, agora, 8000)
-    tocar(L, agora, 'comemorar', say='oi, eu sou|%s!' % NOMES.get(id, id))
+    tocar(L, agora, 'comemorar', say='Привет! Я|%s!' % NOMES.get(id, id))
 
 
 # ------------------------------------------------------------ passo: devolve a pose do quadro
