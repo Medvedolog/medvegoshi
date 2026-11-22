@@ -56,7 +56,7 @@ class GiraffeArtTests(unittest.TestCase):
                 alpha = png.getchannel("A")
                 self.assertTrue(alpha.getbbox(), name)
                 self.assertEqual(0, alpha.getpixel((0, 0)))
-                self.assertEqual(255, max(alpha.getdata()))
+                self.assertEqual(255, alpha.getextrema()[1])
             hashes.add(hashlib.sha256((self.source / (name + ".png")).read_bytes()).hexdigest())
         self.assertEqual(8, len(hashes), "each pose must actually look different")
 
