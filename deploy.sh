@@ -49,6 +49,7 @@ echo "→ Копирование файлов и звуков..."
 # Upload only the optional Pip runtime, never Zoo test fixtures or upstream sources.
 mpremote connect "$PORT" mkdir :zoo 2>/dev/null || true
 mpremote connect "$PORT" mkdir :zoo/pip 2>/dev/null || true
+mpremote connect "$PORT" mkdir :zoo/giraffe 2>/dev/null || true
 mpremote connect "$PORT" mkdir :zoo/packs 2>/dev/null || true
 mpremote connect "$PORT" \
   cp "$DIR/main.py" : \
@@ -59,6 +60,8 @@ mpremote connect "$PORT" \
   + cp "$DIR/zoo/sprites.py" :zoo/sprites.py \
   + cp "$DIR/zoo/pip/__init__.py" :zoo/pip/__init__.py \
   + cp "$DIR/zoo/pip/face.py" :zoo/pip/face.py \
+  + cp "$DIR/zoo/giraffe/__init__.py" :zoo/giraffe/__init__.py \
+  + cp "$DIR/zoo/giraffe/face.py" :zoo/giraffe/face.py \
   + cp "$DIR/vida.py" : \
   + cp "$DIR/rede.py" : \
   + cp "$DIR/portal.py" : \
