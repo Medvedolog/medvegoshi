@@ -18,6 +18,7 @@ from machine import I2C, Pin
 import hw
 import desenho as d
 import vida as V
+from zoo import recovery as zoo_recovery
 import rede
 from hw import W, H
 
@@ -82,10 +83,13 @@ def salvar(nome, dados):
         print('Erro ao salvar', nome, e)
 
 
-cfg = carregar('config.json', {'modo': 'pet', 'som': True, 'personagem': 'capi',
-                               'hora': 'real', 'vel': 2, 'casa': 'pet'})
-if cfg['personagem'] not in d.ELENCO:
-    cfg['personagem'] = 'capi'
+# A missing optional Zoo animal must NEVER silently become Capi:
+# the shared capi.json would be overwritten with a different pet.
+# Stop boot with a visible USB recovery message and NO save writes.
+cfg = zoo_recovery.require_config(
+    'config.json', {'modo': 'pet', 'som': True, 'personagem': 'capi',
+                    'hora': 'real', 'vel': 2, 'casa': 'pet'},
+    d.ELENCO, tela, d)
 if cfg['modo'] not in ('pet', 'companion', 'explore'):
     cfg['modo'] = 'pet'
 if cfg['vel'] not in (1, 2, 3):
@@ -110,7 +114,9 @@ def arquivo_pet(id):
     return 'capi.json'      # um bichinho por vez: trocar de personagem comeca do zero
 
 
-pet = carregar(arquivo_pet(cfg['personagem']), dict(PET_PADRAO))
+# The same fail-closed policy applies to corrupt/truncated pet saves.
+pet = zoo_recovery.require_pet(
+    arquivo_pet(cfg['personagem']), PET_PADRAO, tela, d)
 vt = 0                      # relogio continuo da vida (ms); nao da a volta como ticks_ms
 L = V.nova(cfg['personagem'], vt)
 vida_out = None             # pose do quadro devolvida por V.passo
