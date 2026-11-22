@@ -13,8 +13,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install host sprite tool dependency
+        run: python -m pip install "Pillow>=10,<13"
       - name: Check Python syntax
-        run: python -m compileall -q main.py vida.py desenho.py font_ru.py portal.py companion zoo/pip zoo/tests
+        run: python -m compileall -q main.py vida.py desenho.py font_ru.py portal.py companion zoo/pip zoo/tests zoo/tools
       - name: Check Cyrillic bitmap font and app tests
         run: python -m unittest discover -s tests -p 'test_*.py'
       - name: Run Zoo/Pip integration and regression tests
