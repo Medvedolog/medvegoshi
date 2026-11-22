@@ -17,6 +17,11 @@ jobs:
         run: python -m compileall -q main.py vida.py desenho.py font_ru.py portal.py companion
       - name: Check Cyrillic bitmap font
         run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Check installer profile routing
+        run: |
+          sh -n install.sh
+          bash -n deploy.sh
+          sh tests/test_installer.sh
       - name: Check brain dashboard JavaScript syntax
         run: |
           python - <<'PY'
