@@ -47,6 +47,28 @@
 не собран/не включён в MicroPython.** Основной `main.py` пока не
 переключается на новый порт; `install.sh --board amoled-v1` запрещён.
 
+## Этап сборки нативного SH8601 — экспериментально
+
+В одной рабочей ветке создана [отдельная GitHub Actions сборка](../.github/workflows/build-amoled-v1.yml)
+с фиксированными версиями MicroPython **v1.28.0**, ESP-IDF **v5.5.2**
+и [MIT-модуля QSPI SH8601](https://github.com/dobodu/Lilygo_Waveshare_Amoled_Micropython).
+Скрипт [build_amoled_v1.sh](../ports/build_amoled_v1.sh)
+получает исходники по конкретным commit SHA, исправляет повреждённый
+CMake upstream в отдельной копии, добавляет недостающее `schrift.c`
+и выбирает 16 МиБ Flash / Octal PSRAM.
+
+Успешный workflow должен публиковать **только экспериментальный**
+MicroPython бинарник и SHA256, **без файлов MedveGoshi и без прошивки**.
+До успешного workflow утверждать, что бинарник собран, **нельзя**.
+Даже при успешной компиляции это `hardware-NOT_TESTED`,
+не релиз для конечного пользователя.
+
+Первое подключение к общему игровому рендереру находится в
+[ports/v1_game_demo.py](../ports/v1_game_demo.py): используется
+настоящий `desenho.personagem('girafa')` из MedveGoshi без второй
+копии игры. Полноценное исполнение `main.py` на V1 остаётся
+не реализованным до переноса звука, RTC, IMU и PMIC.
+
 ## Этапы портирования
 
 ### 1. Проверить реальную ревизию
