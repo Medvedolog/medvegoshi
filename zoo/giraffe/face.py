@@ -64,10 +64,14 @@ def render(E, R, P, A, eyes='normal', mouth='sorriso', sick=False):
         A(-2, -108, 8, 6, DARK, 1, 2)
         A(24, -108, 8, 6, DARK, 1, 2)
     else:
+        surprised = eyes in ('susto', 'assustado')
         for xx in (-2, 24):
-            E(xx, -108, 8, 9, WHITE)
-            E(xx, -107 + (3 if eyes in ('triste', 'chorando') else 0), 4, 6, DARK)
-            E(xx - 2, -110, 1, 2, WHITE)
+            # Shock widens the whites and shrinks the pupils, rather than
+            # reusing the neutral look (important for distinct sprite poses).
+            E(xx, -108, 9 if surprised else 8, 12 if surprised else 9, WHITE)
+            E(xx, -107 + (3 if eyes in ('triste', 'chorando') else 0),
+              3 if surprised else 4, 5 if surprised else 6, DARK)
+            E(xx - 2, -111 if surprised else -110, 1, 2, WHITE)
 
     if mouth in ('triste', 'dormindo') or eyes in ('triste', 'chorando'):
         E(16, -88, 8, 2, DARK)
