@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Raio-X da Capi</title>
+<title>Мозг MedveGoshi</title>
 <style>
 :root{color-scheme:light;--fundo:#fff6ec;--cartao:#fffdf9;--tinta:#2b2118;--tinta2:#6b5b4b;--fraco:#a8998a;--linha:#eadfd2;
 --topo1:#ff9a5a;--topo2:#ff5f8f;--pos:#2a78d6;--neg:#eb6834;--trilho:#f1e7dc;
@@ -47,20 +47,21 @@ dt{color:var(--tinta2)}dd{margin:0;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
-<header><h1>🧠 Raio-X da Capi</h1><div class="chips" id="chips"></div></header>
-<main id="app"><div class="cartao vazio">Carregando o cérebro…</div></main>
+<header><h1>🧠 Мозг питомца</h1><div class="chips" id="chips"></div></header>
+<main id="app"><div class="cartao vazio">Загрузка состояния мозга…</div></main>
 <script>
 var D = /*DADOS*/null;
+var NOMES = {"ficar_quieta":"Сидит тихо","ficar_quieta_longa":"Отдыхает","ouvir_dono":"Слушает хозяина","pedir_para_carregar":"Просит зарядку","avisar_bateria":"Батарея садится","baixar_brilho":"Уменьшает яркость","dormir_tela":"Гасит экран","mostrar_hora":"Показывает часы","mostrar_clima":"Показывает погоду","mostrar_humor":"Показывает настроение","dormir":"Спит","cochilar":"Дремлет","acordar":"Просыпается","espreguicar":"Потягивается","bocejar":"Зевает","comer":"Ест","beliscar":"Перекусывает","pedir_comida":"Просит еду","recusar_comida":"Отказывается от еды","cocar":"Чешется","sorrir":"Улыбается","sorriso_largo":"Широко улыбается","careta":"Корчит рожицы","bico":"Дуется","olhos_brilhando":"Блестят глаза","piscar":"Моргает","olhar_de_lado":"Смотрит искоса","surpresa":"Удивляется","cara_de_tedio":"Скучает","bravinha":"Сердится","lagrimazinha":"Плачет","rir":"Смеётся","dancinha":"Танцует","danca_longa":"Долго танцует","pular":"Прыгает","girar":"Кружится","deitar":"Ложится","rolar":"Кувыркается","balancar":"Качается","esconder_rosto":"Прячет лицо","tremer":"Дрожит","acenar":"Машет лапой","ronronar":"Мурлычет","cantarolar":"Напевает","cantar_musica":"Поёт песенку","assobiar":"Свистит","gritinho_alegria":"Радостно кричит","resmungar":"Ворчит","suspirar":"Вздыхает","chamar_baixo":"Тихо зовёт","chamar_alto":"Громко зовёт","alarme_fome":"Сильно голодна","risada":"Хохочет","beep_curto":"Пищит","pedir_carinho":"Просит ласку","pedir_brincar":"Просит поиграть","chamar_atencao_silenciosa":"Привлекает внимание","mostrar_curiosidade":"Интересуется","contar_piada":"Шутит","pedir_abraco":"Просит обнять","dar_presente":"Дарит подарок","elogiar_dono":"Хвалит хозяина","agradecer":"Благодарит","emburrar":"Обижается","ignorar_toque":"Игнорирует касание","fazer_charme":"Кокетничает","pedir_desculpa":"Извиняется","dar_boa_noite":"Желает доброй ночи","dar_bom_dia":"Желает доброго утра","esconde_esconde":"Играет в прятки","foge_do_dedo":"Убегает от пальца","adivinha_a_mao":"Угадывает руку","sequencia_de_toques":"Повторяет касания","pedra_papel_tesoura":"Камень-ножницы-бумага","contar_junto":"Считает вместе","corrida_de_inclinar":"Бег с наклоном","equilibrar":"Держит равновесие","encher_balao":"Надувай шарик","cantar_junto":"Поёт вместе","olhar_em_volta":"Оглядывается","farejar":"Нюхает","investigar_toque":"Изучает касание","baguncar_tela":"Озорничает","esconder_item":"Прячет вещь","rabiscar":"Рисует","mudar_de_canto":"Переходит в угол","espiar":"Подглядывает","derrubar_coisa":"Роняет предмет","imitar_dono":"Повторяет за тобой","acenar_para_outra":"Машет другу","aproximar":"Подходит ближе","conversar":"Беседует","pega_pega_duplo":"Играет в догонялки","ensinar":"Обучает друга","ciume":"Ревнует","dividir_comida":"Делится едой","dormir_juntas":"Спят вместе","danca_dupla":"Танцуют вдвоём","apresentar":"Знакомится","ignorar_outra":"Не замечает друга"};
+var DRIVES = {"fome":"Голод","energia":"Энергия","humor":"Настроение","tedio":"Скука","afeto":"Привязанность","curiosidade":"Любопытство","estresse":"Стресс"};
+var CLIMA = {"sol":"Ясно","nublado":"Облачно","neblina":"Туман","vento":"Ветер","chuva":"Дождь","neve":"Снег","tempestade":"Гроза"};
 var EMO = {fome:'🍎', energia:'⚡', humor:'😊', tedio:'🥱', afeto:'💛', curiosidade:'🔎', estresse:'😣'};
 var TEMPO = {sol:'☀️', nublado:'☁️', neblina:'🌫️', vento:'💨', chuva:'🌧️', neve:'❄️', tempestade:'⛈️'};
-var MOTIVO = {carinho:'carinho', estrela:'estrela', comida:'comida', toque:'toque', shh:'shh!', ignorado:'ignorada',
-  som_sem_resposta:'som sem resposta', custo_som:'custo do som', jogo_fim:'brincou', jogo_repetiu:'brincou de novo',
-  social_ok:'amiga', sacudida_leve:'sacudida', sacudida_forte:'sacudidona', desligou:'desligou'};
+var MOTIVO = {"carinho":"ласка","estrela":"похвала","comida":"еда","toque":"касание","shh":"тише!","ignorado":"просьба без ответа","som_sem_resposta":"звук без ответа","custo_som":"цена звука","jogo_fim":"игра","jogo_repetiu":"повторная игра","social_ok":"встреча","sacudida_leve":"встряхивание","sacudida_forte":"сильная тряска","desligou":"выключение"};
 function $(t, a, f) { var e = document.createElement(t); for (var k in a || {}) e.setAttribute(k, a[k]);
   (f || []).forEach(function (x) { e.append(x); }); return e; }
-function nome(a) { return a.replace(/_/g, ' '); }
+function nome(a) { return NOMES[a] || a.replace(/_/g, ' '); }
 function hm(m) { m = ((m % 1440) + 1440) % 1440; return String(m / 60 | 0).padStart(2, '0') + 'h' + String(m % 60).padStart(2, '0'); }
-function ha(s) { var d = D.agora_s - s; return d < 60 ? 'agora' : d < 3600 ? 'há ' + (d / 60 | 0) + ' min' : 'há ' + (d / 3600 | 0) + ' h'; }
+function ha(s) { var d = D.agora_s - s; return d < 60 ? 'сейчас' : d < 3600 ? (d / 60 | 0) + ' мин назад' : (d / 3600 | 0) + ' ч назад'; }
 function cartao(titulo, sub) { var c = $('div', {class: 'cartao'}, [$('h2', {}, [titulo])]); if (sub) c.append($('p', {class: 'sub'}, [sub]));
   document.getElementById('app').append(c); return c; }
 function barra(rot, frac, cor, txt, centro) {
@@ -74,20 +75,20 @@ function barra(rot, frac, cor, txt, centro) {
 
 function topo() {
   var c = document.getElementById('chips'), dias = D.idade_s / 86400;
-  c.append($('span', {class: 'chip'}, [dias < 1 ? (D.idade_s / 3600 | 0) + ' h de vida' : dias.toFixed(1).replace('.', ',') + ' dias de vida']));
+  c.append($('span', {class: 'chip'}, [dias < 1 ? (D.idade_s / 3600 | 0) + ' ч жизни' : dias.toFixed(1).replace('.', ',') + ' дн. жизни']));
   c.append($('span', {class: 'chip'}, [(D.dormindo ? '💤 ' : '▶️ ') + nome(D.acao)]));
   c.append($('span', {class: 'chip'}, ['🕒 ' + hm(D.minuto)]));
   var k = D.clima;
-  c.append($('span', {class: 'chip'}, [k.tempo ? (TEMPO[k.tempo] || '🌡️') + ' ' + k.tempo + (k.graus === null ? '' : ' ' + k.graus + '°') : '📡 sem previsão']));
+  c.append($('span', {class: 'chip'}, [k.tempo ? (TEMPO[k.tempo] || '🌡️') + ' ' + (CLIMA[k.tempo] || k.tempo) + (k.graus === null ? '' : ' ' + k.graus + '°') : '📡 Нет прогноза']));
 }
 
 function vontades() {
-  var c = cartao('Como ela está', 'As 7 vontades agora. O humor vai de −100 a +100; o resto, de 0 a 100.');
+  var c = cartao('Как она себя чувствует', 'Семь потребностей. Настроение от −100 до +100; остальные показатели от 0 до 100.');
   D.drives.forEach(function (p, i) {
     var v = p[1] / 10, h = p[0] === 'humor';
-    c.append(barra(EMO[p[0]] + ' ' + p[0], v / 100, 'var(--s' + (i + 1) + ')', (h && v > 0 ? '+' : '') + Math.round(v), h));
+    c.append(barra(EMO[p[0]] + ' ' + (DRIVES[p[0]] || p[0]), v / 100, 'var(--s' + (i + 1) + ')', (h && v > 0 ? '+' : '') + Math.round(v), h));
   });
-  if (D.clima.tempo) c.append($('p', {class: 'sub'}, ['Com esse tempo o humor tende a ' + (D.clima.alvo > 0 ? '+' : '') + D.clima.alvo / 10 + '.']));
+  if (D.clima.tempo) c.append($('p', {class: 'sub'}, ['При такой погоде настроение стремится к ' + (D.clima.alvo > 0 ? '+' : '') + D.clima.alvo / 10 + '.']));
 }
 
 function faixas(lista, passo) {            // celulas seguidas com a mesma acao viram uma faixa
@@ -100,10 +101,10 @@ function faixas(lista, passo) {            // celulas seguidas com a mesma acao 
 }
 
 function relogio() {
-  var R = D.relogio, n = 1440 / R.passo_min, c = cartao('Relógio dos hábitos', 'O anel de fora é o que ela aprendeu a fazer em cada hora; o de dentro, o que aprendeu a evitar. Toque num hábito para achá-lo no relógio.');
+  var R = D.relogio, n = 1440 / R.passo_min, c = cartao('Часы привычек', 'Внешнее кольцо — привычные действия по времени; внутреннее — действия, которых питомец избегает. Нажмите на привычку, чтобы увидеть её время.');
   var NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), cores = {}, nc = 0;
   svg.setAttribute('viewBox', '0 0 260 260'); svg.id = 'relogio'; svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Relógio de 24 horas com os hábitos aprendidos');
+  svg.setAttribute('aria-label', '24-часовые часы изученных привычек');
   function cor(a) { if (!(a in cores)) cores[a] = nc < 8 ? 'var(--s' + (++nc) + ')' : 'var(--fraco)'; return cores[a]; }
   function arco(i, r0, r1) {
     var a0 = (i / n) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2 - 0.012;
@@ -129,59 +130,59 @@ function relogio() {
   agora.setAttribute('cx', 130 + 127 * Math.cos(aa)); agora.setAttribute('cy', 130 + 127 * Math.sin(aa)); agora.setAttribute('r', 5);
   agora.setAttribute('fill', 'var(--tinta)'); svg.append(agora);
   c.append(svg);
-  var dica = $('p', {class: 'dica', 'aria-live': 'polite'}, ['● é a hora de agora']); c.append(dica);
+  var dica = $('p', {class: 'dica', 'aria-live': 'polite'}, ['● текущее время']); c.append(dica);
   var botoes = [];
   function escolhe(x) {
     fh.concat(fe).forEach(function (y) { y.arcos.forEach(function (e) { e.setAttribute('stroke', y === x ? 'var(--tinta)' : 'none'); e.setAttribute('stroke-width', 2); }); });
     botoes.forEach(function (b) { b.setAttribute('aria-pressed', b._x === x ? 'true' : 'false'); });
-    dica.textContent = (fe.indexOf(x) >= 0 ? 'Evita ' : 'Faz ') + nome(x.acao) + ' das ' + x.txt + ' (força ' + Math.round(100 * x.pico / R.max) + '%)';
+    dica.textContent = (fe.indexOf(x) >= 0 ? 'Избегает: ' : 'Делает: ') + nome(x.acao) + ' в ' + x.txt + ' (сила ' + Math.round(100 * x.pico / R.max) + '%)';
   }
   var l = $('div', {class: 'lista'});
   function linha(x, pre) { var b = $('button', {class: 'hab', 'aria-pressed': 'false'}, [$('span', {class: 'bola'}), pre + nome(x.acao) + ' · ' + x.txt]);
     b.firstChild.style.background = x.cor; b._x = x; b.onclick = function () { escolhe(x); }; botoes.push(b); l.append(b); }
   fh.forEach(function (x) { linha(x, '✨ '); });
   fe.slice().sort(function (a, b) { return b.cel.length - a.cel.length; }).slice(0, 5).forEach(function (x) { linha(x, '🚫 '); });
-  if (!fh.length && !fe.length) l.append($('p', {class: 'sub'}, ['Ainda nenhum hábito: ela precisa de alguns dias com a mesma rotina.']));
+  if (!fh.length && !fe.length) l.append($('p', {class: 'sub'}, ['Привычек пока нет: нужно несколько дней с похожим распорядком.']));
   c.append(l);
 }
 
 function maisFeitas() {
-  var c = cartao('O que ela mais fez', 'Quantas vezes cada ação venceu a escolha.'), corpo = $('div'), seg = $('div', {class: 'seg'});
-  [['hoje', 'Hoje'], ['ontem', 'Ontem']].forEach(function (p, i) {
+  var c = cartao('Частые действия', 'Сколько раз мозг выбирал каждое действие.'), corpo = $('div'), seg = $('div', {class: 'seg'});
+  [['hoje', 'Сегодня'], ['ontem', 'Вчера']].forEach(function (p, i) {
     var b = $('button', {'aria-pressed': i ? 'false' : 'true'}, [p[1]]);
     b.onclick = function () { seg.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); }); mostra(p[0]); };
     seg.append(b); });
   function mostra(k) { corpo.textContent = ''; var l = D[k], m = l.length ? l[0][1] : 1;
-    if (!l.length) corpo.append($('p', {class: 'sub'}, ['Nada registrado ' + (k === 'hoje' ? 'hoje ainda.' : 'ontem.')]));
+    if (!l.length) corpo.append($('p', {class: 'sub'}, ['Записей нет: ' + (k === 'hoje' ? 'сегодня.' : 'вчера.')]));
     l.forEach(function (p) { corpo.append(barra(nome(p[0]), p[1] / m, 'var(--s1)', p[1])); }); }
   c.append(seg, corpo); mostra('hoje');
 }
 
 function gostos() {
-  var c = cartao('O que ela aprendeu', 'Quanto cada ação ficou mais forte (gosta) ou mais fraca (evita) na rede desde que ela nasceu. Os hábitos de horário ficam no relógio.');
+  var c = cartao('Чему научилась', 'Какие действия стали чаще (нравятся) или реже (избегает) по сравнению с началом жизни. Временные привычки — на часах.');
   var m = 1; D.gosta.concat(D.evita).forEach(function (p) { m = Math.max(m, Math.abs(p[1])); });
-  [['💙 Gosta', D.gosta, 'var(--pos)'], ['🧡 Evita', D.evita, 'var(--neg)']].forEach(function (g) {
+  [['💙 Нравится', D.gosta, 'var(--pos)'], ['🧡 Избегает', D.evita, 'var(--neg)']].forEach(function (g) {
     c.append($('p', {class: 'sub'}, [g[0]]));
-    if (!g[1].length) c.append($('p', {class: 'sub'}, ['nada ainda']));
+    if (!g[1].length) c.append($('p', {class: 'sub'}, ['пока ничего']));
     g[1].forEach(function (p) { c.append(barra(nome(p[0]), p[1] / m, g[2], (p[1] > 0 ? '+' : '') + p[1], true)); });
   });
 }
 
 function recompensas() {
-  var R = D.recompensas.slice().reverse(), c = cartao('Últimas recompensas', R.length + ' guardadas. Positiva ensina a repetir; negativa, a evitar.');
-  var l = $('div'), mais = $('button', {}, ['Ver todas (' + R.length + ')']), todas = false;
+  var R = D.recompensas.slice().reverse(), c = cartao('Последние поощрения', R.length + ' записей. Положительные учат повторять, отрицательные — избегать.');
+  var l = $('div'), mais = $('button', {}, ['Показать все (' + R.length + ')']), todas = false;
   function mostra() { l.textContent = ''; (todas ? R : R.slice(0, 12)).forEach(function (r) {
     var ch = $('span', {class: 'r'}, [(r[2] > 0 ? '+' : '−') + Math.abs(r[2])]); ch.style.background = r[2] > 0 ? 'var(--pos)' : 'var(--neg)';
     l.append($('div', {class: 'rec'}, [$('span', {class: 'sub', style: 'margin:0'}, [ha(r[0])]), $('span', {}, [nome(r[1]) + ' · ' + (MOTIVO[r[3]] || nome(r[3]))]), ch])); });
-    mais.textContent = todas ? 'Ver menos' : 'Ver todas (' + R.length + ')'; }
+    mais.textContent = todas ? 'Свернуть' : 'Показать все (' + R.length + ')'; }
   mais.onclick = function () { todas = !todas; mostra(); };
-  if (!R.length) c.append($('p', {class: 'sub'}, ['Nenhuma recompensa ainda.'])); else { c.append(l); if (R.length > 12) c.append(mais); mostra(); }
+  if (!R.length) c.append($('p', {class: 'sub'}, ['Поощрений пока нет.'])); else { c.append(l); if (R.length > 12) c.append(mais); mostra(); }
 }
 
 function historia() {
   var H = D.horas;
-  if (H.length < 2) { cartao('Vontades de hora em hora', 'Ainda sem histórico: as linhas aparecem depois das duas primeiras horas de vida.'); return; }
-  var c = cartao('Vontades nas últimas ' + H.length + ' horas', 'Uma linha por vontade, de hora em hora. Toque ou passe o dedo para ver o valor.');
+  if (H.length < 2) { cartao('Потребности по часам', 'Истории пока нет: графики появятся после первых двух часов жизни.'); return; }
+  var c = cartao('Потребности за последние ' + H.length + ' ч', 'Почасовая история каждого показателя. Нажмите или проведите пальцем, чтобы увидеть значение.');
   D.drives.forEach(function (p, i) {
     var h = p[0] === 'humor', lo = h ? -1000 : 0, NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg');
     s.setAttribute('viewBox', '0 0 300 48'); s.setAttribute('preserveAspectRatio', 'none');
@@ -192,10 +193,10 @@ function historia() {
     pl.setAttribute('vector-effect', 'non-scaling-stroke'); s.append(pl);
     var mk = document.createElementNS(NS, 'line'); mk.setAttribute('y1', 0); mk.setAttribute('y2', 48); mk.setAttribute('stroke', 'var(--fraco)');
     mk.setAttribute('vector-effect', 'non-scaling-stroke'); mk.style.display = 'none'; s.append(mk);
-    var rot = $('span', {}, [EMO[p[0]] + ' ' + p[0]]), val = $('div', {class: 'dica'});
+    var rot = $('span', {}, [EMO[p[0]] + ' ' + (DRIVES[p[0]] || p[0])]), val = $('div', {class: 'dica'});
     function aponta(ev) { var b = s.getBoundingClientRect(), k = Math.round((ev.clientX - b.left) / b.width * (H.length - 1));
       k = Math.max(0, Math.min(H.length - 1, k)); mk.setAttribute('x1', X(k)); mk.setAttribute('x2', X(k)); mk.style.display = '';
-      val.textContent = (H.length - 1 - k ? 'há ' + (H.length - 1 - k) + ' h: ' : 'última hora: ') + Math.round(H[k][i] / 10); }
+      val.textContent = (H.length - 1 - k ? (H.length - 1 - k) + ' ч назад: ' : 'последний час: ') + Math.round(H[k][i] / 10); }
     s.onpointerdown = s.onpointermove = aponta;
     s.onpointerleave = function (ev) { if (ev.pointerType !== 'mouse') return; mk.style.display = 'none'; val.textContent = ''; };
     c.append($('div', {class: 'spark'}, [$('div', {}, [rot, val]), s]));
@@ -203,9 +204,9 @@ function historia() {
 }
 
 function porDentro() {
-  var r = D.rede, c = cartao('Por dentro', 'Números para depurar a rede.'), dl = $('dl');
-  [['Semente', D.semente], ['Taxa de aprendizado (η)', r.eta], ['Ruído', r.ruido], ['Ticks rodados', r.ticks.toLocaleString('pt-BR')],
-   ['Entrada mexida pelo STDP', r.ih_mudou_pct + '%'], ['Limiar dos ocultos', r.limiar.join(' / ') + ' (mín / mediana / máx)'], ['Versão do resumo', D.versao]]
+  var r = D.rede, c = cartao('Внутренние данные', 'Техническая информация для диагностики сети.'), dl = $('dl');
+  [['Seed', D.semente], ['Темп обучения (η)', r.eta], ['Шум', r.ruido], ['Тактов выполнено', r.ticks.toLocaleString('ru-RU')],
+   ['Изменение входов STDP', r.ih_mudou_pct + '%'], ['Порог скрытых нейронов', r.limiar.join(' / ') + ' (мин / мед / макс)'], ['Версия данных', D.versao]]
     .forEach(function (p) { dl.append($('dt', {}, [p[0]]), $('dd', {}, [String(p[1])])); });
   c.append(dl);
 }
@@ -215,7 +216,7 @@ function mostrar(d) {
   topo(); vontades(); relogio(); maisFeitas(); gostos(); recompensas(); historia(); porDentro();
 }
 function vazio() {
-  document.getElementById('app').innerHTML = '<div class="cartao vazio">🔌 Sem dados do cérebro.<br>Abra esta página pelo Wi-Fi da Capi ou gere com <code>python3 -m companion.sim.raiox</code>.</div>';
+  document.getElementById('app').innerHTML = '<div class="cartao vazio">🔌 Нет данных мозга.<br>Откройте страницу через Wi-Fi питомца или создайте её командой <code>python3 -m companion.sim.raiox</code>.</div>';
 }
 if (D) mostrar(D); else if (location.protocol === 'file:') vazio(); else fetch('brain.json').then(function (r) { if (!r.ok) throw r; return r.json(); }).then(mostrar).catch(vazio);
 </script>
