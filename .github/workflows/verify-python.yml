@@ -17,5 +17,14 @@ jobs:
         run: python -m compileall -q main.py vida.py desenho.py font_ru.py portal.py companion
       - name: Check Cyrillic bitmap font
         run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Check brain dashboard JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          page = Path('companion/raiox.html').read_text(encoding='utf-8')
+          code = page.split('<script>', 1)[1].split('</script>', 1)[0]
+          Path('/tmp/medvegoshi-raiox.js').write_text(code, encoding='utf-8')
+          PY
+          node --check /tmp/medvegoshi-raiox.js
       - name: Run companion unit tests
         run: python -m unittest discover -s companion/testes -t .
