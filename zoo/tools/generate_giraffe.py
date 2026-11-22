@@ -24,7 +24,7 @@ from zoo.giraffe.face import render
 from zoo.tools.build_sprites import compile_pack
 
 # The first authored source file for Жирафик, not Giraffegotchi artwork.
-SOURCE_COMMIT = "73788e25b273da5f6bf444c19ecee697781598dd"
+SOURCE_COMMIT = "c38afad7e4dc848e0308ce7cccfa697056d884c9"
 SOURCE_URL = (
     "https://github.com/Medvedolog/medvegoshi/blob/"
     + SOURCE_COMMIT + "/zoo/giraffe/face.py"
