@@ -730,6 +730,17 @@ def cachorro(cx, pe, olhos, boca, doente, s, ol):
     return pe - 74 * s, pe - 101 * s, 30 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-12, -78, 7), (12, -78, 7))]
 
 
+def pip(cx, pe, olhos, boca, doente, s, ol):
+    """Optional eye-led MedveGoshi Zoo character (not original Pip-KeyPet)."""
+    from zoo.pip.face import render
+    E, P, R, A = _rel(cx, pe, s, ol, lambda color: (14, 15, 40))
+    anchors = render(E, R, olhos, boca, doente)
+    if doente:
+        termometro(cx + 35 * s, pe - 60 * s)
+    points = [(cx + dx * s, pe + dy * s) for dx, dy in anchors]
+    return pe - 64 * s, pe - 87 * s, 35 * s, points
+
+
 def gato(cx, pe, olhos, boca, doente, s, ol):
     if ol:
         ol_g = lambda c: (110, 104, 128) if c == GATO else ol(c)   # contorno claro: nao some a noite
@@ -822,11 +833,12 @@ def naufrago(cx, pe, olhos, boca, doente, s, ol):
     return pe - 74 * s, pe - 106 * s, 31 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-10, -76, 6), (10, -76, 6))]
 
 
-ELENCO = ('capi', 'elefante', 'pato', 'polvo', 'calopsita', 'cachorro', 'gato', 'et', 'sapinho', 'naufrago')
+ELENCO = ('capi', 'elefante', 'pato', 'polvo', 'calopsita', 'cachorro', 'gato', 'et', 'sapinho', 'naufrago', 'pip')
 NOMES = {'capi': 'Капи', 'pato': 'Утка', 'elefante': 'Слон', 'polvo': 'Осьминог', 'calopsita': 'Попугай',
-         'cachorro': 'Карамелька', 'gato': 'Кот', 'et': 'Пришелец', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон'}
+         'cachorro': 'Карамелька', 'gato': 'Кот', 'et': 'Пришелец', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон', 'pip': 'Пип'}
 _FUNCS = {'capi': capi, 'pato': pato, 'elefante': elefante, 'polvo': polvo, 'calopsita': calopsita,
-          'cachorro': cachorro, 'gato': gato, 'et': et, 'sapinho': sapinho, 'naufrago': naufrago}
+          'cachorro': cachorro, 'gato': gato, 'et': et, 'sapinho': sapinho, 'naufrago': naufrago,
+          'pip': pip}
 
 
 FASES_VIDA = ('ovo', 'filhote', 'adulto', 'idoso', 'estrela')
@@ -892,7 +904,7 @@ def sombra(cx, ph, rx=20):
 # ------------------------------------------------------------ personagem vivo (movimentos e efeitos)
 olhos_ult = []
 HTOP = {'capi': 77, 'pato': 95, 'elefante': 75, 'polvo': 71, 'calopsita': 84, 'cachorro': 75,
-        'gato': 75, 'et': 81, 'sapinho': 65, 'naufrago': 79}
+        'gato': 75, 'et': 81, 'sapinho': 65, 'naufrago': 79, 'pip': 86}
 AZUL_L = (110, 180, 250)
 
 
