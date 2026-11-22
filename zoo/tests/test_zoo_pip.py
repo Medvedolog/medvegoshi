@@ -77,12 +77,14 @@ class PipFaceTests(unittest.TestCase):
 class CatalogueCompatibilityTests(unittest.TestCase):
     def test_pip_is_opt_in_and_original_cast_is_kept(self):
         cast = top_constant("desenho.py", "ELENCO")
-        self.assertEqual(11, len(cast))
-        self.assertEqual("pip", cast[-1])
+        self.assertEqual(12, len(cast))
+        self.assertEqual("pip", cast[-2])
+        self.assertEqual("girafa", cast[-1])
         for original in ("capi", "pato", "elefante", "polvo", "calopsita",
                          "cachorro", "gato", "et", "sapinho", "naufrago"):
             self.assertIn(original, cast)
         self.assertIn("Пип", vida.NOMES.values())
+        self.assertIn("Жирафик", vida.NOMES.values())
 
     def test_character_metadata_match_render_list(self):
         cast = top_constant("desenho.py", "ELENCO")
