@@ -61,11 +61,11 @@ def prepare(micropython, driver):
     cmake = (
         "add_library(usermod_amoled INTERFACE)\n"
         "target_sources(usermod_amoled INTERFACE\n"
-        + "".join("  \${CMAKE_CURRENT_LIST_DIR}/" + s + "\n" for s in source_files)
+        + "".join("  ${CMAKE_CURRENT_LIST_DIR}/" + s + "\n" for s in source_files)
         + ")\n"
         "target_include_directories(usermod_amoled INTERFACE\n"
-        "  \${IDF_PATH}/components/esp_lcd/include\n"
-        "  \${CMAKE_CURRENT_LIST_DIR}\n"
+        "  ${IDF_PATH}/components/esp_lcd/include\n"
+        "  ${CMAKE_CURRENT_LIST_DIR}\n"
         ")\n"
         "target_link_libraries(usermod INTERFACE usermod_amoled)\n"
     )
