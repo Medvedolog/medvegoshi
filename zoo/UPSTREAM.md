@@ -14,6 +14,12 @@ MicroPython и сами по себе **не включаются в проши�
   - `sim/maze_test.c` → `upstream/pip/sim/maze_test.c`: тесты мини-игры «лабиринт».
   - `sim/pet_test.c` → `upstream/pip/sim/pet_test.c`: тесты потребностей/поведения питомца.
   - `ui/face.h` → `upstream/pip/ui/face.h`: описание оригинального C API графики глаз.
+  - `ui/face.c`, `ui/maze.c`, `ui/maze.h`, `ui/pet.c`, `ui/pet.h`, `ui/moods.h`
+    → `upstream/pip/ui/`: исходный MIT-движок для компиляции исходных тестов.
+
+Команда `sh zoo/upstream/pip/run_tests.sh` собирает три оригинальных C-теста
+на компьютере (нужен `cc` и `libm`). Эти тесты также включены в GitHub Actions.
+Они проверяют оригинальный Pip-KeyPet, не наш рендерер `zoo/pip/face.py`.
 
 Наш `zoo/pip/face.py` **написан заново**, а не является переводом
 `ui/face.c`. Он использует как вдохновение идею эмоциональных глаз.
