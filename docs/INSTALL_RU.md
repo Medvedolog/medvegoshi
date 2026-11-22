@@ -56,4 +56,4 @@ sh install.sh --board amoled-v1
 - Установщик обязан **отказывать** при выборе неизвестного/неподдерживаемого профиля.
 - Сохранения `config.json`, файлы питомца и `brain.bin` не должны получать несовместимые форматы из-за выбора экрана.
 
-См. также [план переноса AMOLED V1](PORT_AMOLED_V1.md) и [план локализации](LOCALIZATION_RU.md). Благодарность оригинальному проекту [Capigoshi](https://github.com/rjcaubit/capigoshi).
+См. также [план переноса AMOLED V1](https://github.com/Medvedolog/medvegoshi/blob/docs/russian-first/docs/PORT_AMOLED_V1.md) и [план локализации](https://github.com/Medvedolog/medvegoshi/blob/docs/russian-first/docs/LOCALIZATION_RU.md) из PR #1 (до объединения с `main`). Благодарность оригинальному проекту [Capigoshi](https://github.com/rjcaubit/capigoshi).
