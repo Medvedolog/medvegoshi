@@ -43,6 +43,9 @@ def run(i2c=None, confirmed_v1=False):
                 print("Game touch:", point)
         time.sleep_ms(40)
     print("Touch samples:", len(readings))
+    print("Rendering original MedveGoshi Жирафик through shared desenho.py...")
+    from ports.v1_game_demo import show_giraffe
+    show_giraffe(screen)
     print("Hardware results are provisional: preserve raw log and photo.")
     return {"touch_samples": len(readings),
             "viewport": (amoled_v1.OFFSET_X, amoled_v1.OFFSET_Y,
