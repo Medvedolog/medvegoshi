@@ -65,6 +65,7 @@ mpremote connect "$PORT" \
   + cp "$DIR/zoo/sprites.py" :zoo/sprites.py \
   + cp "$DIR/zoo/pip/__init__.py" :zoo/pip/__init__.py \
   + cp "$DIR/zoo/pip/face.py" :zoo/pip/face.py \
+  + cp "$DIR/zoo/pip/game.py" :zoo/pip/game.py \
   + cp "$DIR/zoo/giraffe/__init__.py" :zoo/giraffe/__init__.py \
   + cp "$DIR/zoo/giraffe/face.py" :zoo/giraffe/face.py \
   + cp "$DIR/vida.py" : \

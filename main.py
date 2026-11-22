@@ -205,6 +205,10 @@ ultima_reacao = 0
 ultimo_urgente = 0
 ultimo_save = time.ticks_ms()
 acc_pet = 0
+pip_session = pip_snapshot = None
+pip_reaction, pip_reaction_at = None, 0
+pip_tried = False
+pip_last_poll = -1000
 grito_seguidos = 0
 botao_antes = 1
 piso_mic = 2000.0           # ruido de fundo do microfone (se adapta)
@@ -316,9 +320,111 @@ def noite_pet():
     return hora_de_dormir(hora_atual())
 
 
+def pip_em_uso():
+    # Experimental opt-in, real-time Care only. The legacy implementation
+    # remains the fallback for an unavailable clock, module, or state.
+    return (cfg['personagem'] == 'pip' and cfg.get('pip_native') is True and
+            cfg['modo'] == 'pet' and cfg['hora'] == 'real')
+
+
+def pip_atualizar(agora):
+    global pip_session, pip_snapshot, pip_tried, pip_last_poll
+    if not pip_em_uso() or fase_vida() in ('ovo', 'estrela'):
+        return
+    if time.ticks_diff(agora, pip_last_poll) < 1000:
+        return
+    pip_last_poll = agora
+    if pip_session is None and pip_tried:
+        return
+    try:
+        epoch = relogio.epoch()
+        if not epoch:
+            pip_snapshot = None
+            return
+        if pip_session is None:
+            from zoo.pip.game import open_pip
+            pip_tried = True
+            pip_session = open_pip('pip', epoch, enabled=True,
+                                   seed=random.randint(1, 0x7fffffff))
+        if pip_session is not None:
+            pip_snapshot = pip_session.tick(epoch)
+            pip_copiar_painel()
+    except (OSError, ValueError, RuntimeError, TypeError, ImportError, MemoryError) as exc:
+        pip_snapshot, pip_tried = None, True
+        print('Pip native inactive:', exc)
+
+
+def pip_copiar_painel():
+    if not pip_snapshot:
+        return
+    necessidades = pip_snapshot['needs']
+    pet['fome'] = lim(necessidades['food'] * 100)
+    pet['alegria'] = lim(necessidades['fun'] * 100)
+    pet['energia'] = lim(necessidades['energy'] * 100)
+    pet['dormindo'] = pip_snapshot['asleep']
+
+
+def pip_evento(name):
+    global pip_snapshot, pip_reaction, pip_reaction_at
+    if not pip_em_uso() or pip_session is None or not pip_snapshot:
+        return False, None
+    try:
+        reaction = pip_session.event(name)
+        if reaction:
+            pip_reaction, pip_reaction_at = reaction, time.ticks_ms()
+        pip_snapshot = pip_session.status()
+        if pip_snapshot is None:
+            return False, None
+        pip_copiar_painel()
+        return True, reaction
+    except (OSError, ValueError, RuntimeError, TypeError, MemoryError) as exc:
+        pip_snapshot = None
+        print('Pip native event unavailable:', exc)
+        return False, None
+
+
+def pip_salvar():
+    global pip_session, pip_snapshot, pip_tried
+    if pip_session is None:
+        return True
+    # Native integrity failure closes the adapter; don't trap the selected
+    # pet forever. Fail the first unsaved write, then keep the sidecar intact.
+    valid = pip_session.status() is not None
+    if valid and pip_session.flush():
+        return True
+    pip_session.close()
+    pip_session = pip_snapshot = None
+    pip_tried = True
+    return not valid
+
+
+_PIP_STATES = {
+    'happy': ('feliz', 'sorriso'), 'love': ('feliz', 'sorriso'),
+    'smug': ('feliz', 'sorriso'), 'content': ('feliz', 'sorriso'),
+    'surprised': ('susto', 'o'), 'afraid': ('susto', 'o'),
+    'sad': ('sono', 'triste'), 'gloomy': ('sono', 'triste'),
+    'lonely': ('sono', 'triste'), 'sick': ('sono', 'triste'),
+    'sleepy': ('sono', 'o'), 'tired': ('sono', 'o'),
+    'asleep': ('fechados', 'dormindo'), 'nauseous': ('sono', 'triste'),
+    'disgusted': ('susto', 'triste'), 'no': ('sono', 'triste'),
+}
+
+
+def pip_expressao(agora, olhos, boca, usa_pose=False):
+    if not pip_em_uso() or not pip_snapshot:
+        return olhos, boca
+    if pip_reaction and 0 <= time.ticks_diff(agora, pip_reaction_at) < 1500:
+        return _PIP_STATES.get(pip_reaction, (olhos, boca))
+    if usa_pose:
+        return olhos, boca
+    return _PIP_STATES.get(pip_snapshot['mood'], (olhos, boca))
+
+
 def tick_pet(offline=False):
     if fase_vida() in ('ovo', 'estrela'):
         return
+    if not offline and pip_em_uso() and pip_snapshot:
+        return  # no second needs model while native Pip owns Care
     noite = noite_pet()
     if pet['dormindo']:
         pet['fome'] -= FOME_DORMINDO
@@ -364,6 +470,23 @@ def acao_pet(i):
         falar('Тс-с... хр-р')
         return
     som.tocar('clique')
+    if i in (0, 1):
+        native, reaction = pip_evento('feed' if i == 0 else 'play')
+        if native:
+            if i == 0:
+                if reaction in ('nauseous', 'disgusted'):
+                    falar('Я уже сыт!')
+                else:
+                    iniciar_anim('comer')
+                    som.tocar('comer')
+            elif reaction == 'no':
+                falar('Я устал...')
+            else:
+                iniciar_anim('pular')
+                som.tocar('feliz')
+            pip_salvar()
+            salvar(arquivo_pet(cfg['personagem']), pet)
+            return
     if i == 0:
         if pet['fome'] >= 99.5:
             falar('Я уже сыт!')
@@ -488,6 +611,7 @@ def novo_ovo():
 def trocar_pet(id):
     global ponte, cer_seg, cer_lido, cer_ativ, vida_out, toque_vida
     global anim, anim_ini, acc_pet, ultimo_save
+    global pip_session, pip_snapshot, pip_tried, pip_last_poll, pip_reaction
     if id not in d.ELENCO or id == cfg['personagem']:
         raise ValueError('pet selection')
     epoch = relogio.epoch()
@@ -499,9 +623,15 @@ def trocar_pet(id):
             from companion.placa import gravar
             gravar(ponte.cer, epoch or cer_seg, pasta)
 
+    if not pip_salvar():
+        raise OSError('Pip native save not committed')
     estado, novo = switch_pet.activate(
         cfg, pet, id, PET_PADRAO, epoch, lambda: preparar_ovo(epoch),
         guardar_cerebro)
+    if pip_session is not None:
+        pip_session.close()
+    pip_session = pip_snapshot = pip_reaction = None
+    pip_tried, pip_last_poll = False, -1000
     cfg['personagem'] = id
     pet.clear()
     pet.update(estado)
@@ -727,6 +857,11 @@ def cerebro_ativo():
 
 
 def cerebro_evento(nome):
+    if pip_em_uso() and pip_snapshot:
+        name = {'carinho': 'stroke', 'toque': 'poke', 'barulho': 'fright',
+                'sacudida_forte': 'shake', 'sacudida_leve': 'shake'}.get(nome)
+        if name:
+            pip_evento(name)
     if cerebro_ativo():
         ponte.evento(nome, cer_seg)
 
@@ -943,6 +1078,7 @@ def abrir_wifi():
         pet['epoch'] = epoch
     salvar(arquivo_pet(cfg['personagem']), pet)
     salvar('config.json', cfg)
+    pip_salvar()
     som.tocar('feliz')
     try:
         import portal
@@ -1316,6 +1452,7 @@ def desenhar_vivo(agora, ph, hora, modo):
         olhos, boca = 'normal', 'triste' if triste else 'sorriso'
     olhos = lp.get('eyes') or olhos
     boca = lp.get('mouth') or boca
+    olhos, boca = pip_expressao(agora, olhos, boca, bool(lp.get('eyes') or lp.get('mouth')))
     if olhos == 'normal' and (agora % 3800) < 150:
         olhos = 'fechados'                               # piscadinha
     pe = d.FEET + (int(math.sin(agora / 900)) if dorme else 0)
@@ -1584,6 +1721,7 @@ def passo(agora, dt):
     verificar_botao(agora)
     animar_menu()
     verificar_bateria(agora)
+    pip_atualizar(agora)
     envelhecer(dt)
     verificar_sensores(agora)
     atualizar_rede(agora)
@@ -1615,6 +1753,7 @@ def passo(agora, dt):
         epoch = relogio.epoch()
         if epoch:
             pet['epoch'] = epoch
+        pip_salvar()
         salvar(arquivo_pet(cfg['personagem']), pet)
     desenhar_jogo(agora)
     desenhar_sobreposicoes(agora)

@@ -20,6 +20,7 @@ command -v idf.py >/dev/null 2>&1 || {
 MICROPYTHON_SHA=e0e9fbb17ed6fd06bb76e266ae554784c9c80804
 AMOLED_SHA=97934b7c35b1720a14fd69e4e1322bb5684b9b2c
 IDF_VERSION=v5.5.2
+PIP_UPSTREAM_SHA=b505d9393bd9b8c0b076c0ef7a4d46921db69071
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$ROOT/.." && pwd)
@@ -48,11 +49,21 @@ clone_at_sha https://github.com/dobodu/Lilygo_Waveshare_Amoled_Micropython.git "
 
 python3 "$ROOT/prepare_firmware.py" "$MP" "$DRIVER" > "$WORK/preparation.json"
 
+# Compose isolated user C modules without changing either source tree.
+export MEDVEGOSHI_AMOLED_CMAKE="$DRIVER/micropython.cmake"
+export MEDVEGOSHI_PIP_CMAKE="$ROOT/pip_native/micropython.cmake"
+MODULES="$WORK/medvegoshi_modules.cmake"
+[ -f "$MEDVEGOSHI_PIP_CMAKE" ] || { echo "Pip user module missing" >&2; exit 2; }
+cat > "$MODULES" <<'CMAKE'
+include("$ENV{MEDVEGOSHI_AMOLED_CMAKE}")
+include("$ENV{MEDVEGOSHI_PIP_CMAKE}")
+CMAKE
+
 make -C "$MP/mpy-cross" -j2
 make -C "$MP/ports/esp32" submodules
 make -C "$MP/ports/esp32" -j2 \
   BOARD=ESP32_GENERIC_S3 BOARD_VARIANT=SPIRAM_OCT \
-  USER_C_MODULES="$DRIVER/micropython.cmake" \
+  USER_C_MODULES="$MODULES" \
   CFLAGS_EXTRA=-DMODULE_AMOLED_ENABLED=1
 
 FW="$MP/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/firmware.bin"
@@ -60,16 +71,17 @@ FW="$MP/ports/esp32/build-ESP32_GENERIC_S3-SPIRAM_OCT/firmware.bin"
 mkdir -p "$OUTPUT"
 cp "$FW" "$OUTPUT/medvegoshi-amoled-v1-experimental.bin"
 cp "$DRIVER/LICENSE" "$OUTPUT/AMOLED-UPSTREAM-LICENSE.txt"
+cp "$REPO_ROOT/zoo/upstream/pip/LICENSE" "$OUTPUT/PIP-UPSTREAM-LICENSE.txt"
 cp "$WORK/preparation.json" "$OUTPUT/preparation.json"
 (
   cd "$OUTPUT"
   sha256sum medvegoshi-amoled-v1-experimental.bin > SHA256SUMS
 )
-python3 - "$OUTPUT" "$MICROPYTHON_SHA" "$AMOLED_SHA" "$IDF_VERSION" <<'PY'
+python3 - "$OUTPUT" "$MICROPYTHON_SHA" "$AMOLED_SHA" "$IDF_VERSION" "$PIP_UPSTREAM_SHA" <<'PY'
 import json
 import pathlib
 import sys
-out, micro, driver, idf = sys.argv[1:]
+out, micro, driver, idf, pip = sys.argv[1:]
 info = {
     "status": "BUILT_NOT_HARDWARE_TESTED",
     "installable": False,
@@ -79,6 +91,8 @@ info = {
     "micropython_sha": micro,
     "amoled_driver_sha": driver,
     "idf_version": idf,
+    "pip_upstream_sha": pip,
+    "pip_module": "pip_native (experimental)",
     "warnings": [
         "Not flashed or tested on real hardware",
         "No bundled MedveGoshi game scripts",
