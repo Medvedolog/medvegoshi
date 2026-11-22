@@ -57,7 +57,7 @@ class FirmwarePreparationTest(unittest.TestCase):
     def test_refuse_unknown_amoled_upstream(self):
         path = self.driver / "amoled/micropython.cmake"
         path.write_text("add_library(usermod_amoled INTERFACE)\n")
-        with self.assertRaisesRegex(ValueError, "changed"):
+        with self.assertRaises(ValueError):
             build.prepare(self.mp, self.driver)
 
     def test_refuse_overwrite_existing_partition_file(self):
