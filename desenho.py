@@ -3,6 +3,7 @@
 # So usa primitivas do framebuf: fill_rect, rect, ellipse (cheia/contorno/metade),
 # poly, pixel, line e texto 8x8. Cores em RGB e convertidas para RGB565 em C().
 import math, framebuf
+import font_ru
 from array import array
 from hw import cor, W, H
 
@@ -194,18 +195,40 @@ _fbm = framebuf.FrameBuffer(_mono, 32 * 8, 8, framebuf.MONO_HLSB)
 
 
 def texto(s, x, y, c, esc=1):
+    """ASCII fast path + Cyrillic bitmap glyphs (8x8, same cell width)."""
     x, y = ri(x), ri(y)
-    if esc == 1:
-        _fb.text(s, x, y, C(c))
+    if not any(ord(ch) > 127 for ch in s):
+        if esc == 1:
+            _fb.text(s, x, y, C(c))
+            return
+        s = s[:32]
+        _fbm.fill(0)
+        _fbm.text(s, 0, 0, 1)
+        k = C(c)
+        for py in range(8):
+            for pxx in range(len(s) * 8):
+                if _fbm.pixel(pxx, py):
+                    _fb.fill_rect(x + pxx * esc, y + py * esc, esc, esc, k)
         return
-    s = s[:32]
-    _fbm.fill(0)
-    _fbm.text(s, 0, 0, 1)
+
+    # MicroPython framebuf.text() only supports Latin/ASCII. Draw Cyrillic
+    # locally and let it handle basic punctuation and Latin characters.
     k = C(c)
-    for py in range(8):
-        for pxx in range(len(s) * 8):
-            if _fbm.pixel(pxx, py):
-                _fb.fill_rect(x + pxx * esc, y + py * esc, esc, esc, k)
+    for i, ch in enumerate(s[:32]):
+        xx = x + i * 8 * esc
+        if font_ru.draw_char(_fb, ch, xx, y, k, esc):
+            continue
+        if ord(ch) > 127:             # Unknown glyph: a small fallback box.
+            _fb.rect(xx + esc, y + esc, 6 * esc, 6 * esc, k)
+        elif esc == 1:
+            _fb.text(ch, xx, y, k)
+        else:
+            _fbm.fill(0)
+            _fbm.text(ch, 0, 0, 1)
+            for py in range(8):
+                for px in range(8):
+                    if _fbm.pixel(px, py):
+                        _fb.fill_rect(xx + px * esc, y + py * esc, esc, esc, k)
 
 
 def centro(s, y, c, esc=1):
@@ -405,7 +428,7 @@ def presente(tipo, x, y, t):
 def tela_wifi(qr, linhas, celular=False):
     """Tela de configurar o Wi-Fi: QR de entrar na rede da placa e o passo a passo."""
     rect(0, 0, W, H, TRAY)
-    centro('Wi-Fi do bichinho', 14, CREME)
+    centro('Wi-Fi питомца', 14, CREME)
     n = len(qr)
     k = 144 // n
     lado = n * k
@@ -800,8 +823,8 @@ def naufrago(cx, pe, olhos, boca, doente, s, ol):
 
 
 ELENCO = ('capi', 'elefante', 'pato', 'polvo', 'calopsita', 'cachorro', 'gato', 'et', 'sapinho', 'naufrago')
-NOMES = {'capi': 'Capi', 'pato': 'Pato', 'elefante': 'Elefante', 'polvo': 'Polvo', 'calopsita': 'Calopsita',
-         'cachorro': 'Caramelo', 'gato': 'Gato', 'et': 'ET', 'sapinho': 'Sapinho', 'naufrago': 'Naufrago'}
+NOMES = {'capi': 'Капи', 'pato': 'Утка', 'elefante': 'Слон', 'polvo': 'Осьминог', 'calopsita': 'Попугай',
+         'cachorro': 'Карамелька', 'gato': 'Кот', 'et': 'ET', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон'}
 _FUNCS = {'capi': capi, 'pato': pato, 'elefante': elefante, 'polvo': polvo, 'calopsita': calopsita,
           'cachorro': cachorro, 'gato': gato, 'et': et, 'sapinho': sapinho, 'naufrago': naufrago}
 
@@ -1251,7 +1274,7 @@ def botao_pet(x, y):
 
 # ------------------------------------------------------------ menu de ajustes
 MENU_FUNDO = 272
-MODOS = (('pet', 'Cuidar'), ('companion', 'Olhar'), ('explore', 'Passear'))
+MODOS = (('pet', 'Уход'), ('companion', 'Жизнь'), ('explore', 'Гулять'))
 VEL_MIN = {1: 30, 2: 15, 3: 10}
 AJUSTES_ROT = ('-1m', '-1h', '+1h', '+1m')       # acertar o relogio sem internet
 AJUSTES_MIN = (-1, -60, 60, 1)
@@ -1270,12 +1293,12 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
          legenda='', fase='adulto', wifi=1):
     """Painel de ajustes com a borda de baixo em y = borda (0 a 272).
     pendente = personagem escolhido nas setas e ainda nao confirmado;
-    confirma = 'trocar' ou 'zerar' mostra a pergunta 'comeca do zero' no lugar da hora;
+    confirma = 'trocar' ou 'Сброс' mostra a pergunta 'comeca do zero' no lugar da hora;
     wifi = barrinhas do canto (tocar nelas abre o Wi-Fi): 0 sem rede, 1 configurada, 2 internet ok."""
     o = borda - MENU_FUNDO                     # tudo desce junto com o painel
     rect(0, o, W, MENU_FUNDO - 10, TRAY)
     rrect(0, o + MENU_FUNDO - 22, W, 22, 10, TRAY)
-    centro('Ajustes', o + 12, CREME)
+    centro('Настройки', o + 12, CREME)
     onda = CREME if som_ligado else MUTEDM
     rect(196, o + 13, 3, 5, CREME); poly(198, o + 15, (0, -1, 6, -5, 6, 8, 0, 4), CREME)
     rect(206, o + 13, 1, 5, onda); rect(209, o + 11, 1, 9, onda)
@@ -1283,10 +1306,10 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
         linha(194, o + 22, 211, o + 9, VERMELHO)
     for i in range(3):
         rect(36 + i * 4, o + 19 - i * 3, 3, 3 + i * 3, CREME if i < (0, 2, 3)[wifi] else MUTEDM)
-    texto('modo', 20, o + 29, MUTEDM)
+    texto('Режим', 20, o + 29, MUTEDM)
     for i, (mid, rot) in enumerate(MODOS):
         _seg(20 + i * 68, o + 40, 64, 30, rot, modo == mid)
-    texto('personagem', 20, o + 78, MUTEDM)
+    texto('Персонаж', 20, o + 78, MUTEDM)
     mostra = pendente or id
     n = len(ELENCO)
     idx = ELENCO.index(mostra) if mostra in ELENCO else 0
@@ -1306,27 +1329,27 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
     if confirma:
         rrect(16, o + 168, 208, 74, 8, TRAY_BTN)
         if confirma == 'trocar':
-            centro('Trocar de bicho?', o + 176, CREME)
-            centro('Comeca do zero!', o + 190, ACC)
+            centro('Сменить друга?', o + 176, CREME)
+            centro('Начнём с яйца!', o + 190, ACC)
         else:
-            centro('Recomecar?', o + 176, CREME)
-            centro('Volta a ser ovo!', o + 190, ACC)
-        _seg(24, o + 206, 92, 28, 'Sim', True)
-        _seg(124, o + 206, 92, 28, 'Nao', False, TRAY)
+            centro('Начать заново?', o + 176, CREME)
+            centro('Снова яйцо!', o + 190, ACC)
+        _seg(24, o + 206, 92, 28, 'Да', True)
+        _seg(124, o + 206, 92, 28, 'Нет', False, TRAY)
     else:
-        texto('hora', 20, o + 171, MUTEDM)
-        _seg(20, o + 182, 98, 26, 'Real', hora_modo == 'real')
-        _seg(122, o + 182, 98, 26, 'Simulada', hora_modo == 'sim')
+        texto('Время', 20, o + 171, MUTEDM)
+        _seg(20, o + 182, 98, 26, 'Обычное', hora_modo == 'real')
+        _seg(122, o + 182, 98, 26, 'Ускорить', hora_modo == 'sim')
         if hora_modo == 'sim':
             for i, v in enumerate((1, 2, 3)):
                 _seg(20 + i * 68, o + 214, 64, 22, '%dx' % v, vel == v)
-            centro('dia em %d min' % VEL_MIN[vel], o + 244, MUTEDM)
+            centro('сутки за %d мин' % VEL_MIN[vel], o + 244, MUTEDM)
         else:
             for i, rot in enumerate(AJUSTES_ROT):
                 _seg(20 + i * 51, o + 214, 47, 22, rot, False)
-            centro('agora ' + relogio, o + 242, CREME)
+            centro('Сейчас ' + relogio, o + 242, CREME)
         _seg(16, o + 248, 48, 18, 'zerar', False)
-        _seg(176, o + 248, 48, 18, 'som' if som_ligado else 'mudo', som_ligado)   # liga/desliga o som
+        _seg(176, o + 248, 48, 18, 'Звук' if som_ligado else 'Тихо', som_ligado)   # liga/desliga o som
     rrect(100, o + 256, 40, 4, 2, MUTEDM)
     if borda < H:
         hl(0, borda, W, (24, 18, 26))
