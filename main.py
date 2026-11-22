@@ -431,11 +431,11 @@ def fase_vida():
 def legenda_vida():
     f = fase_vida()
     if f == 'ovo':
-        return '%s, ovo' % nome()
+        return '%s: яйцо' % nome()
     if f == 'estrela':
-        return '%s, estrela' % nome()
+        return '%s: звезда' % nome()
     dias = int(pet['idade_min'] // DIA_MIN)
-    return '%s, %d dia%s' % (nome(), dias, '' if dias == 1 else 's')
+    return '%s: %d дн.' % (nome(), dias)
 
 
 def novo_ovo(id=None):
@@ -1317,7 +1317,7 @@ def acao_menu(x, y):
     elif k == 'sim':
         novo_ovo(menu_pend if menu_conf == 'trocar' else None)
         menu_pend = menu_conf = None
-        sistema('Um ovo novo!')
+        sistema('Новое яйцо!')
     elif k == 'nao':
         menu_pend = menu_conf = None
     elif k == 'hora' and v != cfg['hora']:
