@@ -2,7 +2,7 @@ name: Python and Cyrillic checks
 
 on:
   push:
-    branches: ["feature/russian-game-ui", "feature/zoo-lab-pip"]
+    branches: ["feature/russian-game-ui", "feature/zoo-lab-pip", "feature/zoo-sprite-pipeline"]
   pull_request:
 
 jobs:
