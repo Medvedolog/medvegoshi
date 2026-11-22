@@ -96,6 +96,51 @@ python3 -m unittest discover -s zoo/tests -p 'test_*.py'
 - оба буфера вместе — **466 048 байт**, без расходов MicroPython,
   Zoo, драйверов, аудио и мозга. Физических замеров PSRAM/FPS пока нет.
 
+## Нативная сборка MicroPython с SH8601/QSPI — воспроизводимый прототип
+
+Добавлена отдельная [сборка GitHub Actions](https://github.com/Medvedolog/medvegoshi/actions/workflows/build-amoled-v1.yml).
+Она **не прошивает плату**, не меняет IPS и не публикует релиз.
+При успешной компиляции появляется артефакт `medvegoshi-v1-native-UNTESTED`
+с файлом `medvegoshi-amoled-v1-experimental.bin`, `SHA256SUMS`,
+`BUILD-METADATA.json`, файлом подготовки и оригинальной MIT-лицензией.
+Бинарник **без файлов игры MedveGoshi** и не рассчитан на установку без
+дополнительной проверки аппаратной ревизии. Даже успешная сборка не
+означает, что SH8601 действительно заработал на устройстве.
+
+Зафиксированные источники:
+
+- MicroPython [v1.28.0, SHA `e0e9fbb17ed6fd06bb76e266ae554784c9c80804`](https://github.com/micropython/micropython/tree/e0e9fbb17ed6fd06bb76e266ae554784c9c80804);
+- ESP-IDF [v5.5.2](https://github.com/espressif/esp-idf/tree/v5.5.2), Docker
+  `espressif/idf:v5.5.2` с зафиксированным индексом SHA256;
+- MIT-драйвер [dobodu/Lilygo_Waveshare_Amoled_Micropython, SHA `97934b7c35b1720a14fd69e4e1322bb5684b9b2c`](https://github.com/dobodu/Lilygo_Waveshare_Amoled_Micropython/tree/97934b7c35b1720a14fd69e4e1322bb5684b9b2c).
+
+Скрипты `ports/build_amoled_v1.sh` и `ports/prepare_firmware.py` скачивают
+названные исходники по **точным коммитам**. Последний корректирует
+некорректный CMake-файл нативного модуля в отдельной временной копии,
+подключает `schrift.c` и включает схему **Flash 16 МБ / Octal PSRAM**.
+В наши исходники не импортирован сторонний графический C-код.
+Любые изменения расположения файлов или лицензии upstream прерывают сборку.
+
+На Linux с установленным ESP-IDF 5.5.2 (или внутри одноимённого Docker
+image) воспроизвести сборку можно командой:
+
+```bash
+bash ports/build_amoled_v1.sh
+```
+
+Обычные проверки выполняются без компилятора ESP32:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_amoled_native_build.py'
+```
+
+**Подключение к игре — пока ограничено графикой:**
+`ports/v1_game_demo.py` вызывает подлинные `desenho.usar()` и
+`desenho.personagem('girafa', ...)` поверх AMOLED-адаптера без копии
+`main.py`. Ручной V1 smoke-тест показывает Жирафика после проверки
+цветных полос и тача. Полный игровой цикл ещё требует общего HAL
+для RTC, QMI8658, ES8311, AXP2101 и кнопок.
+
 ## Следующие этапы
 
 - [x] V1 GPIO/QSPI/FT3168 и TCA9554 вынесены в отдельный экспериментальный порт.
