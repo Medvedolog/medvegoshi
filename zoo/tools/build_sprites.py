@@ -141,6 +141,10 @@ def assemble_frame(image, source_anchor, scale, target_anchor, width, height):
 def compile_pack(source, output, size=(96, 112), target="ips",
                  margin=4, fps=4, max_kib=768, overwrite=False):
     source, output = Path(source), Path(output)
+    # Protect the input art and its parents from accidental --overwrite.
+    s, o = source.resolve(), output.resolve()
+    if s == o or s in o.parents or o in s.parents:
+        raise ValueError("source and output must be separate, non-nested directories")
     width, height = size
     if target not in ALLOWED_TARGETS:
         raise ValueError("unknown target")
@@ -167,6 +171,14 @@ def compile_pack(source, output, size=(96, 112), target="ips",
             old = json.load(handle)
         if old.get("format") != "medvegoshi-rgb565-mask-v1":
             raise ValueError("refusing to overwrite foreign directory")
+        if old.get("id") != data["id"]:
+            raise ValueError("refusing to overwrite a different pack")
+        expected = {"manifest.json"}
+        for frame in old.get("frames", []):
+            expected.update((frame.get("rgb565"), frame.get("mask")))
+        if any(p.is_symlink() or not p.is_file() or p.name not in expected
+               for p in output.iterdir()):
+            raise ValueError("refusing to overwrite non-generated files")
         shutil.rmtree(output)
     output.mkdir(parents=True, exist_ok=True)
 
