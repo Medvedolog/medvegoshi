@@ -28,9 +28,15 @@ def load_config(path, defaults, available):
     """
     try:
         os.stat(path)
-    except OSError:
-        # New device, no active pet yet: use independent defaults.
-        return dict(defaults)
+    except OSError as err:
+        # Only ENOENT means a normal new device. An I/O error must NOT
+        # be treated as an empty save and followed by a new write.
+        code = getattr(err, "errno", None)
+        if code is None and err.args:
+            code = err.args[0]
+        if code == 2:
+            return dict(defaults)
+        raise RecoveryRequired("config_corrupt")
 
     try:
         with open(path, "r") as fd:
@@ -53,8 +59,13 @@ def load_pet(path, defaults):
     """Read the shared capi.json slot without ever accepting invalid JSON."""
     try:
         os.stat(path)
-    except OSError:
-        return dict(defaults)
+    except OSError as err:
+        code = getattr(err, "errno", None)
+        if code is None and err.args:
+            code = err.args[0]
+        if code == 2:
+            return dict(defaults)
+        raise RecoveryRequired("pet_corrupt")
     try:
         with open(path, "r") as fd:
             data = json.load(fd)
