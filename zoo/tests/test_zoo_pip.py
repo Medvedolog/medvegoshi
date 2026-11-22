@@ -77,7 +77,7 @@ class CatalogueCompatibilityTests(unittest.TestCase):
         self.assertIn("Жирафик", vida.NOMES.values())
 
     def test_character_metadata_match_render_list(self):
-        cast = top_constant("desenho.py", "ELENCO")
+        cast = registry.ELENCO
         art_names = registry.NOMES
         art_heights = registry.HTOP
         self.assertEqual(set(cast), set(art_names))
