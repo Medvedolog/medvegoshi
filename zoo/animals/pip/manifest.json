@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "id": "pip",
+  "name_ru": "Пип",
+  "htop": 86,
+  "head": -64,
+  "top": -87,
+  "half": 35,
+  "eyes": [
+    [
+      -15,
+      -80
+    ],
+    [
+      15,
+      -80
+    ]
+  ],
+  "thermometer": [
+    35,
+    -60
+  ],
+  "ring": [
+    14,
+    15,
+    40
+  ],
+  "license": "MIT",
+  "author": "MedveGoshi contributors; expressive-eye concept by David Novikov (Pip-KeyPet)",
+  "source_url": "https://github.com/Medvedolog/medvegoshi/blob/feature/zoo-lab-pip/zoo/pip/face.py",
+  "phrases": {
+    "ocioso": [
+      "Пип-пип!",
+      "Я тебя вижу!",
+      "Посмотри|в мои глаза!",
+      "Поиграем?",
+      "Бип-бип!"
+    ],
+    "carinho": [
+      "Ой, щекотно!",
+      "Ты мой друг!"
+    ]
+  }
+}
