@@ -154,8 +154,8 @@ def _select(pack, eyes, mouth, sick):
 
 def _check_frame(pack, frame):
     name = frame["name"]
-    if pack["verified"].get(name):
-        return True
+    if name in pack["verified"]:
+        return pack["verified"][name]
     path = pack["base"] + "/" + name
     h = hashlib.sha256()
     for suffix in (".rgb565", ".mask"):
@@ -165,10 +165,9 @@ def _check_frame(pack, frame):
                 if not piece:
                     break
                 h.update(piece)
-    if hexlify(h.digest()).decode("ascii") != frame["sha256"]:
-        return False
-    pack["verified"][name] = True
-    return True
+    valid = hexlify(h.digest()).decode("ascii") == frame["sha256"]
+    pack["verified"][name] = valid
+    return valid
 
 
 def _mask_for(pack, frame):
@@ -286,11 +285,10 @@ def draw(fb, hero, cx, feet, scale, eyes="normal", mouth="sorriso",
         return None
     try:
         if not _check_frame(pack, frame):
-            pack["verified"].pop(frame["name"], None)
             return None
         return _paint(fb, pack, frame, cx, feet, scale,
                       disp_w, disp_h, prefer_blit)
     except (OSError, ValueError, TypeError, IndexError, MemoryError):
         # A missing/corrupt optional art resource must never prevent play.
-        pack["verified"].pop(frame["name"], None)
+        pack["verified"][frame["name"]] = False
         return None
