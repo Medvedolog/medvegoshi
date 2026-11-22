@@ -2,11 +2,11 @@
 Pip-KeyPet, Giraffegotchi and TamaPetchi, but implemented for MedveGoshi.
 All tests here run on CPython without a device or additional packages.
 """
-import ast
 from pathlib import Path
 import unittest
 
 import vida
+from zoo import registry
 from zoo.pip.face import render
 
 
@@ -28,16 +28,6 @@ class RecordingPrimitives:
         self.ops.append(("rect", x, y, w, h, color))
         if w <= 0 or h <= 0:
             raise AssertionError("invalid rect size")
-
-
-def top_constant(filepath, key):
-    tree = ast.parse((ROOT / filepath).read_text(encoding="utf-8"))
-    for node in tree.body:
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == key:
-                    return ast.literal_eval(node.value)
-    raise AssertionError("missing constant: %s in %s" % (key, filepath))
 
 
 class PipFaceTests(unittest.TestCase):
@@ -76,7 +66,7 @@ class PipFaceTests(unittest.TestCase):
 
 class CatalogueCompatibilityTests(unittest.TestCase):
     def test_pip_is_opt_in_and_original_cast_is_kept(self):
-        cast = top_constant("desenho.py", "ELENCO")
+        cast = registry.ELENCO
         self.assertEqual(12, len(cast))
         self.assertEqual("pip", cast[-2])
         self.assertEqual("girafa", cast[-1])
@@ -88,8 +78,8 @@ class CatalogueCompatibilityTests(unittest.TestCase):
 
     def test_character_metadata_match_render_list(self):
         cast = top_constant("desenho.py", "ELENCO")
-        art_names = top_constant("desenho.py", "NOMES")
-        art_heights = top_constant("desenho.py", "HTOP")
+        art_names = registry.NOMES
+        art_heights = registry.HTOP
         self.assertEqual(set(cast), set(art_names))
         self.assertEqual(set(cast), set(art_heights))
         self.assertEqual(set(cast), set(vida.HTOP))
