@@ -18,7 +18,7 @@ from machine import I2C, Pin
 import hw
 import desenho as d
 import vida as V
-from zoo import recovery as zoo_recovery
+from zoo import recovery as zoo_recovery, pet_slots, switch_pet
 import rede
 from hw import W, H
 
@@ -77,10 +77,18 @@ def carregar(nome, padrao):
 
 def salvar(nome, dados):
     try:
-        with open(nome, 'w') as f:
-            json.dump(dados, f)
-    except Exception as e:
+        if nome.startswith('pet_saves/'):
+            pet_slots.save_pet(cfg['personagem'], dados)
+        elif nome == 'config.json':
+            pet_slots.save_json(nome, dados)
+        else:
+            # Unlike config and pet data, presentes.json is a JSON array.
+            with open(nome, 'w') as f:
+                json.dump(dados, f)
+        return True
+    except (OSError, ValueError, TypeError, MemoryError, zoo_recovery.RecoveryRequired) as e:
         print('Erro ao salvar', nome, e)
+        return False
 
 
 # A missing optional Zoo animal must NEVER silently become Capi:
@@ -111,12 +119,21 @@ AQUECER_MIN = AQUECER_SEG / 60 * FATOR_OVO
 
 
 def arquivo_pet(id):
-    return 'capi.json'      # um bichinho por vez: trocar de personagem comeca do zero
+    return pet_slots.pet_path(id)
 
 
-# The same fail-closed policy applies to corrupt/truncated pet saves.
-pet = zoo_recovery.require_pet(
-    arquivo_pet(cfg['personagem']), PET_PADRAO, tela, d)
+# A legacy save is copied exactly once, to the recorded active pet only.
+# Boot must stop if its owner or the active slot cannot be verified.
+try:
+    pet_slots.prepare(cfg['personagem'])
+    pet = pet_slots.load_pet(cfg['personagem'], PET_PADRAO)
+except zoo_recovery.RecoveryRequired as exc:
+    try:
+        zoo_recovery.show_recovery(tela, d, exc)
+    except Exception as show_error:
+        print('Zoo recovery screen unavailable:', show_error)
+    print('Zoo slot recovery:', exc.reason)
+    raise RuntimeError('MedveGoshi data protected: ' + exc.reason)
 vt = 0                      # relogio continuo da vida (ms); nao da a volta como ticks_ms
 L = V.nova(cfg['personagem'], vt)
 vida_out = None             # pose do quadro devolvida por V.passo
@@ -207,7 +224,7 @@ limpou_presentes = 0
 # menu
 menu_borda, menu_alvo, menu_arrasta = 0.0, 0, False
 menu_pend = None                       # personagem escolhido nas setas, ainda sem confirmar
-menu_conf = None                       # 'trocar' ou 'zerar': pergunta 'comeca do zero'
+menu_conf = None                       # 'trocar' ou 'zerar': acoes distintas
 
 # baloes: um por personagem ('p' principal, 'v' vizinho)
 PRIOR = {'urgente': 5, 'grito': 4, 'fala': 3, 'chamado': 2, 'pensa': 1}
@@ -444,28 +461,68 @@ def legenda_vida():
     return '%s: %d дн.' % (nome(), dias)
 
 
-def novo_ovo(id=None):
-    """Comeca do zero: ovo novo (do mesmo bichinho ou de outro)."""
-    if id:
-        cfg['personagem'] = id
+def preparar_ovo(epoch):
+    estado = dict(PET_PADRAO)
+    estado['vida_adulto'] = random.randint(VIDA_ADULTO[0], VIDA_ADULTO[1])
+    estado['epoch'] = epoch
+    return estado
+
+
+def novo_ovo():
+    """Reset the current lifecycle only; selecting another pet is not a reset."""
+    estado = preparar_ovo(relogio.epoch())
+    vida = V.nova(cfg['personagem'], vt)
+    try:
+        pet_slots.save_pet(cfg['personagem'], estado)
+    except (OSError, zoo_recovery.RecoveryRequired) as exc:
+        print('Zoo egg save:', exc)
+        return False
     pet.clear()
-    pet.update(PET_PADRAO)
+    pet.update(estado)
     L.clear()
-    L.update(V.nova(cfg['personagem'], vt))
-    pet['vida_adulto'] = random.randint(VIDA_ADULTO[0], VIDA_ADULTO[1])
-    pet['epoch'] = relogio.epoch()
+    L.update(vida)
     baloes.clear()
-    salvar(arquivo_pet(cfg['personagem']), pet)
-    salvar('config.json', cfg)
+    return True
+
+
+def trocar_pet(id):
+    global ponte, cer_seg, cer_lido, cer_ativ, vida_out, toque_vida
+    global anim, anim_ini, acc_pet, ultimo_save
+    if id not in d.ELENCO or id == cfg['personagem']:
+        raise ValueError('pet selection')
+    epoch = relogio.epoch()
+    vida = V.nova(id, vt)
+
+    def guardar_cerebro(pasta):
+        if ponte is not None:
+            # Ponte.salvar swallows I/O failures; switching must abort on one.
+            from companion.placa import gravar
+            gravar(ponte.cer, epoch or cer_seg, pasta)
+
+    estado, novo = switch_pet.activate(
+        cfg, pet, id, PET_PADRAO, epoch, lambda: preparar_ovo(epoch),
+        guardar_cerebro)
+    cfg['personagem'] = id
+    pet.clear()
+    pet.update(estado)
+    L.clear()
+    L.update(vida)
+    ponte = V.OCIOSO = None
+    cer_seg, cer_lido, cer_ativ = 0, -1000, ''
+    vida_out = toque_vida = None
+    anim, anim_ini, acc_pet = '', 0, 0
+    ultimo_save = time.ticks_ms()
+    baloes.clear()
+    return novo
 
 
 def envelhecer(dt):
     antes = fase_vida()
     if antes == 'estrela':
         if not hora_de_dormir(hora_atual()):         # de manha aparece um ovo novo
-            novo_ovo()
-            sistema('Новое яйцо!')
-            som.tocar('feliz')
+            if novo_ovo():
+                sistema('Новое яйцо!')
+                som.tocar('feliz')
         return
     pet['idade_min'] += dt / 60000 * (FATOR_OVO if antes == 'ovo' else fator_tempo())
     if antes == 'idoso' and pet['idade_min'] >= fim_da_vida() and hora_de_dormir(hora_atual()):
@@ -736,7 +793,7 @@ def atualizar_cerebro(agora):
     if ponte is None:
         from companion.placa import Ponte
         gc.collect()
-        ponte = Ponte(cer_seg)
+        ponte = Ponte(cer_seg, pasta=pet_slots.brain_dir(cfg['personagem']))
         print('cerebro: semente', ponte.cer.semente, 'idade', ponte.cer.idade_s // 3600, 'h')
     V.OCIOSO = ocioso_cerebro
     ativ = atividade_companion()
@@ -881,7 +938,9 @@ def trocar_offline():
 def abrir_wifi():
     """Para o jogo e abre a configuracao do Wi-Fi pelo celular (portal.py)."""
     global reancorar
-    pet['epoch'] = relogio.epoch()
+    epoch = relogio.epoch()
+    if epoch:
+        pet['epoch'] = epoch
     salvar(arquivo_pet(cfg['personagem']), pet)
     salvar('config.json', cfg)
     som.tocar('feliz')
@@ -1280,14 +1339,15 @@ def desenhar_vivo(agora, ph, hora, modo):
 def desenhar_sobreposicoes(agora):
     if bat_avisou:
         d.bateria_fraca(agora)
-    if sis_txt and time.ticks_diff(sis_ate, agora) > 0:
-        d.sistema(sis_txt)
     if menu_borda >= 1:
         d.menu(int(menu_borda), cfg['modo'], cfg['personagem'], cfg['hora'], cfg['vel'],
                relogio_txt(hora_real()), cfg['som'], menu_pend, menu_conf, legenda_vida(), fase_vida(),
                rede.situacao())
     else:
         d.alca()
+    # Show save/switch results above the settings panel, not behind it.
+    if sis_txt and time.ticks_diff(sis_ate, agora) > 0:
+        d.sistema(sis_txt)
 
 
 # ------------------------------------------------------------ menu de ajustes
@@ -1295,12 +1355,13 @@ def fechar_menu():
     global menu_alvo, menu_pend, menu_conf
     menu_alvo = 0
     menu_pend = menu_conf = None
-    salvar('config.json', cfg)
+    if not salvar('config.json', cfg):
+        sistema('Не удалось сохранить')
 
 
-def acao_menu(x, y):
+def acao_menu(x, y, hit=None):
     global menu_pend, menu_conf
-    r = d.menu_toque(x, y, cfg['hora'], menu_conf)
+    r = hit or d.menu_toque(x, y, cfg['hora'], menu_conf)
     if not r:
         return
     k, v = r
@@ -1317,13 +1378,21 @@ def acao_menu(x, y):
         atual = menu_pend or cfg['personagem']
         prox = d.ELENCO[(d.ELENCO.index(atual) + v) % len(d.ELENCO)]
         menu_pend = None if prox == cfg['personagem'] else prox
-        menu_conf = 'trocar' if menu_pend else None      # trocar comeca do zero: pergunta antes
+        menu_conf = 'trocar' if menu_pend else None      # confirm without resetting either pet
     elif k == 'zerar':
         menu_pend, menu_conf = None, 'zerar'
     elif k == 'sim':
-        novo_ovo(menu_pend if menu_conf == 'trocar' else None)
+        alvo, confirma = menu_pend, menu_conf
         menu_pend = menu_conf = None
-        sistema('Новое яйцо!')
+        try:
+            if confirma == 'trocar' and alvo:
+                novo = trocar_pet(alvo)
+                sistema('Новое яйцо!' if novo else 'Друг вернулся!')
+            elif confirma == 'zerar':
+                sistema('Новое яйцо!' if novo_ovo() else 'Не удалось сохранить')
+        except (OSError, ValueError, TypeError, MemoryError, zoo_recovery.RecoveryRequired) as exc:
+            print('Zoo switch:', exc)
+            sistema('Не удалось сменить друга' if confirma == 'trocar' else 'Не удалось сохранить')
     elif k == 'nao':
         menu_pend = menu_conf = None
     elif k == 'hora' and v != cfg['hora']:
@@ -1360,10 +1429,15 @@ def pressionar(x, y, agora):
             menu_borda = float(y + 14)
             return
     elif menu_alvo:
-        if y >= 250 and (x >= 68 or menu_conf):
-            menu_arrasta = True                       # arrastar a alca para cima
-        else:
-            acao_menu(x, y)
+        # Drawn positions shift with the slide animation. Match the hit
+        # coordinate system to where the controls are on this frame.
+        if y < int(menu_borda):
+            local_y = y + d.MENU_FUNDO - int(menu_borda)
+            hit = d.menu_toque(x, local_y, cfg['hora'], menu_conf)
+            if hit and hit[0] == 'fechar':
+                menu_arrasta = True                   # arrastar a alca para cima
+            elif hit:
+                acao_menu(x, local_y, hit)
         return
     if time.ticks_diff(agora, ultimo_toque) < 250:
         return
@@ -1538,7 +1612,9 @@ def passo(agora, dt):
         vida_out = None
     if time.ticks_diff(agora, ultimo_save) > 60000:
         ultimo_save = agora
-        pet['epoch'] = relogio.epoch()
+        epoch = relogio.epoch()
+        if epoch:
+            pet['epoch'] = epoch
         salvar(arquivo_pet(cfg['personagem']), pet)
     desenhar_jogo(agora)
     desenhar_sobreposicoes(agora)

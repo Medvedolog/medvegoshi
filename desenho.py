@@ -1316,8 +1316,9 @@ def botao_pet(x, y):
 MENU_FUNDO = 272
 MODOS = (('pet', 'Уход'), ('companion', 'Жизнь'), ('explore', 'Гулять'))
 VEL_MIN = {1: 30, 2: 15, 3: 10}
-AJUSTES_ROT = ('-1m', '-1h', '+1h', '+1m')       # acertar o relogio sem internet
+AJUSTES_ROT = ('-1 мин', '-1 ч', '+1 ч', '+1 мин')
 AJUSTES_MIN = (-1, -60, 60, 1)
+MENU_CLOCK_X, MENU_CLOCK_STEP, MENU_CLOCK_W = 16, 53, 49
 
 
 def _seg(x, y, w, h, rot, ligado, fundo=TRAY_BTN):
@@ -1333,12 +1334,12 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
          legenda='', fase='adulto', wifi=1):
     """Painel de ajustes com a borda de baixo em y = borda (0 a 272).
     pendente = personagem escolhido nas setas e ainda nao confirmado;
-    confirma = 'trocar' ou 'zerar' mostra a pergunta 'comeca do zero' no lugar da hora;
+    confirma = 'trocar' ou 'zerar' mostra a acao no lugar da hora;
     wifi = barrinhas do canto (tocar nelas abre o Wi-Fi): 0 sem rede, 1 configurada, 2 internet ok."""
     o = borda - MENU_FUNDO                     # tudo desce junto com o painel
     rect(0, o, W, MENU_FUNDO - 10, TRAY)
     rrect(0, o + MENU_FUNDO - 22, W, 22, 10, TRAY)
-    centro('Настройки', o + 12, CREME)
+    centro('Настройки', o + 9, BRANCO, 2)
     onda = CREME if som_ligado else MUTEDM
     rect(196, o + 13, 3, 5, CREME); poly(198, o + 15, (0, -1, 6, -5, 6, 8, 0, 4), CREME)
     rect(206, o + 13, 1, 5, onda); rect(209, o + 11, 1, 9, onda)
@@ -1346,10 +1347,11 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
         linha(194, o + 22, 211, o + 9, VERMELHO)
     for i in range(3):
         rect(36 + i * 4, o + 19 - i * 3, 3, 3 + i * 3, CREME if i < (0, 2, 3)[wifi] else MUTEDM)
-    texto('Режим', 20, o + 29, MUTEDM)
+    texto('Режим', 20, o + 29, CREME)
     for i, (mid, rot) in enumerate(MODOS):
         _seg(20 + i * 68, o + 40, 64, 30, rot, modo == mid)
-    texto('Персонаж', 20, o + 78, MUTEDM)
+    texto('Твой питомец', 16, o + 76, CREME)
+    _seg(116, o + 73, 108, 14, 'Сменить друга', bool(pendente))
     mostra = pendente or id
     n = len(ELENCO)
     idx = ELENCO.index(mostra) if mostra in ELENCO else 0
@@ -1370,14 +1372,16 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
         rrect(16, o + 168, 208, 74, 8, TRAY_BTN)
         if confirma == 'trocar':
             centro('Сменить друга?', o + 176, CREME)
-            centro('Начнём с яйца!', o + 190, ACC)
+            centro('Прогресс сохранится', o + 190, ACC)
+            confirm_label = 'Сменить'
         else:
-            centro('Начать заново?', o + 176, CREME)
-            centro('Снова яйцо!', o + 190, ACC)
-        _seg(24, o + 206, 92, 28, 'Да', True)
-        _seg(124, o + 206, 92, 28, 'Нет', False, TRAY)
+            centro('Сбросить прогресс?', o + 176, CREME)
+            centro('Этот друг начнёт с яйца', o + 190, ACC)
+            confirm_label = 'Сбросить'
+        _seg(24, o + 206, 92, 28, confirm_label, True)
+        _seg(124, o + 206, 92, 28, 'Отмена', False, TRAY)
     else:
-        texto('Время', 20, o + 171, MUTEDM)
+        texto('Время', 20, o + 171, CREME)
         _seg(20, o + 182, 98, 26, 'Обычное', hora_modo == 'real')
         _seg(122, o + 182, 98, 26, 'Ускорить', hora_modo == 'sim')
         if hora_modo == 'sim':
@@ -1386,51 +1390,62 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
             centro('сутки за %d мин' % VEL_MIN[vel], o + 244, MUTEDM)
         else:
             for i, rot in enumerate(AJUSTES_ROT):
-                _seg(20 + i * 51, o + 214, 47, 22, rot, False)
-            centro('Сейчас ' + relogio, o + 242, CREME)
-        _seg(16, o + 248, 48, 18, 'zerar', False)
-        _seg(176, o + 248, 48, 18, 'Звук' if som_ligado else 'Тихо', som_ligado)   # liga/desliga o som
-    rrect(100, o + 256, 40, 4, 2, MUTEDM)
+                _seg(MENU_CLOCK_X + i * MENU_CLOCK_STEP, o + 214, MENU_CLOCK_W, 22, rot, False)
+            centro('Сейчас ' + relogio, o + 240, CREME)
+        _seg(16, o + 248, 52, 18, 'Сброс', False)
+        _seg(172, o + 248, 52, 18, 'Звук' if som_ligado else 'Тихо', som_ligado)
+    rrect(100, o + 256, 40, 4, 2, CREME)
     if borda < H:
         hl(0, borda, W, (24, 18, 26))
 
 
 def menu_toque(x, y, hora_modo, confirma=None):
-    """Mesmas areas do menuHit() da referencia, mais som, acerto do relogio, zerar e confirmacao."""
-    if y < 26 and x > 186:
+    """Hit boxes in the coordinate system of the fully open settings panel."""
+    if not (0 <= x < W and 0 <= y < MENU_FUNDO):
+        return None
+    if y < 26 and 194 <= x < 224:
         return ('som', None)
-    if y < 30 and x < 64:
+    if y < 26 and 16 <= x < 49:
         return ('wifi', None)
     if 40 <= y < 70:
-        i = (x - 20) // 68
-        if 0 <= i < 3:
+        i, local_x = divmod(x - 20, 68)
+        if 0 <= i < 3 and local_x < 64:
             return ('modo', MODOS[i][0])
+    if 73 <= y < 87 and 116 <= x < 224:
+        return ('personagem', 1)
     if 88 <= y < 164:
         if x < 82:
             return ('personagem', -1)
         if x > 158:
             return ('personagem', 1)
         return ('cartao', None)
+    if 250 <= y < MENU_FUNDO and 92 <= x < 148:
+        return ('fechar', None)
     if confirma:
-        if 204 <= y < 236:
-            return ('sim', None) if x < 120 else ('nao', None)
-        if y >= 250:
-            return ('fechar', None)
+        if 206 <= y < 234:
+            if 24 <= x < 116:
+                return ('sim', None)
+            if 124 <= x < 216:
+                return ('nao', None)
         return None
     if 182 <= y < 208:
-        return ('hora', 'real' if x < 120 else 'sim')
+        if 20 <= x < 118:
+            return ('hora', 'real')
+        if 122 <= x < 220:
+            return ('hora', 'sim')
     if hora_modo == 'sim' and 214 <= y < 236:
-        i = (x - 20) // 68
-        if 0 <= i < 3:
+        i, local_x = divmod(x - 20, 68)
+        if 0 <= i < 3 and local_x < 64:
             return ('vel', i + 1)
-    if hora_modo != 'sim' and 212 <= y < 238 and 20 <= x < 222:
-        return ('ajuste', AJUSTES_MIN[min(3, (x - 20) // 51)])
-    if y >= 246 and x < 68:
-        return ('zerar', None)
-    if y >= 246 and x >= 172:
-        return ('som', None)
-    if y >= 250:
-        return ('fechar', None)
+    if hora_modo == 'real' and 214 <= y < 236:
+        i, local_x = divmod(x - MENU_CLOCK_X, MENU_CLOCK_STEP)
+        if 0 <= i < len(AJUSTES_MIN) and local_x < MENU_CLOCK_W:
+            return ('ajuste', AJUSTES_MIN[i])
+    if 248 <= y < 266:
+        if 16 <= x < 68:
+            return ('zerar', None)
+        if 172 <= x < 224:
+            return ('som', None)
     return None
 
 

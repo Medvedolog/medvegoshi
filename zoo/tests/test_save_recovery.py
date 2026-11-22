@@ -152,11 +152,14 @@ class ZooRecoveryTests(unittest.TestCase):
     def test_main_checks_config_before_loading_pet(self):
         src = (ROOT / "main.py").read_text(encoding="utf-8")
         self.assertIn("zoo_recovery.require_config", src)
-        self.assertIn("zoo_recovery.require_pet", src)
+        self.assertIn("pet_slots.prepare", src)
+        self.assertIn("pet_slots.load_pet", src)
         self.assertNotIn("cfg['personagem'] = 'capi'", src)
         self.assertLess(src.index("zoo_recovery.require_config"),
-                        src.index("zoo_recovery.require_pet"))
-        self.assertLess(src.index("zoo_recovery.require_pet"),
+                        src.index("pet_slots.prepare"))
+        self.assertLess(src.index("pet_slots.prepare"),
+                        src.index("pet_slots.load_pet"))
+        self.assertLess(src.index("pet_slots.load_pet"),
                         src.index("vt = 0"))
 
     def test_software_update_copies_main_last(self):

@@ -1,4 +1,4 @@
-"""Fail-closed recovery for MedveGoshi's single-pet save slot.
+"""Fail-closed recovery for MedveGoshi settings and pet saves.
 
 This module must stay compatible with MicroPython on the original IPS.
 If config.json names an unavailable plugin, NEVER substitute Capi and write
@@ -18,6 +18,19 @@ class RecoveryRequired(Exception):
         self.reason = reason
         self.pet_id = pet_id
         Exception.__init__(self, reason)
+
+
+_SLOT_MESSAGES = {
+    "slot_filesystem": "Нужна LittleFS2",
+    "slot_bad_id": "Неизвестный ID питомца",
+    "slot_destination_conflict": "Есть другое сохранение",
+    "slot_io": "Нет доступа к файлам",
+    "slot_journal_conflict": "Конфликт журнала переноса",
+    "slot_not_ready": "Перенос не завершён",
+    "slot_owner_conflict": "Владелец не совпадает",
+    "slot_owner_unknown": "Кому принадлежит файл?",
+    "slot_source_changed": "Старый файл изменился",
+}
 
 
 def load_config(path, defaults, available):
@@ -117,13 +130,22 @@ def show_recovery(tela, desenho, error):
         desenho.centro("zoo/animals", 158, dark)
     elif error.reason == "pet_corrupt":
         desenho.centro("ОШИБКА СОХРАНЕНИЯ", 59, red)
-        desenho.centro("capi.json поврежден", 93, dark)
+        desenho.centro("Файл питомца не читается", 93, dark)
+        if error.pet_id:
+            desenho.centro(error.pet_id[:28], 112, red)
         desenho.centro("Восстановите файл", 137, dark)
-    else:
+    elif error.reason == "config_corrupt":
         desenho.centro("ОШИБКА НАСТРОЕК", 59, red)
         desenho.centro("config.json поврежден", 93, dark)
         desenho.centro("Восстановите файл", 137, dark)
-    desenho.centro("Данные не изменены", 202, dark)
+    else:
+        desenho.centro("СЛОТ НЕ ОТКРЫТ", 59, red)
+        desenho.centro(_SLOT_MESSAGES.get(error.reason, "Ошибка чтения данных"), 93, dark)
+        if error.pet_id:
+            desenho.centro(error.pet_id[:28], 112, red)
+        desenho.centro("Не сбрасывайте данные", 137, dark)
+    desenho.centro("Старые файлы не стёрты" if error.reason.startswith("slot_") else
+                   "Данные не изменены", 202, dark)
     desenho.centro("Подключите USB", 228, dark)
     tela.mostrar()
 
@@ -139,3 +161,4 @@ def require_config(path, defaults, available, tela, desenho):
             print("Zoo recovery screen unavailable:", show_error)
         print("Zoo recovery: %s, pet_id=%s" % (exc.reason, exc.pet_id))
         raise RuntimeError("MedveGoshi data protected: " + exc.reason)
+
