@@ -2,8 +2,8 @@
 
 > **Дата среза:** 22 ноября 2026 г.  
 > **Репозиторий:** https://github.com/Medvedolog/medvegoshi  
-> **Рабочая ветка:** `feature/zoo-lab-pip`  
-> **Базовый PR:** [#3 — Zoo и Пип](https://github.com/Medvedolog/medvegoshi/pull/3), направлен в `feature/russian-game-ui`  
+> **Текущая рабочая ветка:** `feature/zoo-plugin-registry`  
+> **Текущий PR:** [#7 — модульный реестр животных](https://github.com/Medvedolog/medvegoshi/pull/7) → `feature/zoo-giraffe-first-pack` (PR #6) → PR #5 → PR #4 → PR #3 → PR #2  
 > **Статус:** техническое задание на продолжение работ, **не заявление о готовности перечисленных функций**.
 
 ## 0. Цель и неизменяемые требования
@@ -26,9 +26,13 @@
 
 - [PR #1](https://github.com/Medvedolog/medvegoshi/pull/1) — русская документация; `docs/russian-first → main`, открыт, не объединён.
 - [PR #2](https://github.com/Medvedolog/medvegoshi/pull/2) — кириллица и русские реплики/меню, профиль IPS, скрипт `install.sh`; `feature/russian-game-ui → main`, открыт как draft, не объединён.
-- [PR #3](https://github.com/Medvedolog/medvegoshi/pull/3) — Zoo; `feature/zoo-lab-pip → feature/russian-game-ui`, открыт как draft, не объединён.
+- [PR #3](https://github.com/Medvedolog/medvegoshi/pull/3) — Zoo и Пип; `feature/zoo-lab-pip → feature/russian-game-ui`.
+- [PR #4](https://github.com/Medvedolog/medvegoshi/pull/4) — конвертер PNG → RGB565.
+- [PR #5](https://github.com/Medvedolog/medvegoshi/pull/5) — построчный sprite renderer и fallback.
+- [PR #6](https://github.com/Medvedolog/medvegoshi/pull/6) — оригинальный Жирафик.
+- [PR #7](https://github.com/Medvedolog/medvegoshi/pull/7) — универсальный реестр подключаемых животных и инсталлятор.
 
-**Порядок интеграции:** закончить проверку документации #1 и локализации #2; затем переносить Zoo #3 через его целевую ветку. При изменении базы PR пересчитать diff и перепроверить GitHub Actions. Не утверждать, что код уже находится в `main`.
+**Порядок интеграции:** после проверки документации #1 и локализации #2 объединять зависимые PR строго по цепочке #3 → #4 → #5 → #6 → #7. При смене базы пересчитать diff и прогнать CI. **Ни один из этих PR не считать уже находящимся в `main`.**
 
 ### 1.2. Готово в PR #3
 
