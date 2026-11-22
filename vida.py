@@ -3,16 +3,15 @@
 # Tempos em ms de um relogio continuo (nao usa ticks_ms, que da a volta em alguns dias).
 # Textos sem acento (fonte 8x8), no maximo 2 linhas x 14 letras ('|' quebra a linha).
 import math, random
+from zoo import registry as zoo_registry
 
 FEET = 205
 IGNORADO_MS = 600000        # 10 min sem atencao: chora e chama
 ACORDA_MS = 60000           # barulho, sacudida ou toque dormindo: fica 1 min acordado
 OCIOSO = None               # main.py troca pelo cerebro no modo Olhar: f(L, agora, per) no lugar do sorteio
-HTOP = {'capi': 77, 'pato': 95, 'elefante': 75, 'polvo': 71, 'calopsita': 84, 'cachorro': 75,
-        'gato': 75, 'et': 81, 'sapinho': 65, 'naufrago': 79, 'pip': 86, 'girafa': 125}
-NOMES = {'capi': 'Капи', 'pato': 'Утка', 'elefante': 'Слон', 'polvo': 'Осьминог',
-         'calopsita': 'Попугай', 'cachorro': 'Карамелька', 'gato': 'Кот',
-         'et': 'Пришелец', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон', 'pip': 'Пип', 'girafa': 'Жирафик'}
+# Same boot-time catalogue as desenho.py; future animals need no vida.py edit.
+HTOP = zoo_registry.HTOP
+NOMES = zoo_registry.NOMES
 
 
 # ------------------------------------------------------------ curvas
@@ -347,12 +346,9 @@ FRASES_CHAR = {
                 'carinho': ('Ква!', 'Скачу от|радости!')},
     'naufrago': {'ocioso': ('Вижу корабль!', 'Где мой плот?', 'Опять кокос!', 'Бутылка|в море!', 'Земля! Ура!', 'Скучаю|по острову'),
                  'carinho': ('Как хорошо|вместе!', 'Я не один!')},
-    'pip': {'ocioso': ('Пип-пип!', 'Я тебя вижу!', 'Посмотри|в мои глаза!', 'Поиграем?', 'Бип-бип!'),
-            'carinho': ('Ой, щекотно!', 'Ты мой друг!')},
-    'girafa': {'ocioso': ('Привет сверху!', 'Я всё вижу!', 'Где листья?',
-                          'Поиграем?', 'Пятнышки|красивые!'),
-               'carinho': ('Ой, приятно!', 'Погладь|мою шею!')},
 }
+# Optional speech comes from each Zoo plugin's manifest, not this game file.
+FRASES_CHAR.update(zoo_registry.EXTRA_PHRASES)
 
 
 POOLS = {
