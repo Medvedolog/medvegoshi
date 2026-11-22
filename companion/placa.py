@@ -197,7 +197,7 @@ class Ponte:
         """(movimento, fala, som) da acao, com hora, clima e humor resolvidos."""
         mov, fala, som = EXPRESSAO[NOMES[acao]]
         if fala == 'hora':
-            fala = 'sao ' + hora_txt if hora_txt else None
+            fala = 'Сейчас ' + hora_txt if hora_txt else None
         elif fala == 'clima':
             fala = clima_txt or None
         elif fala == 'humor':
@@ -207,11 +207,11 @@ class Ponte:
 
 def humor_txt(h):
     if h > 50:
-        return 'to muito|feliz!'
+        return 'Я очень рад!'
     if h > 15:
-        return 'to feliz!'
+        return 'Я рад!'
     if h > -15:
-        return 'to de boa'
+        return 'Всё хорошо'
     if h > -50:
-        return 'to meio|triste...'
-    return 'to triste...'
+        return 'Мне грустно...'
+    return 'Мне плохо...'
