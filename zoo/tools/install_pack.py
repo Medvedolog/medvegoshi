@@ -22,18 +22,21 @@ STEM = re.compile(r"[A-Za-z0-9_-]{1,50}\Z")
 FMT = "medvegoshi-rgb565-mask-v1"
 
 
-def existing_characters():
-    # Query the SAME boot-time registry as the game, including optional
-    # animals shipped under zoo/animals/. No static ELENCO AST assumptions.
-    return registry.ELENCO
+def existing_characters(animals_root=None):
+    # The device may already hold an optional animal, while its source can
+    # live in an external folder not tracked by this repo.
+    cast = set(registry.ELENCO)
+    if animals_root is not None:
+        cast.update(registry.discover(str(animals_root)))
+    return cast
 
 
-def validate(pack):
+def validate(pack, animals_root=None):
     pack = Path(pack)
     meta = json.loads((pack / "manifest.json").read_text(encoding="utf-8"))
     identifier = meta.get("id", "")
     if (not isinstance(identifier, str) or not IDENTIFIER.fullmatch(identifier)
-            or identifier not in existing_characters()):
+            or identifier not in existing_characters(animals_root)):
         raise ValueError("sprite id must be an existing MedveGoshi character")
     if meta.get("target") != "ips" or meta.get("format") != FMT:
         raise ValueError("installer supports only compiled IPS packs")
@@ -73,12 +76,13 @@ def validate(pack):
     return identifier, files
 
 
-def install(pack, port, board="ips", dry_run=False, mpremote="mpremote"):
+def install(pack, port, board="ips", dry_run=False, mpremote="mpremote",
+            animals_root=None):
     if board != "ips":
         raise ValueError("AMOLED V1 remains blocked until the hardware port is tested")
     if not port or port.startswith("-"):
         raise ValueError("an explicit serial port is required")
-    identifier, files = validate(pack)
+    identifier, files = validate(pack, animals_root=animals_root)
     folder = "zoo/packs/" + identifier
     cmds = [
         [mpremote, "connect", port, "mkdir", ":zoo"],
@@ -113,8 +117,11 @@ def main():
     parser.add_argument("--port", required=True)
     parser.add_argument("--board", choices=("ips", "amoled-v1"), default="ips")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--animals-root", type=Path, default=None,
+                        help="Optional external folder containing animal plugin dirs")
     args = parser.parse_args()
-    install(args.pack, args.port, args.board, args.dry_run)
+    install(args.pack, args.port, args.board, args.dry_run,
+            animals_root=args.animals_root)
 
 
 if __name__ == "__main__":
