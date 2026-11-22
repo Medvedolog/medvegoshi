@@ -31,10 +31,12 @@ I2C_SDA = 15
 
 GPIO_CS = 12
 GPIO_CLK = 11
-GPIO_LCD_RESET = 13
+GPIO_TE = 13  # NOT panel reset; reset goes through TCA9554 EXIO0
 GPIO_DATA = (4, 5, 6, 7)
 GPIO_TOUCH_IRQ = 21
 EXPANDER_POWER_BIT = 1
+EXPANDER_PANEL_RESET_BIT = 0
+EXPANDER_TOUCH_RESET_BIT = 2
 
 
 class BoardMismatch(RuntimeError):
@@ -45,25 +47,44 @@ class DriverUnavailable(RuntimeError):
     pass
 
 
-def validate_v1_bus(i2c):
-    """Check I2C IDs BEFORE enabling panel or modifying expander pins."""
+def validate_v1_bus(i2c, verified_v1=False):
+    """Never change board GPIOs before identifying the revision.
+
+    FT3168 might be in reset at cold boot. If the board label was
+    independently confirmed V1, only its reset may be released to probe.
+    Never do this for an unidentified board or one with touch 0x15.
+    """
     present = set(i2c.scan())
     if V2_TOUCH_ADDR in present:
-        raise BoardMismatch("Touch 0x15 found: V2/CST820 or incompatible board; V1 only")
-    if TOUCH_ADDR not in present:
-        raise BoardMismatch("FT3168 (0x38) not found; V1 has not been identified")
+        raise BoardMismatch("Touch 0x15 found: V2/CST820 or incompatible board")
     if EXPANDER_ADDR not in present:
-        raise BoardMismatch("TCA9554 (0x20) not found; power sequence not safe")
+        raise BoardMismatch("TCA9554 (0x20) not found; wrong board")
+    if TOUCH_ADDR not in present and verified_v1:
+        set_expander_bit(i2c, EXPANDER_TOUCH_RESET_BIT, True)
+        # The FT3168 requires reset release before its first I2C response.
+        import time
+        time.sleep_ms(50) if hasattr(time, "sleep_ms") else time.sleep(0.05)
+        present = set(i2c.scan())
+    if TOUCH_ADDR not in present:
+        raise BoardMismatch("FT3168 0x38 not found; confirm V1 label first")
+    if V2_TOUCH_ADDR in present:
+        raise BoardMismatch("Ambiguous FT3168+CST820 bus: no hardware writes")
     return present
 
 
-def enable_amoled_power(i2c):
-    """Enable only TCA9554 EXIO1, preserving other pin modes and levels."""
+def set_expander_bit(i2c, bit, enabled):
+    """Set one TCA9554 output and retain every unrelated pin's state."""
     conf = i2c.readfrom_mem(EXPANDER_ADDR, 0x03, 1)[0]
     output = i2c.readfrom_mem(EXPANDER_ADDR, 0x01, 1)[0]
-    mask = 1 << EXPANDER_POWER_BIT
+    mask = 1 << bit
     i2c.writeto_mem(EXPANDER_ADDR, 0x03, bytes((conf & ~mask,)))
-    i2c.writeto_mem(EXPANDER_ADDR, 0x01, bytes((output | mask,)))
+    new_value = (output | mask) if enabled else (output & ~mask)
+    i2c.writeto_mem(EXPANDER_ADDR, 0x01, bytes((new_value,)))
+
+
+def enable_amoled_power(i2c):
+    """Enable panel voltage on EXIO1 only."""
+    set_expander_bit(i2c, EXPANDER_POWER_BIT, True)
 
 
 def physical_to_logical(x, y):
@@ -84,10 +105,15 @@ def logical_to_physical(x, y):
 
 class FT3168Touch:
     """Minimal FT3168 register read, no reset/power writes during sampling."""
-    def __init__(self, i2c):
+    def __init__(self, i2c, irq=None):
         self.i2c = i2c
+        self.irq = irq
 
     def ler(self):
+        # GPIO21 is active-low while touched. Avoid polling the I2C chip
+        # after it enters idle sleep (otherwise it may NACK).
+        if self.irq is not None and self.irq.value():
+            return None
         try:
             # 0x02 = finger count, 0x03..0x06 = XH/XL/YH/YL.
             data = self.i2c.readfrom_mem(TOUCH_ADDR, 0x02, 5)
@@ -131,13 +157,13 @@ class Tela:
 
 
 def prepare_v1(i2c, machine_module=None, amoled_module=None,
-               framebuffer_module=None):
+               framebuffer_module=None, verified_v1=False):
     """Explicit opt-in driver init; fail closed when dependencies are absent.
 
     Requires separately built native MicroPython QSPI support. This module
     is NOT shipped or enabled by the IPS installer.
     """
-    validate_v1_bus(i2c)
+    validate_v1_bus(i2c, verified_v1=verified_v1)
     if amoled_module is None:
         try:
             import amoled as amoled_module
@@ -155,7 +181,7 @@ def prepare_v1(i2c, machine_module=None, amoled_module=None,
     SPI = machine_module.SPI
     cs = Pin(GPIO_CS, Pin.OUT)
     clock = Pin(GPIO_CLK, Pin.OUT)
-    reset = Pin(GPIO_LCD_RESET, Pin.OUT)
+    irq = Pin(GPIO_TOUCH_IRQ, Pin.IN, Pin.PULL_UP)
     data = tuple(Pin(pin, Pin.OUT) for pin in GPIO_DATA)
 
     # Requires a compiled QSPI controller; ordinary SPI is insufficient.
@@ -164,15 +190,18 @@ def prepare_v1(i2c, machine_module=None, amoled_module=None,
     panel = amoled_module.QSPIPanel(
         spi=spi, data=data, dc=data[1], cs=cs, pclk=80_000_000,
         width=PANEL_W, height=PANEL_H)
+    # Real V1 panel reset EXIO0 and touch reset EXIO2 are not ESP32 GPIOs.
+    # Release the panel reset first. Power is on EXIO1.
+    set_expander_bit(i2c, EXPANDER_PANEL_RESET_BIT, True)
+    enable_amoled_power(i2c)
     display = amoled_module.AMOLED(
-        panel, type=2, reset=reset, bpp=16, auto_refresh=False)
+        panel, type=2, bpp=16, auto_refresh=False)
     display.reset()
     display.init()
     display.brightness(0)
-    enable_amoled_power(i2c)
     # Establish black borders once; only the centred game changes later.
     display.fill(0)
     display.refresh()
     screen = Tela(display, framebuffer_module)
     screen.brilho(50)
-    return screen, FT3168Touch(i2c)
+    return screen, FT3168Touch(i2c, irq=irq)
