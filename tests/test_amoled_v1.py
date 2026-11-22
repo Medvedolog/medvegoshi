@@ -31,10 +31,14 @@ class FakeI2C:
 class FakePin:
     OUT = 1
     IN = 0
+    PULL_UP = 2
     creations = []
     def __init__(self, number, mode=None, **kwargs):
         self.number, self.mode = number, mode
         self.creations.append((number, mode))
+        self.level = 1
+    def value(self):
+        return self.level
 
 
 class FakeSPI:
@@ -118,8 +122,11 @@ class AMOLEDV1Contracts(unittest.TestCase):
         self.assertEqual((port.LOGICAL_W, port.LOGICAL_H), (240, 284))
         self.assertEqual((port.OFFSET_X, port.OFFSET_Y), (64, 82))
         self.assertEqual((port.TOUCH_ADDR, port.V2_TOUCH_ADDR), (0x38, 0x15))
-        self.assertEqual((port.GPIO_CS, port.GPIO_CLK, port.GPIO_LCD_RESET),
+        self.assertEqual((port.GPIO_CS, port.GPIO_CLK, port.GPIO_TE),
                          (12, 11, 13))
+        self.assertEqual((port.EXPANDER_PANEL_RESET_BIT,
+                          port.EXPANDER_POWER_BIT,
+                          port.EXPANDER_TOUCH_RESET_BIT), (0, 1, 2))
         self.assertEqual(port.GPIO_DATA, (4, 5, 6, 7))
 
     def test_pixel_and_touch_coordinate_inverse(self):
@@ -175,6 +182,31 @@ class AMOLEDV1Contracts(unittest.TestCase):
                     port.prepare_v1(FakeI2C(addresses), FakeMachine,
                                     NativeModule, FramebufModule)
 
+    def test_ft3168_irq_does_not_poll_sleeping_touch(self):
+        irq = FakePin(21, FakePin.IN)
+        irq.level = 1
+        sensor = port.FT3168Touch(self.bus, irq=irq)
+        self.bus.touch = make_touch_packet(100, 100)
+        self.assertIsNone(sensor.ler())
+        irq.level = 0
+        self.assertEqual(sensor.ler(), (36, 18))
+
+    def test_touch_reset_requires_explicit_v1_label_confirmation(self):
+        class ResetHeldI2C(FakeI2C):
+            def __init__(self):
+                super().__init__([0x20])
+            def writeto_mem(self, dev, reg, data):
+                super().writeto_mem(dev, reg, data)
+                if reg == 1 and data[0] & 4:
+                    self.addresses.append(0x38)
+        bus = ResetHeldI2C()
+        with self.assertRaises(port.BoardMismatch):
+            port.validate_v1_bus(bus)
+        self.assertEqual(bus.writes, [])
+        self.assertIn(0x38, port.validate_v1_bus(bus, verified_v1=True))
+        self.assertEqual([i[1] for i in bus.writes], [3, 1])
+        self.assertEqual(bus.register[(0x20, 0x03)] & 4, 0)
+
     def test_native_compiled_qspi_dependencies_required(self):
         class Incomplete:
             pass
@@ -195,7 +227,9 @@ class AMOLEDV1Contracts(unittest.TestCase):
         self.assertEqual(FakeSPI.calls[0][0], 2)
         self.assertEqual(FakeSPI.calls[0][1]["baudrate"], 80_000_000)
         self.assertEqual(FakeSPI.calls[0][1]["mosi"], None)
-        self.assertEqual(self.bus.register[(0x20, 0x01)] & 0x02, 0x02)
+        self.assertEqual(self.bus.register[(0x20, 0x01)] & 0x03, 0x03)
+        self.assertIn((21, FakePin.IN), FakePin.creations)
+        self.assertNotIn((13, FakePin.OUT), FakePin.creations)
         screen.buf[:4] = b"\xf8\x00\x07\xe0"
         screen.mostrar()
         call = NativeModule.last_display.calls[-2]
