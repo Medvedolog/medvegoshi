@@ -303,7 +303,7 @@ def tick_pet(offline=False):
         acordar = (not noite and not pet['cochilo']) or (pet['cochilo'] and pet['energia'] >= 60)
         if acordar and not offline:
             pet['dormindo'] = pet['cochilo'] = False
-            falar('Bom dia!')
+            falar('Доброе утро!')
             som.tocar('feliz')
     else:
         pet['fome'] -= FOME_MIN
@@ -315,12 +315,12 @@ def tick_pet(offline=False):
             pet['dormindo'] = True
             pet['cochilo'] = not noite
             if not offline:
-                falar('Boa noite!' if noite else 'Cochilo...')
+                falar('Доброй ночи!' if noite else 'Вздремну...')
                 som.tocar('bocejo')
     if not pet['doente'] and (pet['cocos'] >= 2 or pet['fome'] < 15) and random.random() < CHANCE_DOENCA:
         pet['doente'] = True
         if not offline:
-            falar('To dodoi...')
+            falar('Я заболел...')
             som.tocar('triste')
     perda = pet['cocos'] * 0.2 + (0.6 if pet['fome'] < 15 else 0) + (0.6 if pet['doente'] else 0)
     pet['saude'] += -perda if perda else 0.3
@@ -335,15 +335,15 @@ def acao_pet(i):
     if f == 'estrela':
         return
     if f == 'ovo':
-        falar('Sou um ovo!|Me esquenta')
+        falar('Я в яйце!|Согрей меня!')
         return
     if dormindo():
-        falar('Shhh... zzz')
+        falar('Тс-с... хр-р')
         return
     som.tocar('clique')
     if i == 0:
         if pet['fome'] >= 99.5:
-            falar('To cheio!')
+            falar('Я уже сыт!')
         else:
             pet['fome'] = lim(pet['fome'] + COMER_FOME)
             pet['energia'] = lim(pet['energia'] + COMER_ENERGIA)
@@ -351,7 +351,7 @@ def acao_pet(i):
             som.tocar('comer')
     elif i == 1:
         if pet['energia'] < 15:
-            falar('Cansado...')
+            falar('Я устал...')
         else:
             pet['alegria'] = lim(pet['alegria'] + BRINCAR_ALEGRIA)
             pet['energia'] = lim(pet['energia'] - BRINCAR_CANSA)
@@ -362,17 +362,17 @@ def acao_pet(i):
         pet['saude'] = lim(pet['saude'] + BANHO_SAUDE)
         pet['energia'] = lim(pet['energia'] + BANHO_ENERGIA)
         iniciar_anim('banho')
-        falar('Que banho bom!')
+        falar('Как приятно!')
         som.tocar('banho')
     elif i == 3:
         if pet['doente']:
             pet['doente'] = False
             pet['saude'] = lim(pet['saude'] + 35)
             iniciar_anim('remedio')
-            falar('Melhorei!')
+            falar('Мне лучше!')
             som.tocar('remedio')
         else:
-            falar('Nao to doente!')
+            falar('Я не болею!')
     salvar(arquivo_pet(cfg['personagem']), pet)
 
 
@@ -405,7 +405,7 @@ def recuperar_tempo_desligado():
         for _ in range(minutos):
             tick_pet(offline=True)
         if minutos > 10:
-            falar('Senti saudade!')
+            falar('Я скучал!')
         pet['dormindo'] = noite_pet()
         pet['cochilo'] = False
 
@@ -458,7 +458,7 @@ def envelhecer(dt):
     if antes == 'estrela':
         if not hora_de_dormir(hora_atual()):         # de manha aparece um ovo novo
             novo_ovo()
-            sistema('Um ovo novo!')
+            sistema('Новое яйцо!')
             som.tocar('feliz')
         return
     pet['idade_min'] += dt / 60000 * (FATOR_OVO if antes == 'ovo' else fator_tempo())
@@ -473,13 +473,13 @@ def envelhecer(dt):
     if agora != antes:
         if agora == 'filhote':
             L.update(V.nova(cfg['personagem'], vt))
-            V.tocar(L, vt, 'comemorar', say='oi! nasci!')
+            V.tocar(L, vt, 'comemorar', say='Ура! Я родился!')
             som.tocar('feliz')
         elif agora == 'adulto':
-            falar('Cresci!')
+            falar('Я вырос!')
             som.tocar('feliz')
         elif agora == 'idoso':
-            falar('To velhinho!')
+            falar('Я старенький!')
         salvar(arquivo_pet(cfg['personagem']), pet)
 
 
@@ -493,8 +493,8 @@ ROTINA = ((0, 'dormindo'), (ACORDA, 'espreguicando'), (6.5, 'passeando'),
           (17.5, 'por do sol'), (18, 'passeando'),      # o sol se poe as 18h
           (DORME, 'dormindo'))
 AMIGOS_DIA = ('passarinho', 'tartaruga', 'borboleta', 'sapo', 'vizinho', 'vizinho')
-FALAS = {'passarinho': 'Piu pra voce!', 'tartaruga': 'Oi, Tata!',
-         'borboleta': 'Que linda!', 'sapo': 'Oi, Sapinho!'}
+FALAS = {'passarinho': 'Чик-чирик!', 'tartaruga': 'Привет, Тата!',
+         'borboleta': 'Как красиво!', 'sapo': 'Привет, Ква!'}
 PENSAMENTOS = ('capim', 'bola', 'nota', 'coracao', 'peixe')
 VIZ_TURNO = 2600                       # conversa: um balao por vez
 
@@ -510,8 +510,8 @@ def atividade_companion():
 
 def conversa():
     """Falas da visita de um vizinho, alternando visitante (v) e principal (p)."""
-    return (('v', 'oi, %s!' % nome()), ('p', 'oi! tudo|bem?'),
-            ('v', 'vamos|brincar?'), ('p', 'oba!'))
+    return (('v', 'Привет, %s!' % nome()), ('p', 'Привет!|Как дела?'),
+            ('v', 'Поиграем?'), ('p', 'Ура!'))
 
 
 def atualizar_companion(dt, agora):
@@ -745,16 +745,16 @@ def atualizar_cerebro(agora):
 # ------------------------------------------------------------ internet, clima e amigos (rede.py)
 # (movimento, fala) que ele sorteia de vez em quando conforme o tempo la fora
 FALAS_CLIMA = {
-    'chuva': (('olhar', 'que chuva!'), ('tremer', 'to todo|molhado!'), ('pular', 'banho de|chuva!')),
-    'tempestade': (('susto', 'trovao!'), ('tremer', 'que medo|de raio')),
-    'neve': (('tremer', 'ta nevando!'), ('comemorar', 'neve!')),
-    'neblina': (('olhar', 'cade tudo?'),),
-    'vento': (('tonto', 'que|ventania!'), ('olhar', 'quase|voei!')),
-    'nublado': (('olhar', 'sera que|chove?'),),
-    'sol': (('dancar', 'que sol|gostoso!'), ('espreguicar', 'dia lindo|la fora')),
-    'noite': (('olhar', 'ceu limpo|hoje!'),),
-    'calor': (('bocejar', 'que calor!'), ('olhar', 'quero um|sorvete')),
-    'frio': (('tremer', 'que frio!'), ('tremer', 'cade meu|casaco?')),
+    'chuva': (('olhar', 'Дождик!'), ('tremer', 'Я промок!'), ('pular', 'Люблю дождь!')),
+    'tempestade': (('susto', 'Гром!'), ('tremer', 'Боюсь молнии!')),
+    'neve': (('tremer', 'Идёт снег!'), ('comemorar', 'Снежок!')),
+    'neblina': (('olhar', 'Туман!'),),
+    'vento': (('tonto', 'Сильный ветер!'), ('olhar', 'Чуть не улетел!')),
+    'nublado': (('olhar', 'Будет дождь?'),),
+    'sol': (('dancar', 'Как солнечно!'), ('espreguicar', 'Хороший день!')),
+    'noite': (('olhar', 'Звёздное небо!'),),
+    'calor': (('bocejar', 'Как жарко!'), ('olhar', 'Хочу мороженое')),
+    'frio': (('tremer', 'Как холодно!'), ('tremer', 'Где моя куртка?')),
 }
 NOME_TEMPO = {'chuva': 'Chuva', 'tempestade': 'Tempestade', 'neve': 'Neve', 'neblina': 'Neblina',
               'vento': 'Vento', 'nublado': 'Nublado', 'sol': 'Ceu limpo'}
@@ -783,10 +783,10 @@ def chegou_amigo(char):
     som.tocar('festa')
     if vida_ativa():
         L['queue'] = []
-        V.tocar(L, vt, 'comemorar', say='oi, %s!' % d.NOMES.get(char, 'amigo'))
+        V.tocar(L, vt, 'comemorar', say='Привет, %s!' % d.NOMES.get(char, 'друг'))
     else:
         iniciar_anim('festa')
-        balao('p', 'grito', 'AMIGO!', 2200)
+        balao('p', 'grito', 'ДРУГ!', 2200)
 
 
 def ganhar_presente(tipo):
@@ -796,9 +796,9 @@ def ganhar_presente(tipo):
     pet['alegria'] = lim(pet['alegria'] + 8)
     som.tocar('amor')
     if vida_ativa():
-        V.falar(L, vt, 'presente!', 'shout')
+        V.falar(L, vt, 'Подарок!', 'shout')
     else:
-        balao('p', 'grito', 'OBA!', 2200)
+        balao('p', 'grito', 'УРА!', 2200)
 
 
 def limpar_presentes():
@@ -834,17 +834,17 @@ def atualizar_rede(agora):
         k = ev[0]
         if k == 'hora':
             relogio.acertar(*ev[1])
-            sistema('Hora certa!')
+            sistema('Время обновлено')
         elif k == 'clima':
             sistema('%s, %dC' % (NOME_TEMPO[ev[2]], d.ri(ev[1])), 4000)
         elif k == 'sem_wifi':
-            sistema('Sem internet')
+            sistema('Нет интернета')
         elif not vivo:
             pass                                          # ovo e estrela nao fazem festa
         elif k == 'chegou':
             chegou_amigo(ev[1])
         elif k == 'mandei':
-            falar('toma um|presente!')
+            falar('Тебе подарок!')
             som.tocar('amor')
         elif k == 'presente':
             ganhar_presente(ev[1])
@@ -868,7 +868,7 @@ def trocar_offline():
     cfg['offline'] = not cfg.get('offline')
     rede.ficar_offline(cfg['offline'])
     salvar('config.json', cfg)
-    sistema('Offline: sem radio' if cfg['offline'] else 'Online de novo!', 3000)
+    sistema('Радио выключено' if cfg['offline'] else 'Радио включено', 3000)
     som.tocar('bocejo' if cfg['offline'] else 'feliz')
 
 
@@ -896,7 +896,7 @@ def abrir_wifi():
         import machine
         machine.reset()
     rede.ler_wifi()
-    sistema('Wi-Fi: depois!')
+    sistema('Wi-Fi: позже!')
     reancorar = True
     gc.collect()
 
@@ -961,13 +961,13 @@ def verificar_sensores(agora):
     cerebro_evento(('sacudida_forte' if abs(g - 1.0) > 1.6 else 'sacudida_leve') if sacudiu else 'barulho')
     if dormindo():
         iniciar_anim('susto')
-        falar('Que susto!')
+        falar('Как страшно!')
         som.tocar('susto')
         pet['alegria'] = lim(pet['alegria'] - 5)
         V.acordar(L, vt)                                  # fica 1 min acordado e volta a dormir
     else:
         iniciar_anim('festa')
-        balao('p', 'grito', 'OBA!' if sacudiu else 'UHU!', 2200)
+        balao('p', 'grito', 'УРА!' if sacudiu else 'ОГО!', 2200)
         som.tocar('feliz')
         pet['alegria'] = lim(pet['alegria'] + 10)
 
@@ -1232,7 +1232,7 @@ def verificar_bateria(agora):
     bat_pct, bat_carregando = bateria.porcentagem(), bateria.carregando()
     fraca = bat_pct is not None and bat_pct <= BATERIA_FRACA and not bat_carregando
     if fraca and not bat_avisou:
-        sistema('Bateria fraca!', 4000)
+        sistema('Заряди батарею!', 4000)
         som.tocar('triste')
     bat_avisou = fraca
 
@@ -1415,7 +1415,7 @@ def soltar(agora):
                 if t[2]:                               # estrela: elogio para o que ela acabou de fazer
                     cerebro_evento('estrela')
                     V.acordar(L, vt)
-                    V.tocar(L, vt, 'comemorar', say='uma estrela!|eba!')
+                    V.tocar(L, vt, 'comemorar', say='Звёздочка!|Ура!')
                     som.tocar('moeda')
                 else:                                  # shh: bronca
                     cerebro_evento('shh')
