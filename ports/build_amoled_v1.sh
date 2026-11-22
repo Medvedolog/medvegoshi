@@ -2,6 +2,21 @@
 # Build-only. NEVER erase or flash hardware.
 set -euo pipefail
 
+# GitHub Actions executes run steps without the Docker image ENTRYPOINT.
+# Ensure the toolchain environment is active in this very shell.
+if ! command -v idf.py >/dev/null 2>&1; then
+  IDF_ROOT="${IDF_PATH:-/opt/esp/idf}"
+  if [ -f "$IDF_ROOT/export.sh" ]; then
+    set +u
+    . "$IDF_ROOT/export.sh"
+    set -u
+  fi
+fi
+command -v idf.py >/dev/null 2>&1 || {
+  echo "ESP-IDF v5.5.2 environment unavailable (idf.py missing)" >&2
+  exit 2
+}
+
 MICROPYTHON_SHA=e0e9fbb17ed6fd06bb76e266ae554784c9c80804
 AMOLED_SHA=97934b7c35b1720a14fd69e4e1322bb5684b9b2c
 IDF_VERSION=v5.5.2
