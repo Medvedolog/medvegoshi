@@ -39,6 +39,7 @@ ELENCO = ()
 NOMES = {}
 HTOP = {}
 EXTRA_PHRASES = {}
+_RENDERERS = {}     # one import per animal, never on every frame
 
 
 def safe_id(value):
@@ -189,6 +190,7 @@ def refresh(root=None):
     global ANIMALS, ELENCO, NOMES, HTOP, EXTRA_PHRASES
     ANIMALS = discover(root)
     ELENCO, NOMES, HTOP, EXTRA_PHRASES = make_catalogue(ANIMALS)
+    _RENDERERS.clear()
     return ELENCO
 
 
@@ -196,13 +198,19 @@ def renderer(character_id):
     """Lazy-load optional animal renderer, returning None on broken plugins."""
     if character_id not in ANIMALS:
         return None
+    if character_id in _RENDERERS:
+        fn = _RENDERERS[character_id]
+        return fn if fn is not False else None
     try:
         module_name = "zoo.animals." + character_id + ".face"
         module = __import__(module_name, None, None, ("render",))
         fn = getattr(module, "render", None)
-        return fn if callable(fn) else None
+        if not callable(fn):
+            fn = False
     except (ImportError, AttributeError, ValueError, MemoryError, SyntaxError):
-        return None
+        fn = False
+    _RENDERERS[character_id] = fn
+    return fn if fn is not False else None
 
 
 # Startup snapshot: imports in desenho.py and vida.py see the same cast.
