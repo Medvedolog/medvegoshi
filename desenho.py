@@ -927,7 +927,7 @@ def sombra(cx, ph, rx=20):
 # ------------------------------------------------------------ personagem vivo (movimentos e efeitos)
 olhos_ult = []
 HTOP = {'capi': 77, 'pato': 95, 'elefante': 75, 'polvo': 71, 'calopsita': 84, 'cachorro': 75,
-        'gato': 75, 'et': 81, 'sapinho': 65, 'naufrago': 79, 'pip': 86}
+        'gato': 75, 'et': 81, 'sapinho': 65, 'naufrago': 79, 'pip': 86, 'girafa': 125}
 AZUL_L = (110, 180, 250)
 
 
