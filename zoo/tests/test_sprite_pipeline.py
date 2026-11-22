@@ -101,8 +101,15 @@ class SpriteCompilerTests(unittest.TestCase):
         out = self.base / "aligned"
         result = compile_pack(self.source, out, size=(64, 64), margin=4)
         anchor_x, anchor_y = result["anchor"]
-        self.assertTrue(0 <= anchor_x < 64)
-        self.assertTrue(0 <= anchor_y < 64)
+        # The anatomical anchor may be just outside the rendered canvas
+        # (for example, a foot pivot under a rounded body). Visible pixels
+        # must remain inside, while the anchor remains a stable signed offset.
+        self.assertIsInstance(anchor_x, int)
+        self.assertIsInstance(anchor_y, int)
+        for entry in result["frames"]:
+            x0, y0, x1, y1 = entry["bounds"]
+            self.assertTrue(0 <= x0 < x1 <= 64, entry)
+            self.assertTrue(0 <= y0 < y1 <= 64, entry)
         # Same shape / anchor but different eye pixels -> common output
         # bounding boxes and equal mask size.
         self.assertEqual(result["frames"][0]["bounds"],
