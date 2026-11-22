@@ -161,6 +161,20 @@ class SpriteRuntimeTests(unittest.TestCase):
         self.assertIsNone(self._draw(fb))
         self.assertEqual({}, fb.pixels)
 
+    def test_corrupt_frame_cached_as_bad_until_reboot(self):
+        pack = self._build()
+        file = pack / "normal.rgb565"
+        original = file.read_bytes()
+        changed = bytearray(original)
+        changed[40] ^= 0x10
+        file.write_bytes(changed)
+        self.assertIsNone(self._draw(PixelFB()))
+        # Do not recompute SHA256 repeatedly on every animation tick.
+        file.write_bytes(original)
+        self.assertIsNone(self._draw(PixelFB()))
+        sprites.clear_cache()  # a reboot or explicit cache reset
+        self.assertIsNotNone(self._draw(PixelFB()))
+
     def test_truncated_file_is_rejected_by_manifest_validation(self):
         pack = self._build()
         file = pack / "normal.rgb565"
