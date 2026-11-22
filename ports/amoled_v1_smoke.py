@@ -14,14 +14,16 @@ def rgb565_swapped(r, g, b):
     return ((word & 0xFF) << 8) | (word >> 8)
 
 
-def run(i2c=None):
+def run(i2c=None, confirmed_v1=False):
+    if not confirmed_v1:
+        raise RuntimeError("Check the board's physical V1 label first; call run(confirmed_v1=True)")
     from machine import Pin, I2C
     if i2c is None:
         i2c = I2C(0, scl=Pin(amoled_v1.I2C_SCL),
                   sda=Pin(amoled_v1.I2C_SDA), freq=400000)
     print("Detecting original Waveshare 1.8 V1 (SH8601/FT3168)...")
     print("I2C:", [hex(x) for x in sorted(i2c.scan())])
-    screen, touch = amoled_v1.prepare_v1(i2c)
+    screen, touch = amoled_v1.prepare_v1(i2c, verified_v1=True)
     fb = screen.fb
     colors = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 255))
     for i, rgb in enumerate(colors):
