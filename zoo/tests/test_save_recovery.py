@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from zoo import recovery
 
@@ -55,6 +56,15 @@ class ZooRecoveryTests(unittest.TestCase):
         self.assertEqual(PET, recovery.load_pet(str(self.save), PET))
         self.assertFalse(self.config.exists())
         self.assertFalse(self.save.exists())
+
+    def test_flash_io_error_is_never_treated_as_first_boot(self):
+        with patch("zoo.recovery.os.stat", side_effect=OSError(5, "I/O error")):
+            with self.assertRaises(recovery.RecoveryRequired) as ctx:
+                recovery.load_config(str(self.config), CFG, ("capi",))
+            self.assertEqual(ctx.exception.reason, "config_corrupt")
+            with self.assertRaises(recovery.RecoveryRequired) as other:
+                recovery.load_pet(str(self.save), PET)
+            self.assertEqual(other.exception.reason, "pet_corrupt")
 
     def test_valid_plugin_save_preserved_exactly(self):
         saved = dict(CFG, personagem="girafa", stars=["one"])
