@@ -2,8 +2,12 @@
 
 No ESP32 or external amoled firmware is needed to run these tests.
 """
+import tempfile
+from pathlib import Path
 import unittest
+from PIL import Image
 from ports import amoled_v1 as port
+from ports.preview_amoled_v1 import render as preview_v1
 from ports.amoled_v1_smoke import rgb565_swapped
 
 
@@ -204,6 +208,24 @@ class AMOLEDV1Contracts(unittest.TestCase):
         self.assertEqual(rgb565_swapped(255, 0, 0), 0x00F8)
         self.assertEqual(rgb565_swapped(0, 255, 0), 0xE007)
         self.assertEqual(rgb565_swapped(0, 0, 255), 0x1F00)
+
+    def test_letterboxed_amoled_preview_matches_exact_game_pixels(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            inp, out = root / "ips.png", root / "v1.png"
+            im = Image.new("RGB", (240, 284), (255, 0, 0))
+            im.putpixel((239, 283), (0, 0, 255))
+            im.save(inp)
+            preview_v1(inp, out)
+            with Image.open(out) as assembled:
+                self.assertEqual(assembled.size, (368, 448))
+                self.assertEqual(assembled.getpixel((0, 0)), (0, 0, 0))
+                self.assertEqual(assembled.getpixel((63, 100)), (0, 0, 0))
+                self.assertEqual(assembled.getpixel((64, 82)), (255, 0, 0))
+                self.assertEqual(assembled.getpixel((303, 365)), (0, 0, 255))
+                self.assertEqual(assembled.getpixel((304, 365)), (0, 0, 0))
+            with self.assertRaisesRegex(ValueError, "overwrite"):
+                preview_v1(inp, inp)
 
     def test_invalid_brightness_rejected(self):
         screen, _ = port.prepare_v1(
