@@ -7,47 +7,48 @@ PORT=${1:-/dev/cu.usbmodem101}
 FIRMWARE=/tmp/micropython_s3_spiram_oct.bin
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "=== Deploy Capi → ESP32-S3 ==="
+echo "=== MedveGoshi: установка на ESP32-S3 IPS 1.83 ==="
 echo ""
 
 # Verifica porta
 if [ ! -e "$PORT" ]; then
-  echo "Porta $PORT não encontrada."
+  echo "Порт $PORT не найден."
   echo ""
-  echo "Coloque a placa em download mode:"
-  echo "  Segure BOOT → aperte e solte RST → solte BOOT"
+  echo "Переведите плату в режим прошивки:"
+  echo "  Удерживайте BOOT, нажмите и отпустите RST, затем отпустите BOOT"
   echo ""
-  echo "Depois rode novamente: bash deploy.sh"
+  echo "Затем повторите: bash deploy.sh"
   exit 1
 fi
 
 if [ "$SO_ARQUIVOS" = 0 ]; then
   # Baixa firmware se não existir
   if [ ! -f "$FIRMWARE" ]; then
-    echo "Baixando MicroPython ESP32-S3 SPIRAM_OCT..."
+    echo "Загрузка MicroPython ESP32-S3 SPIRAM_OCT..."
     curl -L "https://micropython.org/resources/firmware/ESP32_GENERIC_S3-SPIRAM_OCT-20250415-v1.25.0.bin" \
          -o "$FIRMWARE" --progress-bar
     echo ""
   fi
-  echo "Porta: $PORT"
+  echo "Порт: $PORT"
   echo "Firmware: $FIRMWARE"
   echo ""
-  echo "→ Apagando flash (isso zera os bichinhos salvos)..."
+  echo "→ Стирание Flash (все сохранения питомца будут удалены)..."
   esptool.py --chip esp32s3 --port "$PORT" erase_flash
   echo ""
-  echo "→ Gravando MicroPython..."
+  echo "→ Запись MicroPython..."
   esptool.py --chip esp32s3 --port "$PORT" write_flash -z 0 "$FIRMWARE"
   echo ""
-  echo "→ Aguardando placa reiniciar..."
+  echo "→ Перезагрузка платы..."
   sleep 3
 fi
 
 echo ""
-echo "→ Copiando arquivos e sons..."
+echo "→ Копирование файлов и звуков..."
 mpremote connect "$PORT" \
   cp "$DIR/main.py" : \
   + cp "$DIR/hw.py" : \
   + cp "$DIR/desenho.py" : \
+  + cp "$DIR/font_ru.py" : \
   + cp "$DIR/vida.py" : \
   + cp "$DIR/rede.py" : \
   + cp "$DIR/portal.py" : \
@@ -58,10 +59,10 @@ mpremote connect "$PORT" cp "$DIR"/companion/*.py :companion/      # o cerebro (
 
 # Acerta o relógio da placa com a hora deste computador (não precisa de internet)
 AGORA=$(date "+%Y, %-m, %-d, %-H, %-M, %-S")
-echo "→ Acertando o relógio da placa: $(date "+%d/%m/%Y %H:%M:%S")"
+echo "→ Синхронизация часов устройства: $(date "+%d/%m/%Y %H:%M:%S")"
 mpremote connect "$PORT" \
   exec "from machine import I2C, Pin; import hw; hw.Relogio(I2C(0, scl=Pin(14), sda=Pin(15), freq=400000)).acertar($AGORA)" \
   + reset
 
 echo ""
-echo "✓ Pronto! A Capi deve aparecer na tela em instantes."
+echo "✓ Готово! Питомец появится на экране при успешной загрузке."
