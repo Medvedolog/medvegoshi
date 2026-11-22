@@ -21,6 +21,8 @@
 
 > **Русская версия:** [README.md](README.md)
 
+**Note:** This is the original project's English guide, retained for reference. The separate MedveGoshi AMOLED V1 port and Russian in-device UI are **not finished**. Thanks to [rjcaubit/capigoshi](https://github.com/rjcaubit/capigoshi) and João for the original project and characters. See [credits and licenses](CREDITOS.md).
+
 ---
 
 ## What it is
@@ -137,7 +139,7 @@ You need Python 3 and a Mac or Linux machine (on Windows, run the step 3 command
 
 ```bash
 pip install esptool mpremote
-git clone https://github.com/rjcaubit/capigoshi.git && cd capigoshi
+git clone https://github.com/Medvedolog/medvegoshi.git && cd medvegoshi
 ```
 
 **1. Put the board in flashing mode.** Hold **BOOT**, press and release **RST**, release **BOOT**.
@@ -284,7 +286,7 @@ design_handoff_capigoshi_1c/   "1c Diorama" visual spec (colors, coordinates, re
 - **The brain started from scratch:** `brain.bin` is missing or corrupted and `brain.bak` too. A fresh
   brain is born with a new random seed; that is expected after `deploy.sh` without `--so-arquivos`.
 
-The older, more detailed guide (in Portuguese) is [LEIA-ME.md](LEIA-ME.md).
+This document describes the inherited Capigoshi firmware for the **IPS 1.83-inch board**. The Russian version and planned AMOLED V1 port are documented in [README.md](README.md).
 
 ## Roadmap
 
@@ -300,7 +302,7 @@ The older, more detailed guide (in Portuguese) is [LEIA-ME.md](LEIA-ME.md).
 
 Contributions are very welcome: code, characters, lines, translations and sounds. Read
 [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Issues and PRs in
-English or Portuguese are both fine.
+For contributions to MedveGoshi, see the [Russian contribution guide](CONTRIBUTING.md).
 
 ## Credits and license
 
