@@ -102,7 +102,7 @@ class PluginRegistryTests(unittest.TestCase):
     def test_original_ten_ids_and_two_bundled_plugins(self):
         self.assertEqual(10, len(registry.BUILTINS))
         self.assertEqual(12, len(registry.ELENCO))
-        self.assertEqual(("girafa", "pip"), registry.ELENCO[-2:])
+        self.assertEqual(("pip", "girafa"), registry.ELENCO[-2:])
         self.assertEqual("Жирафик", registry.NOMES["girafa"])
         self.assertEqual("Пип", registry.NOMES["pip"])
         self.assertEqual(125, registry.HTOP["girafa"])
@@ -153,6 +153,7 @@ class PluginRegistryTests(unittest.TestCase):
     def test_reserved_id_and_traversal_are_rejected(self):
         self.assertFalse(registry.safe_id("../escape"))
         self.assertFalse(registry.safe_id("Pip"))
+        self.assertFalse(registry.safe_id("bad-name"))
         reserved = json.loads(json.dumps(FOX))
         reserved["id"] = "capi"
         with self.assertRaisesRegex(ValueError, "reserved"):
