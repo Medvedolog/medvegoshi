@@ -49,6 +49,47 @@ def load_config(path, defaults, available):
     return result
 
 
+def load_pet(path, defaults):
+    """Read the shared capi.json slot without ever accepting invalid JSON."""
+    try:
+        os.stat(path)
+    except OSError:
+        return dict(defaults)
+    try:
+        with open(path, "r") as fd:
+            data = json.load(fd)
+    except (OSError, ValueError, TypeError, MemoryError):
+        raise RecoveryRequired("pet_corrupt")
+    if not isinstance(data, dict):
+        raise RecoveryRequired("pet_corrupt")
+    result = dict(defaults)
+    result.update(data)
+    # Schema invariants: do not run the simulation on values that will
+    # later crash or silently turn into a freshly initialized animal.
+    for key in ("fome", "alegria", "energia", "saude", "cocos",
+                "epoch", "idade_min", "vida_adulto"):
+        number = result.get(key)
+        if isinstance(number, bool) or not isinstance(number, (int, float)):
+            raise RecoveryRequired("pet_corrupt")
+    for key in ("doente", "dormindo", "cochilo", "morto"):
+        if not isinstance(result.get(key), bool):
+            raise RecoveryRequired("pet_corrupt")
+    return result
+
+
+def require_pet(path, defaults, tela, desenho):
+    """Stop without overwriting a broken or partial shared save."""
+    try:
+        return load_pet(path, defaults)
+    except RecoveryRequired as exc:
+        try:
+            show_recovery(tela, desenho, exc)
+        except Exception as show_error:
+            print("Zoo recovery screen unavailable:", show_error)
+        print("Zoo recovery: invalid save, file=" + path)
+        raise RuntimeError("MedveGoshi data protected: pet_corrupt")
+
+
 def show_recovery(tela, desenho, error):
     """Show a diagnostic screen; device must not continue the game loop."""
     fb = tela.fb
@@ -63,6 +104,10 @@ def show_recovery(tela, desenho, error):
             desenho.centro(error.pet_id[:28], 105, red)
         desenho.centro("Верните папку", 137, dark)
         desenho.centro("zoo/animals", 158, dark)
+    elif error.reason == "pet_corrupt":
+        desenho.centro("ОШИБКА СОХРАНЕНИЯ", 59, red)
+        desenho.centro("capi.json поврежден", 93, dark)
+        desenho.centro("Восстановите файл", 137, dark)
     else:
         desenho.centro("ОШИБКА НАСТРОЕК", 59, red)
         desenho.centro("config.json поврежден", 93, dark)
