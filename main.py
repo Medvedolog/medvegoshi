@@ -673,7 +673,7 @@ def texto_clima():
     if w is None:
         return ''
     g = rede.clima.get('temp')
-    return rede.tipo_de(w) + ('|%d graus' % g if g is not None else '')
+    return NOME_TEMPO.get(rede.tipo_de(w), 'Погода') + ('|%d C' % g if g is not None else '')
 
 
 def leitura_sentidos():
@@ -756,8 +756,8 @@ FALAS_CLIMA = {
     'calor': (('bocejar', 'Как жарко!'), ('olhar', 'Хочу мороженое')),
     'frio': (('tremer', 'Как холодно!'), ('tremer', 'Где моя куртка?')),
 }
-NOME_TEMPO = {'chuva': 'Chuva', 'tempestade': 'Tempestade', 'neve': 'Neve', 'neblina': 'Neblina',
-              'vento': 'Vento', 'nublado': 'Nublado', 'sol': 'Ceu limpo'}
+NOME_TEMPO = {'chuva': 'Дождь', 'tempestade': 'Гроза', 'neve': 'Снег', 'neblina': 'Туман',
+              'vento': 'Ветер', 'nublado': 'Облачно', 'sol': 'Ясно'}
 
 
 def ler_presentes():
