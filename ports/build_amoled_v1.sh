@@ -93,6 +93,7 @@ info = {
     "idf_version": idf,
     "pip_upstream_sha": pip,
     "pip_module": "pip_native (experimental)",
+    "pip_features": ["behavior", "nonverbal_pcm", "rgb565_eye_tile"],
     "warnings": [
         "Not flashed or tested on real hardware",
         "No bundled MedveGoshi game scripts",

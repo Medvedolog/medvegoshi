@@ -63,7 +63,7 @@ class PipReplayTest(unittest.TestCase):
         self.assertIn("Пип уже был сыт", text)
         self.assertIn("сытость=90%", text)
         self.assertIn("сохранение → загрузка: совпало", text)
-        self.assertIn("совпавших следующих шагов: 3", text)
+        self.assertIn("совпавших шагов: 3", text)
 
 
 if __name__ == "__main__":

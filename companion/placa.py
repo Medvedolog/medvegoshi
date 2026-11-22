@@ -10,6 +10,8 @@ from companion.cerebro import Cerebro, DORMIR, ACORDAR
 from companion.expressao import EXPRESSAO
 
 ARQ, BAK, TMP = 'brain.bin', 'brain.bak', 'brain.tmp'
+BAK_TMP = 'brain.bak.tmp'
+BRAIN_CHUNK = 1024
 MAGICO = b'CAPB'
 VERSAO = 1
 CAB = '<4sHIIIIBB'                 # magico, versao, semente, idade_s, segundo salvo, ticks, dormindo, afeto_ja_60
@@ -25,12 +27,12 @@ MOV_LEVE, MOV_FORTE = 0, 1                                 # sentido mov
 SOM_BARULHO = 0                                            # sentido som_evento
 
 
-def _crc(dados):
+def _crc(dados, initial=0):
     try:
         from binascii import crc32
     except ImportError:
         from zlib import crc32
-    return crc32(dados) & 0xffffffff
+    return crc32(dados, initial) & 0xffffffff
 
 
 def _blocos(cer):
@@ -38,30 +40,103 @@ def _blocos(cer):
     return (r.w_ih, r.w_ho, r.th_h, cer.relogio.w, cer.drives.d, cer.rec.n, cer.vezes, cer.vezes_ontem)
 
 
+def _valid_on_disk(path, lengths):
+    """Validate complete header, block layout and CRC using bounded RAM."""
+    try:
+        stream = open(path, 'rb')
+    except OSError as error:
+        code = getattr(error, 'errno', None)
+        if code is None and error.args:
+            code = error.args[0]
+        if code == 2:
+            return False
+        raise
+    with stream:
+        hsize = struct.calcsize(CAB)
+        header = stream.read(hsize)
+        if len(header) != hsize:
+            return False
+        mag, ver, _, _, _, _, dorm, af60 = struct.unpack(CAB, header)
+        if mag != MAGICO or ver != VERSAO or dorm not in (0, 1) or af60 not in (0, 1):
+            return False
+        checksum = _crc(header)
+        for expected in lengths:
+            length = stream.read(4)
+            if len(length) != 4 or struct.unpack('<I', length)[0] != expected:
+                return False
+            checksum = _crc(length, checksum)
+            left = expected
+            while left:
+                part = stream.read(min(BRAIN_CHUNK, left))
+                if not part:
+                    return False
+                checksum = _crc(part, checksum)
+                left -= len(part)
+        tail = stream.read(4)
+        return len(tail) == 4 and struct.unpack('<I', tail)[0] == checksum and not stream.read(1)
+
+
+def _flush_brain_file(stream):
+    stream.flush()
+    if hasattr(os, 'fsync'):
+        os.fsync(stream.fileno())
+
+
+def _write_all(stream, data):
+    if stream.write(data) != len(data):
+        raise OSError("brain: short write")
+
+
+def _copy_brain(src, dst):
+    with open(src, 'rb') as source, open(dst, 'wb') as target:
+        while True:
+            part = source.read(BRAIN_CHUNK)
+            if not part:
+                break
+            _write_all(target, part)
+        _flush_brain_file(target)
+
+
+def _publish_brain(src, dst):
+    # CPython replace and MicroPython LittleFS same-directory rename are
+    # atomic. If the filesystem refuses replacement, never unlink dst.
+    getattr(os, 'replace', os.rename)(src, dst)
+    if not hasattr(os, 'fsync') and hasattr(os, 'sync'):
+        os.sync()
+
+
 def gravar(cer, agora_s, pasta=''):
-    """brain.bin: cabecalho, blocos (tamanho + bytes) e crc32 no fim. Escreve em brain.tmp e troca, guardando a
-    copia anterior em brain.bak: uma queda de energia no meio deixa sempre um arquivo inteiro."""
+    """Publish a verified brain save without removing the last good copy.
+
+    Rotate a validated copy of the old main record into brain.bak. If the
+    main record is missing/corrupt, keep the existing backup untouched.
+    Temporary files are never used for loading, even after power loss.
+    """
     d = cer.drives
     buf = bytearray(struct.pack(CAB, MAGICO, VERSAO, cer.semente, cer.idade_s, agora_s, cer.ticks_rodados,
                                 1 if d.dormindo else 0, 1 if d.afeto_ja_60 else 0))
+    lengths = []
     for b in _blocos(cer):
         x = bytes(b)
+        lengths.append(len(x))
         buf += struct.pack('<I', len(x))
         buf += x
     buf += struct.pack('<I', _crc(buf))
-    with open(pasta + TMP, 'wb') as f:
-        f.write(buf)
-    try:
-        os.remove(pasta + BAK)
-    except OSError:
-        pass
-    try:
-        os.rename(pasta + ARQ, pasta + BAK)
-    except OSError:
-        pass
-    os.rename(pasta + TMP, pasta + ARQ)
-    return len(buf)
-
+    size = len(buf)
+    current, backup, staging, backup_staging = (pasta + n for n in (ARQ, BAK, TMP, BAK_TMP))
+    with open(staging, 'wb') as stream:
+        _write_all(stream, buf)
+        _flush_brain_file(stream)
+    del buf
+    if not _valid_on_disk(staging, lengths):
+        raise OSError("brain: staged save verification failed")
+    if _valid_on_disk(current, lengths):
+        _copy_brain(current, backup_staging)
+        if not _valid_on_disk(backup_staging, lengths):
+            raise OSError("brain: staged backup verification failed")
+        _publish_brain(backup_staging, backup)
+    _publish_brain(staging, current)
+    return size
 
 def _ler(nome):
     """Cerebro do arquivo e o segundo em que foi salvo, ou None se faltar, estiver corrompido ou for de outra versao."""

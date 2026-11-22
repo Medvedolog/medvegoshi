@@ -54,6 +54,18 @@ def run():
     else:
         raise AssertionError("voice never finished")
     assert heard and not pip.voice_render_into(chunk) and not any(chunk)
+    eyes = bytearray(72 * 36 * 2)
+    neutral = (0, 0, 0, 0, 0, 0, 0, 0)
+    x1, y1, x2, y2 = pip.eyes_draw_into(eyes, 72, 36, neutral)
+    assert 0 <= x1 <= x2 < 72 and 0 <= y1 <= y2 < 36
+    assert any(eyes) and eyes[:2] == bytes(2) and pip.EYES_BLACK_KEY == 0
+    prior = bytes(eyes)
+    raises(ValueError, pip.eyes_draw_into, eyes, 72, 36, (float("nan"),) + neutral[1:])
+    assert prior == eyes
+    raises(ValueError, pip.eyes_draw_into, bytearray(36), 72, 36, neutral)
+    raises(TypeError, pip.eyes_draw_into, prior, 72, 36, neutral)
+    pip.eyes_draw_into(eyes, 72, 36, (0, 0, 1, 1, 0, 0, 0, 0))
+    assert prior != eyes
     print("Pip native C smoke passed")
 
 

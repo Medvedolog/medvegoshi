@@ -50,18 +50,40 @@ BRINCAR_ALEGRIA, BRINCAR_CANSA = 20, 8
 BANHO_SAUDE, BANHO_ENERGIA = 10, 10
 
 # ------------------------------------------------------------ hardware
-i2c = I2C(0, scl=Pin(14), sda=Pin(15), freq=400000)
-tela = hw.Tela()
-d.usar(tela.fb)
-toque = hw.Toque(i2c)
-mov = hw.Movimento(i2c)
-relogio = hw.Relogio(i2c)
-som = hw.Som(i2c)
-bateria = hw.Bateria(i2c)
 try:
-    botao = Pin(PINO_BOTAO, Pin.IN, Pin.PULL_UP)
-except Exception:
-    botao = None
+    from ports.runtime_handoff import take as _take_profile
+except ImportError:
+    _v1_handoff = None  # normal IPS deploy has no V1 modules
+else:
+    _v1_handoff = _take_profile()
+
+if _v1_handoff is None:
+    if __name__ == 'v1_game_app':
+        raise RuntimeError('use the explicit AMOLED V1 launcher')
+    runtime_profile_id = 'ips'
+    runtime_clock_write, runtime_allow_wifi = True, True
+    i2c = I2C(0, scl=Pin(14), sda=Pin(15), freq=400000)
+    tela = hw.Tela()
+    d.usar(tela.fb)
+    toque = hw.Toque(i2c)
+    mov = hw.Movimento(i2c)
+    relogio = hw.Relogio(i2c)
+    som = hw.Som(i2c)
+    bateria = hw.Bateria(i2c)
+    try:
+        botao = Pin(PINO_BOTAO, Pin.IN, Pin.PULL_UP)
+    except Exception:
+        botao = None
+else:
+    profile, runtime_allow_wifi = _v1_handoff
+    if profile.profile_id != 'amoled_1_8_v1':
+        raise RuntimeError('unsupported hardware profile')
+    runtime_profile_id = profile.profile_id
+    runtime_clock_write = profile.capabilities['rtc_write']
+    i2c, tela, toque = profile.i2c, profile.tela, profile.toque
+    mov, relogio, som = profile.mov, profile.relogio, profile.som
+    bateria, botao = profile.bateria, profile.botao
+    d.usar(tela.fb)
 gc.collect()
 
 
@@ -383,6 +405,19 @@ def pip_evento(name):
         return False, None
 
 
+def pip_som(nome, alternativo):
+    if pip_em_uso() and som.ligado:
+        player = getattr(som, 'play_pip', None)
+        if callable(player):
+            try:
+                if player(nome):
+                    return
+            except (OSError, ValueError, RuntimeError, TypeError, MemoryError) as exc:
+                print('Pip voice unavailable:', exc)
+    if alternativo:
+        som.tocar(alternativo)
+
+
 def pip_salvar():
     global pip_session, pip_snapshot, pip_tried
     if pip_session is None:
@@ -476,14 +511,16 @@ def acao_pet(i):
             if i == 0:
                 if reaction in ('nauseous', 'disgusted'):
                     falar('Я уже сыт!')
+                    pip_som('oh', None)
                 else:
                     iniciar_anim('comer')
-                    som.tocar('comer')
+                    pip_som('nom', 'comer')
             elif reaction == 'no':
                 falar('Я устал...')
+                pip_som('yawn', None)
             else:
                 iniciar_anim('pular')
-                som.tocar('feliz')
+                pip_som('happy', 'feliz')
             pip_salvar()
             salvar(arquivo_pet(cfg['personagem']), pet)
             return
@@ -1031,8 +1068,9 @@ def atualizar_rede(agora):
     for ev in rede.passo(agora, epoch, cfg['personagem'], vivo):
         k = ev[0]
         if k == 'hora':
-            relogio.acertar(*ev[1])
-            sistema('Время точное!')
+            if runtime_clock_write:
+                relogio.acertar(*ev[1])
+                sistema('Время точное!')
         elif k == 'clima':
             sistema('%s, %dC' % (NOME_TEMPO[ev[2]], d.ri(ev[1])), 4000)
         elif k == 'sem_wifi':
@@ -1063,6 +1101,9 @@ def atualizar_rede(agora):
 
 
 def trocar_offline():
+    if not runtime_allow_wifi:
+        sistema('Радио выкл.', 3000)
+        return
     cfg['offline'] = not cfg.get('offline')
     rede.ficar_offline(cfg['offline'])
     salvar('config.json', cfg)
@@ -1073,6 +1114,9 @@ def trocar_offline():
 def abrir_wifi():
     """Para o jogo e abre a configuracao do Wi-Fi pelo celular (portal.py)."""
     global reancorar
+    if not runtime_allow_wifi:
+        sistema('Радио выкл.', 3000)
+        return
     epoch = relogio.epoch()
     if epoch:
         pet['epoch'] = epoch
@@ -1458,7 +1502,14 @@ def desenhar_vivo(agora, ph, hora, modo):
     pe = d.FEET + (int(math.sin(agora / 900)) if dorme else 0)
     if modo == 'pet':
         d.cocos(pet['cocos'])
-    r = d.personagem_vivo(cfg['personagem'], L['x'], pe, lp, ph, agora, olhos, boca, doente, fase_vida())
+    pip_state = None
+    if pip_em_uso() and pip_snapshot:
+        mood = pip_snapshot['mood']
+        if pip_reaction and 0 <= time.ticks_diff(agora, pip_reaction_at) < 1500:
+            mood = pip_reaction
+        pip_state = (mood, agora)
+    r = d.personagem_vivo(cfg['personagem'], L['x'], pe, lp, ph, agora, olhos, boca, doente,
+                        fase_vida(), pip_state=pip_state)
     cx, topo, meia = r['cx'], r['top'], r['half']
     if dorme:
         z = (agora // 450) % 3
@@ -1479,7 +1530,7 @@ def desenhar_sobreposicoes(agora):
     if menu_borda >= 1:
         d.menu(int(menu_borda), cfg['modo'], cfg['personagem'], cfg['hora'], cfg['vel'],
                relogio_txt(hora_real()), cfg['som'], menu_pend, menu_conf, legenda_vida(), fase_vida(),
-               rede.situacao())
+               rede.situacao(), runtime_clock_write)
     else:
         d.alca()
     # Show save/switch results above the settings panel, not behind it.
@@ -1498,7 +1549,7 @@ def fechar_menu():
 
 def acao_menu(x, y, hit=None):
     global menu_pend, menu_conf
-    r = hit or d.menu_toque(x, y, cfg['hora'], menu_conf)
+    r = hit or d.menu_toque(x, y, cfg['hora'], menu_conf, runtime_clock_write)
     if not r:
         return
     k, v = r
@@ -1536,7 +1587,7 @@ def acao_menu(x, y, hit=None):
         if v == 'sim':
             iniciar_sim(hora_real())
         cfg['hora'] = v
-    elif k == 'ajuste':
+    elif k == 'ajuste' and runtime_clock_write:
         relogio.somar_minutos(v)
     elif k == 'vel' and v != cfg['vel']:
         iniciar_sim(hora_atual())
@@ -1570,7 +1621,7 @@ def pressionar(x, y, agora):
         # coordinate system to where the controls are on this frame.
         if y < int(menu_borda):
             local_y = y + d.MENU_FUNDO - int(menu_borda)
-            hit = d.menu_toque(x, local_y, cfg['hora'], menu_conf)
+            hit = d.menu_toque(x, local_y, cfg['hora'], menu_conf, runtime_clock_write)
             if hit and hit[0] == 'fechar':
                 menu_arrasta = True                   # arrastar a alca para cima
             elif hit:
@@ -1761,11 +1812,14 @@ def passo(agora, dt):
 
 def principal():
     global reancorar
-    rede.iniciar()
-    if cfg.get('offline'):
-        rede.ficar_offline(True)
     if relogio.ler() is None:
+        if not runtime_clock_write:
+            raise RuntimeError('AMOLED V1 RTC stopped or unreadable; refusing game loop')
         relogio.acertar(2026, 1, 1, 12, 0, 0)
+    if runtime_allow_wifi:
+        rede.iniciar()
+    if not runtime_allow_wifi or cfg.get('offline'):
+        rede.ficar_offline(True)
     iniciar_sim(hora_real())
     recuperar_tempo_desligado()
     anterior = ultimo_gc = time.ticks_ms()

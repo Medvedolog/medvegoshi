@@ -732,7 +732,7 @@ def cachorro(cx, pe, olhos, boca, doente, s, ol):
     return pe - 74 * s, pe - 101 * s, 30 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-12, -78, 7), (12, -78, 7))]
 
 
-def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol):
+def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol, pip_state=None):
     """Universal Zoo renderer, used for ALL future /zoo/animals/<id> packs."""
     info = zoo_registry.ANIMALS.get(id)
     fn = zoo_registry.renderer(id) if info else None
@@ -741,7 +741,24 @@ def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol):
     ring = tuple(info.get('ring', (40, 35, 40)))
     E, P, R, A = _rel(cx, pe, s, ol, lambda color: ring)
     try:
-        points = fn(E, R, P, A, olhos, boca, doente)
+        tile = None
+        if id == 'pip' and pip_state is not None and _T is None:
+            try:
+                from zoo.pip import eyes as native_eyes
+                w, h = ri(54 * s), ri(32 * s)
+                x, y = ri(cx - w / 2), ri(pe - 94 * s)
+                tile = native_eyes.try_tile(_fb, x, y, w, h, olhos,
+                                            pip_state[0], pip_state[1], W, H)
+            except (ImportError, OSError, ValueError, MemoryError):
+                pass
+        if tile is None:
+            points = fn(E, R, P, A, olhos, boca, doente)
+        else:
+            try:
+                points = fn(E, R, P, A, olhos, boca, doente, draw_eyes=False)
+                _fb.blit(tile, x, y, 0)
+            except (AttributeError, OSError, TypeError, ValueError, MemoryError):
+                points = fn(E, R, P, A, olhos, boca, doente)
         if not isinstance(points, (tuple, list)) or len(points) != 2:
             return capi(cx, pe, olhos, boca, doente, s, ol)
     except (ValueError, TypeError, AttributeError, MemoryError, OSError):
@@ -858,7 +875,7 @@ FASES_VIDA = ('ovo', 'filhote', 'adulto', 'idoso', 'estrela')
 
 
 def personagem(id, cx, pe, olhos='normal', boca='sorriso', doente=False, contorno=True, s=1.0, cru=False,
-               fase='adulto', racha=False, grama=(46, 176, 96)):
+               fase='adulto', racha=False, grama=(46, 176, 96), pip_state=None):
     """Desenha e devolve (centro da cabeca, topo, meia largura)."""
     if fase == 'ovo':
         return ovo(cx, pe, racha, grama, contorno)
@@ -878,7 +895,7 @@ def personagem(id, cx, pe, olhos='normal', boca='sorriso', doente=False, contorn
         artist = _FUNCS.get(id)
         if artist is None:
             cab, topo, meia, olhos_pts = _animal_plugin(
-                id, cx, pe, olhos, boca, doente, s, OL if contorno else None)
+                id, cx, pe, olhos, boca, doente, s, OL if contorno else None, pip_state)
         else:
             cab, topo, meia, olhos_pts = artist(
                 cx, pe, olhos, boca, doente, s, OL if contorno else None)
@@ -1064,7 +1081,7 @@ def recobrir_chao(ph, x0, x1, base, X, t):
             capim(x, 258, ph['grama'], 1.4)
 
 
-def personagem_vivo(id, cx, pe, lp, ph, t, olhos, boca, doente=False, fase='adulto', base=FEET):
+def personagem_vivo(id, cx, pe, lp, ph, t, olhos, boca, doente=False, fase='adulto', base=FEET, pip_state=None):
     """Desenha o personagem com a pose do movimento (lp) e os efeitos. Devolve dict com
     cx, top, head, half, eyes e flip, ja transformados."""
     sx, sy, fl = lp.get('sx', 1), lp.get('sy', 1), lp.get('flip', 1)
@@ -1081,7 +1098,7 @@ def personagem_vivo(id, cx, pe, lp, ph, t, olhos, boca, doente=False, fase='adul
     rot = lp.get('rot', 0) * fl
     cy = Y - alt * 0.45 * sy
     transformar(X, Y, fl * sx, sy, rot, cy)
-    cab, topo, meia = personagem(id, X, Y, olhos, boca, doente, fase=fase)
+    cab, topo, meia = personagem(id, X, Y, olhos, boca, doente, fase=fase, pip_state=pip_state)
     if _T:
         topo = _p(X, topo)[1]
         cab = _p(X, cab)[1]
@@ -1331,7 +1348,7 @@ def alca():
 
 
 def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, confirma=None,
-         legenda='', fase='adulto', wifi=1):
+         legenda='', fase='adulto', wifi=1, clock_write=True):
     """Painel de ajustes com a borda de baixo em y = borda (0 a 272).
     pendente = personagem escolhido nas setas e ainda nao confirmado;
     confirma = 'trocar' ou 'zerar' mostra a acao no lugar da hora;
@@ -1389,8 +1406,11 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
                 _seg(20 + i * 68, o + 214, 64, 22, '%dx' % v, vel == v)
             centro('сутки за %d мин' % VEL_MIN[vel], o + 244, MUTEDM)
         else:
-            for i, rot in enumerate(AJUSTES_ROT):
-                _seg(MENU_CLOCK_X + i * MENU_CLOCK_STEP, o + 214, MENU_CLOCK_W, 22, rot, False)
+            if clock_write:
+                for i, rot in enumerate(AJUSTES_ROT):
+                    _seg(MENU_CLOCK_X + i * MENU_CLOCK_STEP, o + 214, MENU_CLOCK_W, 22, rot, False)
+            else:
+                centro('Часы: только чтение', o + 221, CREME)
             centro('Сейчас ' + relogio, o + 240, CREME)
         _seg(16, o + 248, 52, 18, 'Сброс', False)
         _seg(172, o + 248, 52, 18, 'Звук' if som_ligado else 'Тихо', som_ligado)
@@ -1399,7 +1419,7 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
         hl(0, borda, W, (24, 18, 26))
 
 
-def menu_toque(x, y, hora_modo, confirma=None):
+def menu_toque(x, y, hora_modo, confirma=None, clock_write=True):
     """Hit boxes in the coordinate system of the fully open settings panel."""
     if not (0 <= x < W and 0 <= y < MENU_FUNDO):
         return None
@@ -1437,7 +1457,7 @@ def menu_toque(x, y, hora_modo, confirma=None):
         i, local_x = divmod(x - 20, 68)
         if 0 <= i < 3 and local_x < 64:
             return ('vel', i + 1)
-    if hora_modo == 'real' and 214 <= y < 236:
+    if clock_write and hora_modo == 'real' and 214 <= y < 236:
         i, local_x = divmod(x - MENU_CLOCK_X, MENU_CLOCK_STEP)
         if 0 <= i < len(AJUSTES_MIN) and local_x < MENU_CLOCK_W:
             return ('ajuste', AJUSTES_MIN[i])

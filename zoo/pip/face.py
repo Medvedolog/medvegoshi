@@ -20,7 +20,7 @@ CHEEK = (245, 131, 176)
 SICK = (132, 167, 153)
 
 
-def render(ellipse, rect, eyes='normal', mouth='sorriso', sick=False):
+def render(ellipse, rect, eyes='normal', mouth='sorriso', sick=False, draw_eyes=True):
     """Draw a small Pip-style creature with expressions. Returns eye anchors.
 
     This is a deterministic vector character, not a sprite or the official
@@ -41,16 +41,17 @@ def render(ellipse, rect, eyes='normal', mouth='sorriso', sick=False):
     shift = (-4 if eyes in ('esquerda', 'olhar_esq') else
              4 if eyes in ('direita', 'olhar_dir') else 0)
 
-    for x in (-15, 15):
-        if closed:
-            E(x, -79, 11, 3, EYE)
-        elif pleased:
-            E(x, -79, 12, 8, EYE)
-            E(x, -82, 8, 4, BODY)
-        else:
-            E(x, -80, 12, 16 if scared else 14, EYE)
-            E(x + shift, -79 + (3 if sad else 0), 5 if scared else 7, 8, PUPIL)
-            E(x + shift - 2, -82 + (3 if sad else 0), 2, 3, SHINE)
+    if draw_eyes:
+        for x in (-15, 15):
+            if closed:
+                E(x, -79, 11, 3, EYE)
+            elif pleased:
+                E(x, -79, 12, 8, EYE)
+                E(x, -82, 8, 4, BODY)
+            else:
+                E(x, -80, 12, 16 if scared else 14, EYE)
+                E(x + shift, -79 + (3 if sad else 0), 5 if scared else 7, 8, PUPIL)
+                E(x + shift - 2, -82 + (3 if sad else 0), 2, 3, SHINE)
 
     # Mouth drawn only with existing ellipse/rect primitives (low CPU cost).
     if mouth in ('dormindo', 'triste') or sad:
@@ -64,3 +65,4 @@ def render(ellipse, rect, eyes='normal', mouth='sorriso', sick=False):
         R(-11, -51, 22, 5, BODY)
 
     return ((-15, -80), (15, -80))
+

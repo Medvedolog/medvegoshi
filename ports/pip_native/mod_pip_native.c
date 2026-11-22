@@ -2,6 +2,7 @@
  * The core authorship and license are in zoo/upstream/pip/LICENSE.
  * This module owns one in-memory pet; it performs no file or hardware I/O.
  */
+#include "py/binary.h"
 #include "py/obj.h"
 #include "py/runtime.h"
 
@@ -12,6 +13,7 @@
 #include "pet.h"
 #include "moods.h"
 #include "voice.h"
+#include "eyes_tile.h"
 
 /* Reuse the pure-C named event/status/state validation shared with host QA.
  * No host Python, ctypes, file I/O, or host snapshot format is linked here.
@@ -279,11 +281,44 @@ static mp_obj_t pip_voice_render_into(mp_obj_t obj)
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(pip_voice_render_into_obj, pip_voice_render_into);
 
+static mp_obj_t pip_eyes_draw_into(size_t n_args, const mp_obj_t *args)
+{
+    int w = bounded_int(args[1], PIP_EYE_MIN_W, PIP_EYE_MAX_W);
+    int h = bounded_int(args[2], PIP_EYE_MIN_H, PIP_EYE_MAX_H);
+    mp_obj_t *items;
+    mp_obj_get_array_fixed_n(args[3], PIP_EYE_POSE_SIZE, &items);
+    float pose[PIP_EYE_POSE_SIZE];
+    for (size_t i = 0; i < PIP_EYE_POSE_SIZE; ++i) {
+        pose[i] = (float)mp_obj_get_float(items[i]);
+    }
+    bool swapped = n_args == 4 || mp_obj_is_true(args[4]);
+    mp_buffer_info_t view;
+    mp_get_buffer_raise(args[0], &view, MP_BUFFER_WRITE);
+    // Never reinterpret the backing storage of wider typed arrays.
+    if (view.typecode != BYTEARRAY_TYPECODE && view.typecode != 'B' && view.typecode != 'b') {
+        mp_raise_TypeError(MP_ERROR_TEXT("eye tile requires a writable byte buffer"));
+    }
+    face_rect_t area;
+    if (view.len != (size_t)w * (size_t)h * sizeof(uint16_t) ||
+        !pip_eyes_tile_draw(view.buf, view.len / sizeof(uint16_t), w, h, pose, swapped, &area)) {
+        mp_raise_ValueError(MP_ERROR_TEXT("invalid eye tile size, alignment or pose"));
+    }
+    mp_obj_t corners[] = {
+        mp_obj_new_int(area.x1), mp_obj_new_int(area.y1),
+        mp_obj_new_int(area.x2), mp_obj_new_int(area.y2),
+    };
+    return mp_obj_new_tuple(4, corners);
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pip_eyes_draw_into_obj, 4, 5, pip_eyes_draw_into);
+
 static const mp_rom_map_elem_t pip_native_globals_table[] = {
     {MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_pip_native)},
     {MP_ROM_QSTR(MP_QSTR_ABI_VERSION), MP_ROM_INT(1)},
     {MP_ROM_QSTR(MP_QSTR_MAX_STATE_BYTES), MP_ROM_INT(STATE_HEAD + 256)},
     {MP_ROM_QSTR(MP_QSTR_VOICE_MAX_BYTES), MP_ROM_INT(VOICE_MAX_BYTES)},
+    {MP_ROM_QSTR(MP_QSTR_EYES_MAX_WIDTH), MP_ROM_INT(PIP_EYE_MAX_W)},
+    {MP_ROM_QSTR(MP_QSTR_EYES_MAX_HEIGHT), MP_ROM_INT(PIP_EYE_MAX_H)},
+    {MP_ROM_QSTR(MP_QSTR_EYES_BLACK_KEY), MP_ROM_INT(0)},
     {MP_ROM_QSTR(MP_QSTR_reset), MP_ROM_PTR(&pip_reset_obj)},
     {MP_ROM_QSTR(MP_QSTR_advance), MP_ROM_PTR(&pip_advance_obj)},
     {MP_ROM_QSTR(MP_QSTR_event), MP_ROM_PTR(&pip_event_obj)},
@@ -292,6 +327,7 @@ static const mp_rom_map_elem_t pip_native_globals_table[] = {
     {MP_ROM_QSTR(MP_QSTR_import_state), MP_ROM_PTR(&pip_import_state_obj)},
     {MP_ROM_QSTR(MP_QSTR_voice_start), MP_ROM_PTR(&pip_voice_start_obj)},
     {MP_ROM_QSTR(MP_QSTR_voice_render_into), MP_ROM_PTR(&pip_voice_render_into_obj)},
+    {MP_ROM_QSTR(MP_QSTR_eyes_draw_into), MP_ROM_PTR(&pip_eyes_draw_into_obj)},
 };
 static MP_DEFINE_CONST_DICT(pip_native_globals, pip_native_globals_table);
 
