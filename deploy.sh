@@ -51,12 +51,15 @@ mpremote connect "$PORT" mkdir :zoo 2>/dev/null || true
 mpremote connect "$PORT" mkdir :zoo/pip 2>/dev/null || true
 mpremote connect "$PORT" mkdir :zoo/giraffe 2>/dev/null || true
 mpremote connect "$PORT" mkdir :zoo/packs 2>/dev/null || true
+mpremote connect "$PORT" mkdir :zoo/animals 2>/dev/null || true
 mpremote connect "$PORT" \
   cp "$DIR/main.py" : \
   + cp "$DIR/hw.py" : \
   + cp "$DIR/desenho.py" : \
   + cp "$DIR/font_ru.py" : \
   + cp "$DIR/zoo/__init__.py" :zoo/__init__.py \
+  + cp "$DIR/zoo/registry.py" :zoo/registry.py \
+  + cp "$DIR/zoo/animals/__init__.py" :zoo/animals/__init__.py \
   + cp "$DIR/zoo/sprites.py" :zoo/sprites.py \
   + cp "$DIR/zoo/pip/__init__.py" :zoo/pip/__init__.py \
   + cp "$DIR/zoo/pip/face.py" :zoo/pip/face.py \
@@ -67,6 +70,23 @@ mpremote connect "$PORT" \
   + cp "$DIR/portal.py" : \
   + cp -r "$DIR/sons" : \
   + cp "$DIR/companion/raiox.html" :raiox.html
+# Discover any validated optional animal directory on the host. Ship only
+# manifest/face/__init__, NOT host tools, tests, artwork sources or build dirs.
+# Every future Zoo animal can be added without updating this deploy script.
+for ANIMAL_DIR in "$DIR"/zoo/animals/*; do
+  [ -d "$ANIMAL_DIR" ] || continue
+  ANIMAL_ID=${ANIMAL_DIR##*/}
+  case "$ANIMAL_ID" in
+    ''|*[!a-z0-9_-]*|[!a-z]*) continue ;;
+  esac
+  [ -f "$ANIMAL_DIR/manifest.json" ] || continue
+  [ -f "$ANIMAL_DIR/face.py" ] || continue
+  [ -f "$ANIMAL_DIR/__init__.py" ] || continue
+  mpremote connect "$PORT" mkdir ":zoo/animals/$ANIMAL_ID" 2>/dev/null || true
+  mpremote connect "$PORT" cp "$ANIMAL_DIR/__init__.py" ":zoo/animals/$ANIMAL_ID/__init__.py"
+  mpremote connect "$PORT" cp "$ANIMAL_DIR/face.py" ":zoo/animals/$ANIMAL_ID/face.py"
+  mpremote connect "$PORT" cp "$ANIMAL_DIR/manifest.json" ":zoo/animals/$ANIMAL_ID/manifest.json"
+done
 mpremote connect "$PORT" mkdir :companion 2>/dev/null || true
 mpremote connect "$PORT" cp "$DIR"/companion/*.py :companion/      # o cerebro (sem sim/ e testes/)
 
