@@ -5,6 +5,7 @@
 import math, framebuf
 import font_ru
 from zoo import sprites as zoo_sprites
+from zoo import registry as zoo_registry
 from array import array
 from hw import cor, W, H
 
@@ -731,25 +732,24 @@ def cachorro(cx, pe, olhos, boca, doente, s, ol):
     return pe - 74 * s, pe - 101 * s, 30 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-12, -78, 7), (12, -78, 7))]
 
 
-def pip(cx, pe, olhos, boca, doente, s, ol):
-    """Optional eye-led MedveGoshi Zoo character (not original Pip-KeyPet)."""
-    from zoo.pip.face import render
-    E, P, R, A = _rel(cx, pe, s, ol, lambda color: (14, 15, 40))
-    anchors = render(E, R, olhos, boca, doente)
-    if doente:
-        termometro(cx + 35 * s, pe - 60 * s)
-    points = [(cx + dx * s, pe + dy * s) for dx, dy in anchors]
-    return pe - 64 * s, pe - 87 * s, 35 * s, points
-
-
-def girafa(cx, pe, olhos, boca, doente, s, ol):
-    """Original Zoo giraffe; automatic fallback when no sprite pack exists."""
-    from zoo.giraffe.face import render
-    E, P, R, A = _rel(cx, pe, s, ol, lambda color: (160, 103, 43))
-    points = render(E, R, P, A, olhos, boca, doente)
-    if doente:
-        termometro(cx + 42 * s, pe - 64 * s)
-    return (pe - 101 * s, pe - 128 * s, 43 * s,
+def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol):
+    """Universal Zoo renderer, used for ALL future /zoo/animals/<id> packs."""
+    info = zoo_registry.ANIMALS.get(id)
+    fn = zoo_registry.renderer(id) if info else None
+    if fn is None:
+        return capi(cx, pe, olhos, boca, doente, s, ol)
+    ring = tuple(info.get('ring', (40, 35, 40)))
+    E, P, R, A = _rel(cx, pe, s, ol, lambda color: ring)
+    try:
+        points = fn(E, R, P, A, olhos, boca, doente)
+        if not isinstance(points, (tuple, list)) or len(points) != 2:
+            return capi(cx, pe, olhos, boca, doente, s, ol)
+    except (ValueError, TypeError, AttributeError, MemoryError, OSError):
+        return capi(cx, pe, olhos, boca, doente, s, ol)
+    if doente and info.get('thermometer'):
+        dx, dy = info['thermometer']
+        termometro(cx + dx * s, pe + dy * s)
+    return (pe + info['head'] * s, pe + info['top'] * s, info['half'] * s,
             [(cx + dx * s, pe + dy * s) for dx, dy in points])
 
 
@@ -845,12 +845,13 @@ def naufrago(cx, pe, olhos, boca, doente, s, ol):
     return pe - 74 * s, pe - 106 * s, 31 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-10, -76, 6), (10, -76, 6))]
 
 
-ELENCO = ('capi', 'elefante', 'pato', 'polvo', 'calopsita', 'cachorro', 'gato', 'et', 'sapinho', 'naufrago', 'pip', 'girafa')
-NOMES = {'capi': 'Капи', 'pato': 'Утка', 'elefante': 'Слон', 'polvo': 'Осьминог', 'calopsita': 'Попугай',
-         'cachorro': 'Карамелька', 'gato': 'Кот', 'et': 'Пришелец', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон', 'pip': 'Пип', 'girafa': 'Жирафик'}
-_FUNCS = {'capi': capi, 'pato': pato, 'elefante': elefante, 'polvo': polvo, 'calopsita': calopsita,
-          'cachorro': cachorro, 'gato': gato, 'et': et, 'sapinho': sapinho, 'naufrago': naufrago,
-          'pip': pip, 'girafa': girafa}
+# The first ten Capigoshi drawers remain unchanged. Every extra animal is
+# discovered at boot from zoo/animals/<id>/manifest.json; no per-animal edits.
+ELENCO = zoo_registry.ELENCO
+NOMES = zoo_registry.NOMES
+_FUNCS = {'capi': capi, 'pato': pato, 'elefante': elefante, 'polvo': polvo,
+          'calopsita': calopsita, 'cachorro': cachorro, 'gato': gato,
+          'et': et, 'sapinho': sapinho, 'naufrago': naufrago}
 
 
 FASES_VIDA = ('ovo', 'filhote', 'adulto', 'idoso', 'estrela')
@@ -874,8 +875,13 @@ def personagem(id, cx, pe, olhos='normal', boca='sorriso', doente=False, contorn
         sprite_info = zoo_sprites.draw(_fb, id, cx, pe, s, olhos, boca, doente,
                                        disp_w=W, disp_h=H)
     if sprite_info is None:
-        cab, topo, meia, olhos_pts = _FUNCS.get(id, capi)(
-            cx, pe, olhos, boca, doente, s, OL if contorno else None)
+        artist = _FUNCS.get(id)
+        if artist is None:
+            cab, topo, meia, olhos_pts = _animal_plugin(
+                id, cx, pe, olhos, boca, doente, s, OL if contorno else None)
+        else:
+            cab, topo, meia, olhos_pts = artist(
+                cx, pe, olhos, boca, doente, s, OL if contorno else None)
     else:
         cab, topo, meia, olhos_pts = sprite_info
     olhos_ult = [(_p(ex, ey) if _T else (ex, ey)) for ex, ey in olhos_pts]
@@ -926,8 +932,7 @@ def sombra(cx, ph, rx=20):
 
 # ------------------------------------------------------------ personagem vivo (movimentos e efeitos)
 olhos_ult = []
-HTOP = {'capi': 77, 'pato': 95, 'elefante': 75, 'polvo': 71, 'calopsita': 84, 'cachorro': 75,
-        'gato': 75, 'et': 81, 'sapinho': 65, 'naufrago': 79, 'pip': 86, 'girafa': 125}
+HTOP = zoo_registry.HTOP
 AZUL_L = (110, 180, 250)
 
 
