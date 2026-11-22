@@ -824,7 +824,7 @@ def naufrago(cx, pe, olhos, boca, doente, s, ol):
 
 ELENCO = ('capi', 'elefante', 'pato', 'polvo', 'calopsita', 'cachorro', 'gato', 'et', 'sapinho', 'naufrago')
 NOMES = {'capi': 'Капи', 'pato': 'Утка', 'elefante': 'Слон', 'polvo': 'Осьминог', 'calopsita': 'Попугай',
-         'cachorro': 'Карамелька', 'gato': 'Кот', 'et': 'ET', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон'}
+         'cachorro': 'Карамелька', 'gato': 'Кот', 'et': 'Пришелец', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон'}
 _FUNCS = {'capi': capi, 'pato': pato, 'elefante': elefante, 'polvo': polvo, 'calopsita': calopsita,
           'cachorro': cachorro, 'gato': gato, 'et': et, 'sapinho': sapinho, 'naufrago': naufrago}
 
@@ -1293,7 +1293,7 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
          legenda='', fase='adulto', wifi=1):
     """Painel de ajustes com a borda de baixo em y = borda (0 a 272).
     pendente = personagem escolhido nas setas e ainda nao confirmado;
-    confirma = 'trocar' ou 'Сброс' mostra a pergunta 'comeca do zero' no lugar da hora;
+    confirma = 'trocar' ou 'zerar' mostra a pergunta 'comeca do zero' no lugar da hora;
     wifi = barrinhas do canto (tocar nelas abre o Wi-Fi): 0 sem rede, 1 configurada, 2 internet ok."""
     o = borda - MENU_FUNDO                     # tudo desce junto com o painel
     rect(0, o, W, MENU_FUNDO - 10, TRAY)
