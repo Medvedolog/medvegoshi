@@ -1,21 +1,19 @@
-# Código de Conduta
+# Правила общения и участия
 
-O Capigoshi é um brinquedo feito para crianças e por gente que gosta delas. Este espaço precisa ser
-acolhedor para todo mundo, inclusive para quem está contribuindo pela primeira vez.
+MedveGoshi — открытый проект электронного питомца, в том числе для детей. В обсуждениях, задачах и Pull Request действует уважительный и безопасный формат общения.
 
-Este projeto adota o [Contributor Covenant, versão 2.1](https://www.contributor-covenant.org/pt-br/version/2/1/code_of_conduct/).
-Em resumo:
+- Обсуждайте технические решения, а не личные качества участников.
+- Не допускаются угрозы, травля, дискриминация, публикация чужих персональных данных, сексуализированный или жестокий контент.
+- Не публикуйте фотографии, имена, изображения рисунков и другие персональные сведения детей без согласия ответственных взрослых и законного основания.
+- При демонстрации детской игрушки избегайте опасных советов об аккумуляторах, электропитании и зарядке.
+- Предлагайте изменения с конкретными воспроизводимыми шагами, без оскорблений.
 
-- Seja gentil e paciente, principalmente com quem está começando.
-- Critique ideias e código, nunca pessoas.
-- Nada de assédio, linguagem ofensiva, conteúdo sexual ou violento. Lembre-se de que o público final
-  são crianças.
-- Não publique dados pessoais de ninguém. Isso inclui fotos, nomes ou desenhos de crianças sem a
-  autorização dos responsáveis.
+Руководствуемся принципами [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
-## Como relatar
+## Как сообщить о проблеме
 
-Se algo te incomodou, use o botão **Report a vulnerability / Report content** do GitHub, ou abra uma
-[Security Advisory privada](https://github.com/rjcaubit/capigoshi/security/advisories/new) no repositório.
-A mensagem é lida apenas pelas pessoas que mantêm o projeto e tratada com sigilo. Quem descumprir este código pode receber um
-aviso, ser suspenso ou ser removido do projeto, conforme a gravidade.
+Для обычных нарушений правил откройте [Issue MedveGoshi](https://github.com/Medvedolog/medvegoshi/issues). Не размещайте там приватные сведения. Для уязвимостей и ситуаций, требующих конфиденциальности, используйте доступные функции приватного обращения GitHub, если они включены в настройках репозитория.
+
+Администраторы проекта могут удалять сообщения, ограничивать участие и закрывать обсуждения, нарушающие эти правила.
+
+Эти правила адаптированы для независимого форка [Capigoshi](https://github.com/rjcaubit/capigoshi).
