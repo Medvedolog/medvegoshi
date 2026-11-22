@@ -6,7 +6,6 @@ The JSON manifest is transferred LAST, so a new pack is not advertised
 until its pixel/mask files have been copied successfully.
 """
 import argparse
-import ast
 import hashlib
 import json
 from pathlib import Path
@@ -15,6 +14,8 @@ import shlex
 import shutil
 import subprocess
 
+from zoo import registry
+
 ROOT = Path(__file__).resolve().parents[2]
 IDENTIFIER = re.compile(r"[a-z][a-z0-9_-]{0,39}\Z")
 STEM = re.compile(r"[A-Za-z0-9_-]{1,50}\Z")
@@ -22,14 +23,9 @@ FMT = "medvegoshi-rgb565-mask-v1"
 
 
 def existing_characters():
-    # Read the unchanged game enum without importing MicroPython-only hw.py.
-    tree = ast.parse((ROOT / "desenho.py").read_text(encoding="utf-8"))
-    for stmt in tree.body:
-        if isinstance(stmt, ast.Assign):
-            for target in stmt.targets:
-                if isinstance(target, ast.Name) and target.id == "ELENCO":
-                    return ast.literal_eval(stmt.value)
-    raise ValueError("could not read the existing cast")
+    # Query the SAME boot-time registry as the game, including optional
+    # animals shipped under zoo/animals/. No static ELENCO AST assumptions.
+    return registry.ELENCO
 
 
 def validate(pack):
