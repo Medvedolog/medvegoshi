@@ -1,9 +1,9 @@
 # MedveGoshi — HANDOFF / ТЗ / TODO: Zoo, графика, мимика, мини-игры и надёжность
 
-> **Дата среза:** 22 ноября 2026 г.  
+> **Дата обновления:** 23 ноября 2026 г.  
 > **Репозиторий:** https://github.com/Medvedolog/medvegoshi  
-> **Текущая рабочая ветка:** `feature/zoo-plugin-registry`  
-> **Текущий PR:** [#7 — модульный реестр животных](https://github.com/Medvedolog/medvegoshi/pull/7) → `feature/zoo-giraffe-first-pack` (PR #6) → PR #5 → PR #4 → PR #3 → PR #2  
+> **Единственная активная ветка разработки:** `feature/russian-game-ui`  
+> **Единый PR прошивки и Zoo:** [#2](https://github.com/Medvedolog/medvegoshi/pull/2) → `main` (draft). PR #3–#7 закрыты как дубли, их код включён в #2.  
 > **Статус:** техническое задание на продолжение работ, **не заявление о готовности перечисленных функций**.
 
 ## 0. Цель и неизменяемые требования
@@ -24,17 +24,17 @@
 
 ### 1.1. Открытые изменения
 
-- [PR #1](https://github.com/Medvedolog/medvegoshi/pull/1) — русская документация; `docs/russian-first → main`, открыт, не объединён.
-- [PR #2](https://github.com/Medvedolog/medvegoshi/pull/2) — кириллица и русские реплики/меню, профиль IPS, скрипт `install.sh`; `feature/russian-game-ui → main`, открыт как draft, не объединён.
+- [PR #1](https://github.com/Medvedolog/medvegoshi/pull/1) — **объединён в main**; русский README является титульным.
+- [PR #2](https://github.com/Medvedolog/medvegoshi/pull/2) — **единственный открытый draft**: кириллица, игровой интерфейс, Zoo, Пип, Жирафик, драйверы/установщик IPS, тесты и реестр животных; `feature/russian-game-ui → main`.
 - [PR #3](https://github.com/Medvedolog/medvegoshi/pull/3) — Zoo и Пип; `feature/zoo-lab-pip → feature/russian-game-ui`.
 - [PR #4](https://github.com/Medvedolog/medvegoshi/pull/4) — конвертер PNG → RGB565.
 - [PR #5](https://github.com/Medvedolog/medvegoshi/pull/5) — построчный sprite renderer и fallback.
 - [PR #6](https://github.com/Medvedolog/medvegoshi/pull/6) — оригинальный Жирафик.
 - [PR #7](https://github.com/Medvedolog/medvegoshi/pull/7) — универсальный реестр подключаемых животных и инсталлятор.
 
-**Порядок интеграции:** после проверки документации #1 и локализации #2 объединять зависимые PR строго по цепочке #3 → #4 → #5 → #6 → #7. При смене базы пересчитать diff и прогнать CI. **Ни один из этих PR не считать уже находящимся в `main`.**
+**Порядок интеграции:** PR #1 уже опубликован в `main` (документация). Изменения PR #3–#7 включены в **сводный PR #2**; все промежуточные PR закрыты. Дальнейшее развитие вести **только в `feature/russian-game-ui`**. Не объединять в `main` непроверенную на физической IPS прошивку.
 
-### 1.2. Готово в PR #3
+### 1.2. Включено в сводный PR #2 (ранее PR #3)
 
 - `zoo/pip/face.py` — **собственный облегчённый MicroPython-рендерер** по мотивам выразительных глаз Pip-KeyPet (не порт `ui/face.c`).
 - Пип добавлен **11-м необязательным персонажем** в `desenho.ELENCO`, `desenho._FUNCS`, `desenho.NOMES`, `vida.NOMES`, `vida.HTOP`; реплики по-русски.
@@ -78,7 +78,7 @@
 
 **Промежуточное состояние P0.3–P0.4:** добавлен хостовый `zoo/tools/build_sprites.py` и тесты `zoo/tests/test_sprite_pipeline.py` (детерминированный RGB565 big-endian, 1-битная маска MSB-first, единый якорь, лимит памяти и ручное подтверждение прав). Это **только компилятор файлов**. P0.5 (ESP32 runtime sprite renderer), P0.6 (разрешённый pack), P0.7 (новые животные) и аппаратные проверки пока НЕ выполнены. [Инструкция](tools/README.md).
 
-### Дополнение по Жирафику (ветка `feature/zoo-giraffe-first-pack`)
+### Дополнение по Жирафику (сейчас в `feature/russian-game-ui`)
 
 - Отдельный [README Жирафика](giraffe/README.md) и `zoo/giraffe/face.py`:
   собственный процедурный персонаж, независимый от Giraffegotchi PNG.
@@ -232,7 +232,7 @@ zoo/
 
 ## 9. Первые пять действий для следующего разработчика
 
-1. Проверить PR #1/#2/#3, выбрать базу для следующего PR, не потерять русский интерфейс и рабочий IPS-инсталлятор.
+1. Продолжать работу в `feature/russian-game-ui` (сводный PR #2), не создавать новую ветку на каждую небольшую функцию. Русский README уже опубликован в `main`.
 2. В отдельной ветке **начать P0.1 → P0.3**: реестр прав + графический конвейер Giraffegotchi на собственном тестовом PNG.
 3. Добавить `zoo/tests/test_sprite_pipeline.py` с повторяемостью преобразования и проверкой RGB565/маски.
 4. Только затем сделать первый добровольно подключаемый sprite-pack с проверенной лицензией и fallback на процедурную графику.
@@ -243,8 +243,8 @@ zoo/
 **Цель:** установить тринадцатого и любого следующего героя добавлением
 самостоятельной папки в `zoo/animals/<id>/`, **без изменения**
 `main.py`, `desenho.py`, `vida.py` и исходных десяти рисунков.
-Новая архитектура реализована в ветке `feature/zoo-plugin-registry`
-поверх Жирафика PR #6; см. [полную спецификацию Zoo Registry v1](REGISTRY.md).
+Новая архитектура реализована в единой ветке `feature/russian-game-ui`
+поверх Жирафика (исторический PR #6, ныне закрыт); см. [спецификацию Zoo Registry v1](REGISTRY.md).
 
 ### Архитектура и DONE / TODO
 
