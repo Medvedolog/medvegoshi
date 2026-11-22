@@ -742,6 +742,17 @@ def pip(cx, pe, olhos, boca, doente, s, ol):
     return pe - 64 * s, pe - 87 * s, 35 * s, points
 
 
+def girafa(cx, pe, olhos, boca, doente, s, ol):
+    """Original Zoo giraffe; automatic fallback when no sprite pack exists."""
+    from zoo.giraffe.face import render
+    E, P, R, A = _rel(cx, pe, s, ol, lambda color: (160, 103, 43))
+    points = render(E, R, P, A, olhos, boca, doente)
+    if doente:
+        termometro(cx + 42 * s, pe - 64 * s)
+    return (pe - 101 * s, pe - 128 * s, 43 * s,
+            [(cx + dx * s, pe + dy * s) for dx, dy in points])
+
+
 def gato(cx, pe, olhos, boca, doente, s, ol):
     if ol:
         ol_g = lambda c: (110, 104, 128) if c == GATO else ol(c)   # contorno claro: nao some a noite
@@ -834,12 +845,12 @@ def naufrago(cx, pe, olhos, boca, doente, s, ol):
     return pe - 74 * s, pe - 106 * s, 31 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-10, -76, 6), (10, -76, 6))]
 
 
-ELENCO = ('capi', 'elefante', 'pato', 'polvo', 'calopsita', 'cachorro', 'gato', 'et', 'sapinho', 'naufrago', 'pip')
+ELENCO = ('capi', 'elefante', 'pato', 'polvo', 'calopsita', 'cachorro', 'gato', 'et', 'sapinho', 'naufrago', 'pip', 'girafa')
 NOMES = {'capi': 'Капи', 'pato': 'Утка', 'elefante': 'Слон', 'polvo': 'Осьминог', 'calopsita': 'Попугай',
-         'cachorro': 'Карамелька', 'gato': 'Кот', 'et': 'Пришелец', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон', 'pip': 'Пип'}
+         'cachorro': 'Карамелька', 'gato': 'Кот', 'et': 'Пришелец', 'sapinho': 'Лягушонок', 'naufrago': 'Робинзон', 'pip': 'Пип', 'girafa': 'Жирафик'}
 _FUNCS = {'capi': capi, 'pato': pato, 'elefante': elefante, 'polvo': polvo, 'calopsita': calopsita,
           'cachorro': cachorro, 'gato': gato, 'et': et, 'sapinho': sapinho, 'naufrago': naufrago,
-          'pip': pip}
+          'pip': pip, 'girafa': girafa}
 
 
 FASES_VIDA = ('ovo', 'filhote', 'adulto', 'idoso', 'estrela')
