@@ -15,6 +15,7 @@ import unittest
 
 from zoo import registry
 from zoo.tools.install_animal import check_source, install
+from zoo.tools.install_pack import existing_characters
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -118,6 +119,11 @@ class PluginRegistryTests(unittest.TestCase):
         self.assertEqual(65, heights["testfox"])
         self.assertEqual(("Привет!", "Я тестовый|лисенок!"),
                          phrases["testfox"]["ocioso"])
+
+    def test_external_animal_can_also_receive_a_sprite_pack(self):
+        # Its metadata may be located outside the local repository.
+        self.assertNotIn("testfox", existing_characters())
+        self.assertIn("testfox", existing_characters(self.root))
 
     def test_external_plugin_executes_via_shared_engine(self):
         proc = subprocess.run(
