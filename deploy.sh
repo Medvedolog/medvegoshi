@@ -53,12 +53,12 @@ mpremote connect "$PORT" mkdir :zoo/giraffe 2>/dev/null || true
 mpremote connect "$PORT" mkdir :zoo/packs 2>/dev/null || true
 mpremote connect "$PORT" mkdir :zoo/animals 2>/dev/null || true
 mpremote connect "$PORT" \
-  cp "$DIR/main.py" : \
-  + cp "$DIR/hw.py" : \
+  cp "$DIR/hw.py" : \
   + cp "$DIR/desenho.py" : \
   + cp "$DIR/font_ru.py" : \
   + cp "$DIR/zoo/__init__.py" :zoo/__init__.py \
   + cp "$DIR/zoo/registry.py" :zoo/registry.py \
+  + cp "$DIR/zoo/recovery.py" :zoo/recovery.py \
   + cp "$DIR/zoo/animals/__init__.py" :zoo/animals/__init__.py \
   + cp "$DIR/zoo/sprites.py" :zoo/sprites.py \
   + cp "$DIR/zoo/pip/__init__.py" :zoo/pip/__init__.py \
@@ -91,10 +91,13 @@ mpremote connect "$PORT" mkdir :companion 2>/dev/null || true
 mpremote connect "$PORT" cp "$DIR"/companion/*.py :companion/      # o cerebro (sem sim/ e testes/)
 
 # Acerta o relógio da placa com a hora deste computador (não precisa de internet)
+# Copy boot entrypoint LAST. If transfer is interrupted, do not leave
+# a new main.py requiring unavailable modules. The existing app/save stays.
 AGORA=$(date "+%Y, %-m, %-d, %-H, %-M, %-S")
 echo "→ Синхронизация часов устройства: $(date "+%d/%m/%Y %H:%M:%S")"
 mpremote connect "$PORT" \
   exec "from machine import I2C, Pin; import hw; hw.Relogio(I2C(0, scl=Pin(14), sda=Pin(15), freq=400000)).acertar($AGORA)" \
+  + cp "$DIR/main.py" : \
   + reset
 
 echo ""
