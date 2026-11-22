@@ -46,7 +46,7 @@ import sys, types
 fbmod = types.ModuleType("framebuf")
 fbmod.MONO_HLSB, fbmod.RGB565 = 1, 2
 class FB:
-    def __init__(self):
+    def __init__(self, *args):
         self.draws = 0
     def ellipse(self, *args): self.draws += 1
     def fill_rect(self, *args): self.draws += 1
