@@ -223,5 +223,5 @@ def humor_txt(h):
     if h > -15:
         return 'Всё хорошо'
     if h > -50:
-        return 'Мне грустно...'
-    return 'Мне плохо...'
+        return 'Грустно...'
+    return 'Совсем|грустно...'

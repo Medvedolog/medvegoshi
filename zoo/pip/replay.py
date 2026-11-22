@@ -29,7 +29,7 @@ EVENT_LABELS = {"feed": "покормить", "stroke": "погладить",
                 "sleep": "уложить спать", "wake": "разбудить"}
 EVENT_REASONS = {
     ("feed", "nauseous"): ("fed_while_full", "Пип уже был сыт"),
-    ("feed", "disgusted"): ("fed_again_while_full", "его снова покормили сытым"),
+    ("feed", "disgusted"): ("fed_again_while_full", "покормили сытым повторно"),
     ("feed", "content"): ("ate_with_appetite", "он поел с аппетитом"),
     ("stroke", None): ("affection", "ласка повышает привязанность"),
     ("sleep", None): ("bedtime_requested", "его уложили спать"),
@@ -46,7 +46,7 @@ MOOD_LABELS = {
     "pinkeye": "глаз покраснел", "nauseous": "подташнивает", "sick": "болеет",
     "tired": "устал", "exhausted": "без сил", "annoyed": "раздражён",
     "furious": "в ярости", "rage": "в бешенстве", "swearing": "ворчит",
-    "indignant": "возмущён", "belligerent": "настроен воинственно",
+    "indignant": "возмущён", "belligerent": "воинственен",
     "hurt": "обижен", "disgusted": "противно", "suspicious": "подозревает неладное",
     "cynical": "усмехается", "afraid": "напуган", "nervous": "нервничает",
     "despondent": "приуныл", "lonely": "скучает по тебе", "gloomy": "хмурится",
@@ -210,7 +210,7 @@ def _human(report):
                         DETAIL_LABELS.get(reason["detail"], reason["detail"])))
         lines.append("          " + ", ".join("%s=%.0f%%" % (NEED_LABELS.get(k, k), v * 100)
                                                 for k, v in state["needs"].items()))
-    lines.append("Проверок сохранения: %d; совпавших следующих шагов: %d."
+    lines.append("Проверок сохранения: %d; совпавших шагов: %d."
                  % (report["checkpoints"], report["verified_steps"]))
     return "\n".join(lines)
 

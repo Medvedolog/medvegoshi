@@ -47,11 +47,11 @@ def _html(s):
 def _pagina(redes, erro='', raiox=False):
     p = ['<!doctype html><html lang="ru"><meta charset="utf-8">'
          '<meta name="viewport" content="width=device-width,initial-scale=1">'
-         '<title>Wi-Fi питомца MedveGoshi</title><style>', _CSS, '</style><main>'
+         '<title>Wi-Fi для MedveGoshi</title><style>', _CSS, '</style><main>'
          '<h1>Привет! Подключи меня к Wi-Fi! 🐾</h1>'
-         '<p>Через Wi-Fi я узнаю точное время и погоду за окном.</p>']
+         '<p>По Wi-Fi я сам настрою часы и узнаю погоду за окном.</p>']
     if raiox:
-        p.append('<p><a class="rx" href="/raiox">🧠 Посмотреть мой мозг</a></p>')
+        p.append('<p><a class="rx" href="/raiox">🧠 Заглянуть в мой мозг</a></p>')
     if erro:
         p.append('<p class="e">%s</p>' % _html(erro))
     p.append('<form class="c" method="post" action="/salvar">')
@@ -76,7 +76,7 @@ def _pagina_salvo(ssid):
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             '<title>Готово!</title><style>' + _CSS + '</style><main><div class="c">'
             '<h1>Готово! 🎉</h1><p>Перезагружаюсь и подключаюсь к сети <b>' + _html(ssid) + '</b>.</p>'
-            '<p>Если подключение не получилось, открой настройки Wi-Fi ещё раз и проверь пароль.</p>'
+            '<p>Если не вышло подключиться, открой Wi-Fi питомца ещё раз и проверь пароль.</p>'
             '</div></main></html>')
 
 
@@ -157,9 +157,9 @@ def tratar(pedido, redes, resumo=None):
         f = formulario(corpo)
         ssid, senha = f.get('ssid', '').strip(), f.get('senha', '')
         if not ssid or len(ssid.encode()) > 32:
-            html = _pagina(redes, 'Не указано имя сети.', resumo is not None)
+            html = _pagina(redes, 'Укажи имя сети.', resumo is not None)
         elif senha and not 8 <= len(senha.encode()) <= 63:
-            html = _pagina(redes, 'Пароль Wi-Fi должен содержать 8–63 символа. Проверь и повтори.', resumo is not None)
+            html = _pagina(redes, 'В пароле Wi-Fi от 8 до 63 символов. Проверь и попробуй снова.', resumo is not None)
         else:
             salvo = {'ssid': ssid, 'senha': senha}
             html = _pagina_salvo(ssid)
@@ -278,7 +278,7 @@ def abrir(tela, botao=None, resumo=None):
             if salvo:
                 with open('wifi.json', 'w') as f:
                     json.dump(salvo, f)
-                _mostrar(tela, ('> salvo!', 'reiniciando...'), True)
+                _mostrar(tela, ('> сохранено!', 'перезапуск...'), True)
                 time.sleep_ms(1500)                  # da tempo do celular mostrar a pagina
                 break
     finally:

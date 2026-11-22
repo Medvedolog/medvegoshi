@@ -130,13 +130,13 @@ def show_recovery(tela, desenho, error):
         desenho.centro("zoo/animals", 158, dark)
     elif error.reason == "pet_corrupt":
         desenho.centro("ОШИБКА СОХРАНЕНИЯ", 59, red)
-        desenho.centro("Файл питомца не читается", 93, dark)
+        desenho.centro("capi.json повреждён", 93, dark)
         if error.pet_id:
             desenho.centro(error.pet_id[:28], 112, red)
         desenho.centro("Восстановите файл", 137, dark)
     elif error.reason == "config_corrupt":
         desenho.centro("ОШИБКА НАСТРОЕК", 59, red)
-        desenho.centro("config.json поврежден", 93, dark)
+        desenho.centro("config.json повреждён", 93, dark)
         desenho.centro("Восстановите файл", 137, dark)
     else:
         desenho.centro("СЛОТ НЕ ОТКРЫТ", 59, red)

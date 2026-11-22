@@ -944,14 +944,14 @@ def atualizar_cerebro(agora):
 # (movimento, fala) que ele sorteia de vez em quando conforme o tempo la fora
 FALAS_CLIMA = {
     'chuva': (('olhar', 'Дождик!'), ('tremer', 'Я промок!'), ('pular', 'Люблю дождь!')),
-    'tempestade': (('susto', 'Гром!'), ('tremer', 'Боюсь молнии!')),
+    'tempestade': (('susto', 'Гром!'), ('tremer', 'Ой, молния!')),
     'neve': (('tremer', 'Идёт снег!'), ('comemorar', 'Снежок!')),
     'neblina': (('olhar', 'Туман!'),),
-    'vento': (('tonto', 'Сильный ветер!'), ('olhar', 'Почти улетел!')),
+    'vento': (('tonto', 'Ух, ветер!'), ('olhar', 'Чуть|не улетел!')),
     'nublado': (('olhar', 'Будет дождь?'),),
-    'sol': (('dancar', 'Как солнечно!'), ('espreguicar', 'Хороший день!')),
-    'noite': (('olhar', 'Звёздное небо!'),),
-    'calor': (('bocejar', 'Как жарко!'), ('olhar', 'Хочу мороженое')),
+    'sol': (('dancar', 'Какое|солнце!'), ('espreguicar', 'Хороший день!')),
+    'noite': (('olhar', 'Звёздное|небо!'),),
+    'calor': (('bocejar', 'Как жарко!'), ('olhar', 'Хочу|мороженое!')),
     'frio': (('tremer', 'Как холодно!'), ('tremer', 'Где куртка?')),
 }
 NOME_TEMPO = {'chuva': 'Дождь', 'tempestade': 'Гроза', 'neve': 'Снег', 'neblina': 'Туман',
@@ -1032,7 +1032,7 @@ def atualizar_rede(agora):
         k = ev[0]
         if k == 'hora':
             relogio.acertar(*ev[1])
-            sistema('Время обновлено')
+            sistema('Время точное!')
         elif k == 'clima':
             sistema('%s, %dC' % (NOME_TEMPO[ev[2]], d.ri(ev[1])), 4000)
         elif k == 'sem_wifi':
@@ -1066,7 +1066,7 @@ def trocar_offline():
     cfg['offline'] = not cfg.get('offline')
     rede.ficar_offline(cfg['offline'])
     salvar('config.json', cfg)
-    sistema('Радио выключено' if cfg['offline'] else 'Радио включено', 3000)
+    sistema('Радио выкл.' if cfg['offline'] else 'Радио вкл.', 3000)
     som.tocar('bocejo' if cfg['offline'] else 'feliz')
 
 
@@ -1162,7 +1162,7 @@ def verificar_sensores(agora):
     cerebro_evento(('sacudida_forte' if abs(g - 1.0) > 1.6 else 'sacudida_leve') if sacudiu else 'barulho')
     if dormindo():
         iniciar_anim('susto')
-        falar('Как страшно!')
+        falar('Ой, напугал!')
         som.tocar('susto')
         pet['alegria'] = lim(pet['alegria'] - 5)
         V.acordar(L, vt)                                  # fica 1 min acordado e volta a dormir
@@ -1433,7 +1433,7 @@ def verificar_bateria(agora):
     bat_pct, bat_carregando = bateria.porcentagem(), bateria.carregando()
     fraca = bat_pct is not None and bat_pct <= BATERIA_FRACA and not bat_carregando
     if fraca and not bat_avisou:
-        sistema('Заряди батарею!', 4000)
+        sistema('Заряди меня!', 4000)
         som.tocar('triste')
     bat_avisou = fraca
 
@@ -1526,10 +1526,10 @@ def acao_menu(x, y, hit=None):
                 novo = trocar_pet(alvo)
                 sistema('Новое яйцо!' if novo else 'Друг вернулся!')
             elif confirma == 'zerar':
-                sistema('Новое яйцо!' if novo_ovo() else 'Не удалось сохранить')
+                sistema('Новое яйцо!' if novo_ovo() else 'Ошибка сохранения')
         except (OSError, ValueError, TypeError, MemoryError, zoo_recovery.RecoveryRequired) as exc:
             print('Zoo switch:', exc)
-            sistema('Не удалось сменить друга' if confirma == 'trocar' else 'Не удалось сохранить')
+            sistema('Не удалось сменить' if confirma == 'trocar' else 'Ошибка сохранения')
     elif k == 'nao':
         menu_pend = menu_conf = None
     elif k == 'hora' and v != cfg['hora']:
@@ -1636,7 +1636,7 @@ def soltar(agora):
                     som.tocar('moeda')
                 else:                                  # shh: bronca
                     cerebro_evento('shh')
-                    V.tocar(L, vt, 'esconder', say='ta bom...|shh')
+                    V.tocar(L, vt, 'esconder', say='Ладно...|тс-с')
                 return
             V.toque(L, vt, t[2])
             cerebro_evento('carinho' if t[2] else 'toque')

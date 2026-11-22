@@ -1350,7 +1350,7 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
     texto('Режим', 20, o + 29, CREME)
     for i, (mid, rot) in enumerate(MODOS):
         _seg(20 + i * 68, o + 40, 64, 30, rot, modo == mid)
-    texto('Твой питомец', 16, o + 76, CREME)
+    texto('Питомец', 16, o + 76, CREME)
     _seg(116, o + 73, 108, 14, 'Сменить друга', bool(pendente))
     mostra = pendente or id
     n = len(ELENCO)
@@ -1383,7 +1383,7 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
     else:
         texto('Время', 20, o + 171, CREME)
         _seg(20, o + 182, 98, 26, 'Обычное', hora_modo == 'real')
-        _seg(122, o + 182, 98, 26, 'Ускорить', hora_modo == 'sim')
+        _seg(122, o + 182, 98, 26, 'Быстрое', hora_modo == 'sim')
         if hora_modo == 'sim':
             for i, v in enumerate((1, 2, 3)):
                 _seg(20 + i * 68, o + 214, 64, 22, '%dx' % v, vel == v)
