@@ -4,6 +4,7 @@
 # poly, pixel, line e texto 8x8. Cores em RGB e convertidas para RGB565 em C().
 import math, framebuf
 import font_ru
+from zoo import sprites as zoo_sprites
 from array import array
 from hw import cor, W, H
 
@@ -854,7 +855,18 @@ def personagem(id, cx, pe, olhos='normal', boca='sorriso', doente=False, contorn
     if fase == 'filhote':
         s *= 0.62
     global olhos_ult
-    cab, topo, meia, olhos_pts = _FUNCS.get(id, capi)(cx, pe, olhos, boca, doente, s, OL if contorno else None)
+    # A sprite is an optional skin installed in /zoo/packs/<character-id>/.
+    # Keep the procedural artist for missing/corrupt packs and for transformed
+    # animation frames: rotation/stretching is not yet supported by bitmap art.
+    sprite_info = None
+    if _T is None and id in ELENCO:
+        sprite_info = zoo_sprites.draw(_fb, id, cx, pe, s, olhos, boca, doente,
+                                       disp_w=W, disp_h=H)
+    if sprite_info is None:
+        cab, topo, meia, olhos_pts = _FUNCS.get(id, capi)(
+            cx, pe, olhos, boca, doente, s, OL if contorno else None)
+    else:
+        cab, topo, meia, olhos_pts = sprite_info
     olhos_ult = [(_p(ex, ey) if _T else (ex, ey)) for ex, ey in olhos_pts]
     if fase == 'idoso':                       # sobrancelhas brancas e bengala
         for ex, ey in olhos_pts:
