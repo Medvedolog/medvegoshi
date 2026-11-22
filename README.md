@@ -17,9 +17,7 @@
   <a href="CREDITOS.md">Благодарности и лицензии</a>
 </p>
 
-> **Состояние ветки разработки:** русский интерфейс, кириллица и модульный Zoo с Пипом и Жирафиком подготовлены в [сводном PR #2](https://github.com/Medvedolog/medvegoshi/pull/2); изменения ещё не выпущены в `main` и требуют испытаний на настоящем IPS 1,83″. **AMOLED 1.8 V1 (SH8601/FT3168) пока не поддерживается:** установщик блокирует эту плату. Сначала проверьте профиль своей платы, а для обновления существующего IPS без удаления сохранений применяйте `--files-only`.
-
-**Разработка:** [Зоопарк и реестр персонажей](https://github.com/Medvedolog/medvegoshi/blob/feature/russian-game-ui/zoo/REGISTRY.md) · [ТЗ и задачи](https://github.com/Medvedolog/medvegoshi/blob/feature/russian-game-ui/zoo/HANDOFF.md) · [установка IPS](https://github.com/Medvedolog/medvegoshi/blob/feature/russian-game-ui/docs/INSTALL_RU.md).
+> **Состояние проекта:** документация переведена на русский. **Русский интерфейс прошивки и порт на Waveshare ESP32-S3-Touch-AMOLED-1.8 V1 ещё не реализованы.** Нельзя прошивать AMOLED-плату текущим `deploy.sh` в расчёте на работающий экран. В `main` остаётся код оригинального Capigoshi для IPS 1,83″.
 
 ## Откуда проект
 
