@@ -6,7 +6,7 @@ MICROPYTHON_SHA=e0e9fbb17ed6fd06bb76e266ae554784c9c80804
 AMOLED_SHA=97934b7c35b1720a14fd69e4e1322bb5684b9b2c
 IDF_VERSION=v5.5.2
 
-ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$ROOT/.." && pwd)
 WORK="${BUILD_ROOT:-$REPO_ROOT/build/amoled-v1-native}"
 MP="$WORK/micropython"
