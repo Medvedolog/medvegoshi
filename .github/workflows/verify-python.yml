@@ -19,6 +19,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_*.py'
       - name: Run Zoo/Pip integration and regression tests
         run: python -m unittest discover -s zoo/tests -p 'test_*.py'
+      - name: Run original Pip-KeyPet C reference tests
+        run: sh zoo/upstream/pip/run_tests.sh
       - name: Check installer profile routing
         run: |
           sh -n install.sh
