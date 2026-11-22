@@ -73,6 +73,15 @@ class FramebufModule:
     RGB565 = 2
 
 
+class FakeNativePanel:
+    def __init__(self):
+        self.calls = []
+    def tx_param(self, cmd, data):
+        self.calls.append(("param", cmd, data))
+    def tx_color(self, cmd, data):
+        self.calls.append(("color", cmd, data))
+
+
 class FakeNativeScreen:
     def __init__(self, panel, **kwargs):
         self.panel = panel
@@ -98,7 +107,7 @@ class NativeModule:
     @classmethod
     def QSPIPanel(cls, **kwargs):
         cls.last_panel = kwargs
-        return kwargs
+        return FakeNativePanel()
     @classmethod
     def AMOLED(cls, panel, **kwargs):
         cls.last_display = FakeNativeScreen(panel, **kwargs)
@@ -182,14 +191,28 @@ class AMOLEDV1Contracts(unittest.TestCase):
                     port.prepare_v1(FakeI2C(addresses), FakeMachine,
                                     NativeModule, FramebufModule)
 
-    def test_ft3168_irq_does_not_poll_sleeping_touch(self):
-        irq = FakePin(21, FakePin.IN)
-        irq.level = 1
-        sensor = port.FT3168Touch(self.bus, irq=irq)
-        self.bus.touch = make_touch_packet(100, 100)
-        self.assertIsNone(sensor.ler())
-        irq.level = 0
+    def test_ft3168_poll_catches_contact_without_irq_and_does_not_retry_nack(self):
+        class CountingTouchBus(FakeI2C):
+            def __init__(self):
+                super().__init__()
+                self.reads = []
+                self.nack = False
+
+            def readfrom_mem(self, dev, reg, n):
+                self.reads.append((dev, reg, n))
+                if self.nack:
+                    raise OSError("idle NACK")
+                return super().readfrom_mem(dev, reg, n)
+
+        bus = CountingTouchBus()
+        sensor = port.FT3168Touch(bus)
+        bus.touch = make_touch_packet(100, 100)
         self.assertEqual(sensor.ler(), (36, 18))
+        self.assertEqual(bus.reads, [(0x38, 0x02, 5)])
+        bus.nack = True
+        self.assertIsNone(sensor.ler())
+        self.assertEqual(bus.reads, [(0x38, 0x02, 5)] * 2)
+        self.assertEqual(bus.writes, [])
 
     def test_touch_reset_requires_explicit_v1_label_confirmation(self):
         class ResetHeldI2C(FakeI2C):
@@ -228,15 +251,41 @@ class AMOLEDV1Contracts(unittest.TestCase):
         self.assertEqual(FakeSPI.calls[0][1]["baudrate"], 80_000_000)
         self.assertEqual(FakeSPI.calls[0][1]["mosi"], None)
         self.assertEqual(self.bus.register[(0x20, 0x01)] & 0x03, 0x03)
-        self.assertIn((21, FakePin.IN), FakePin.creations)
+        self.assertNotIn((21, FakePin.IN), FakePin.creations)
         self.assertNotIn((13, FakePin.OUT), FakePin.creations)
         screen.buf[:4] = b"\xf8\x00\x07\xe0"
+        screen.buf[-2:] = b"\x00\x1f"
+        native = NativeModule.last_display
+        startup = list(native.calls)
+        self.assertEqual(startup.count(("refresh",)), 1)
         screen.mostrar()
-        call = NativeModule.last_display.calls[-2]
-        self.assertEqual(call[:5], ("bitmap", 64, 82, 303, 365))
-        self.assertIs(call[5], screen.buf)
-        self.assertEqual(screen.buf[:4], b"\xf8\x00\x07\xe0")
-        self.assertEqual(NativeModule.last_display.calls[-1], ("refresh",))
+        self.assertEqual(native.calls, startup)  # no framebuffer refresh over our blit
+        col, row, color = native.panel.calls
+        self.assertEqual(col, ("param", 0x2A, b"\x00\x40\x01\x2f"))
+        self.assertEqual(row, ("param", 0x2B, b"\x00\x52\x01\x6d"))
+        self.assertEqual(color[:2], ("color", 0))
+        self.assertIs(color[2], screen.buf)
+        self.assertEqual(len(color[2]), 136320)
+        self.assertEqual(color[2][:4], b"\xf8\x00\x07\xe0")
+        self.assertEqual(color[2][-2:], b"\x00\x1f")
+
+    def test_bad_frame_size_rejected_before_qspi_writes(self):
+        screen, _ = port.prepare_v1(
+            self.bus, FakeMachine, NativeModule, FramebufModule)
+        screen.buf = bytearray(136318)
+        with self.assertRaisesRegex(ValueError, "frame size"):
+            screen.mostrar()
+        self.assertEqual(NativeModule.last_display.panel.calls, [])
+
+    def test_raw_qspi_transport_required_before_display_power(self):
+        class NoRawTransport(NativeModule):
+            @classmethod
+            def QSPIPanel(cls, **kwargs):
+                return object()
+
+        with self.assertRaisesRegex(port.DriverUnavailable, "transport"):
+            port.prepare_v1(self.bus, FakeMachine, NoRawTransport, FramebufModule)
+        self.assertEqual(self.bus.writes, [])
 
     def test_rgb565_endianness_matches_ips_byte_swapped_helper(self):
         self.assertEqual(rgb565_swapped(255, 0, 0), 0x00F8)
@@ -267,9 +316,11 @@ class AMOLEDV1Contracts(unittest.TestCase):
         for n in (-1, 101):
             with self.assertRaises(ValueError):
                 screen.brilho(n)
-        screen.brilho(75)
-        self.assertEqual(NativeModule.last_display.calls[-1],
-                         ("brightness", 75))
+        for percent, raw in ((0, 0), (50, 128), (75, 191), (100, 255)):
+            with self.subTest(percent=percent):
+                screen.brilho(percent)
+                self.assertEqual(NativeModule.last_display.calls[-1],
+                                 ("brightness", raw))
 
 
 if __name__ == "__main__":

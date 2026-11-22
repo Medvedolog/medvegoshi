@@ -5,8 +5,8 @@ V2 CO5300/CST820 is explicitly rejected.
 
 The existing game uses a 240x284 RGB565 framebuf and ST7789 byte-swapped
 colors. Keep that exact drawing ABI and transfer its big-endian RGB565 bytes
-into the centre of the 368x448 V1 display with the external native QSPI
-AMOLED.bitmap() driver. The surrounding pixels remain black.
+into the centre of the 368x448 V1 display through the native QSPI panel
+transport. The surrounding pixels remain black.
 
 This module never flashes firmware. It must only run on a suitable
 MicroPython build with amoled.QSPIPanel and amoled.AMOLED.
@@ -22,6 +22,19 @@ PANEL_W = 368
 PANEL_H = 448
 OFFSET_X = (PANEL_W - LOGICAL_W) // 2
 OFFSET_Y = (PANEL_H - LOGICAL_H) // 2
+FRAME_BYTES = LOGICAL_W * LOGICAL_H * 2
+
+_LCD_CASET = 0x2A
+_LCD_RASET = 0x2B
+
+
+def _address_window(start, size):
+    last = start + size - 1  # SH8601 RAM window uses inclusive end addresses.
+    return bytes((start >> 8, start & 0xFF, last >> 8, last & 0xFF))
+
+
+_COLUMN_WINDOW = _address_window(OFFSET_X, LOGICAL_W)
+_ROW_WINDOW = _address_window(OFFSET_Y, LOGICAL_H)
 
 TOUCH_ADDR = 0x38
 V2_TOUCH_ADDR = 0x15
@@ -105,15 +118,12 @@ def logical_to_physical(x, y):
 
 class FT3168Touch:
     """Minimal FT3168 register read, no reset/power writes during sampling."""
-    def __init__(self, i2c, irq=None):
+    def __init__(self, i2c):
         self.i2c = i2c
-        self.irq = irq
 
     def ler(self):
-        # GPIO21 is active-low while touched. Avoid polling the I2C chip
-        # after it enters idle sleep (otherwise it may NACK).
-        if self.irq is not None and self.irq.value():
-            return None
+        # TP_INT can be a pulse. Sampling its level would drop contacts
+        # between polls. Perform one I2C read, without retries on idle NACK.
         try:
             # 0x02 = finger count, 0x03..0x06 = XH/XL/YH/YL.
             data = self.i2c.readfrom_mem(TOUCH_ADDR, 0x02, 5)
@@ -133,27 +143,29 @@ class FT3168Touch:
 
 class Tela:
     """Game-compatible 240x284 framebuffer; native driver owns AMOLED QSPI."""
-    def __init__(self, display, framebuffer_module):
+    def __init__(self, display, panel, framebuffer_module):
         self.display = display
-        self.buf = bytearray(LOGICAL_W * LOGICAL_H * 2)
+        self.panel = panel
+        self.buf = bytearray(FRAME_BYTES)
         self.fb = framebuffer_module.FrameBuffer(
             self.buf, LOGICAL_W, LOGICAL_H, framebuffer_module.RGB565)
 
     def brilho(self, percent):
         if not (0 <= percent <= 100):
             raise ValueError("AMOLED brightness must be 0..100 percent")
-        self.display.brightness(int(percent))
+        self.display.brightness(int(percent * 255 / 100 + 0.5))
 
     def mostrar(self):
-        # IPS hw.cor produces rgb565be bytes; the reference native AMOLED
-        # bitmap() takes rgb565be pixel buffers. No full native-sized
-        # auxiliary buffer is needed on the MicroPython side.
-        self.display.bitmap(
-            OFFSET_X, OFFSET_Y,
-            OFFSET_X + LOGICAL_W - 1,
-            OFFSET_Y + LOGICAL_H - 1,
-            self.buf)
-        self.display.refresh()
+        if len(self.buf) != FRAME_BYTES:
+            raise ValueError("Incorrect AMOLED V1 RGB565 frame size")
+        # The pinned native bitmap() disagrees on inclusive end coordinates
+        # and payload length. Its separate framebuffer is not updated by the
+        # direct transfer, so refresh() afterwards would overwrite this frame.
+        # Set the SH8601 window ourselves and send all RGB565 wire bytes;
+        # native tx_color issues RAMWR and uses the actual buffer length.
+        self.panel.tx_param(_LCD_CASET, _COLUMN_WINDOW)
+        self.panel.tx_param(_LCD_RASET, _ROW_WINDOW)
+        self.panel.tx_color(0, self.buf)
 
 
 def prepare_v1(i2c, machine_module=None, amoled_module=None,
@@ -181,7 +193,6 @@ def prepare_v1(i2c, machine_module=None, amoled_module=None,
     SPI = machine_module.SPI
     cs = Pin(GPIO_CS, Pin.OUT)
     clock = Pin(GPIO_CLK, Pin.OUT)
-    irq = Pin(GPIO_TOUCH_IRQ, Pin.IN, Pin.PULL_UP)
     data = tuple(Pin(pin, Pin.OUT) for pin in GPIO_DATA)
 
     # Requires a compiled QSPI controller; ordinary SPI is insufficient.
@@ -190,6 +201,9 @@ def prepare_v1(i2c, machine_module=None, amoled_module=None,
     panel = amoled_module.QSPIPanel(
         spi=spi, data=data, dc=data[1], cs=cs, pclk=80_000_000,
         width=PANEL_W, height=PANEL_H)
+    if not (callable(getattr(panel, "tx_param", None)) and
+            callable(getattr(panel, "tx_color", None))):
+        raise DriverUnavailable("Native SH8601 QSPI transport is unavailable")
     # Real V1 panel reset EXIO0 and touch reset EXIO2 are not ESP32 GPIOs.
     # Release the panel reset first. Power is on EXIO1.
     set_expander_bit(i2c, EXPANDER_PANEL_RESET_BIT, True)
@@ -202,6 +216,6 @@ def prepare_v1(i2c, machine_module=None, amoled_module=None,
     # Establish black borders once; only the centred game changes later.
     display.fill(0)
     display.refresh()
-    screen = Tela(display, framebuffer_module)
+    screen = Tela(display, panel, framebuffer_module)
     screen.brilho(50)
-    return screen, FT3168Touch(i2c, irq=irq)
+    return screen, FT3168Touch(i2c)
