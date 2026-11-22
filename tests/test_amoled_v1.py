@@ -33,7 +33,7 @@ class FakePin:
     IN = 0
     PULL_UP = 2
     creations = []
-    def __init__(self, number, mode=None, **kwargs):
+    def __init__(self, number, mode=None, pull=None, **kwargs):
         self.number, self.mode = number, mode
         self.creations.append((number, mode))
         self.level = 1
