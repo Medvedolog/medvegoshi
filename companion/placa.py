@@ -78,14 +78,24 @@ def _ler(nome):
         return None
     cer = Cerebro(semente)
     p = n
+    fim = len(dados) - 4  # the final 4 bytes hold the checksum
     for b, tipo in zip(_blocos(cer), TIPOS):
+        # A valid CRC alone does not guarantee a valid binary layout:
+        # a partially truncated record can still carry a recomputed CRC.
+        if p + 4 > fim:
+            return None
         tam = struct.unpack('<I', dados[p:p + 4])[0]
+        esperado = len(b) * (2 if tipo in ('h', 'H') else 4)
+        if tam != esperado or p + 4 + tam > fim:
+            return None
         novo = array(tipo, dados[p + 4:p + 4 + tam])
         if len(novo) != len(b):
             return None
         for k in range(len(b)):
             b[k] = novo[k]
         p += 4 + tam
+    if p != fim:
+        return None
     cer.idade_s, cer.ticks_rodados = idade, ticks
     cer.drives.dormindo, cer.drives.afeto_ja_60 = bool(dorm), bool(af60)
     return cer, salvo
