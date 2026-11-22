@@ -749,12 +749,12 @@ FALAS_CLIMA = {
     'tempestade': (('susto', 'Гром!'), ('tremer', 'Боюсь молнии!')),
     'neve': (('tremer', 'Идёт снег!'), ('comemorar', 'Снежок!')),
     'neblina': (('olhar', 'Туман!'),),
-    'vento': (('tonto', 'Сильный ветер!'), ('olhar', 'Чуть не улетел!')),
+    'vento': (('tonto', 'Сильный ветер!'), ('olhar', 'Почти улетел!')),
     'nublado': (('olhar', 'Будет дождь?'),),
     'sol': (('dancar', 'Как солнечно!'), ('espreguicar', 'Хороший день!')),
     'noite': (('olhar', 'Звёздное небо!'),),
     'calor': (('bocejar', 'Как жарко!'), ('olhar', 'Хочу мороженое')),
-    'frio': (('tremer', 'Как холодно!'), ('tremer', 'Где моя куртка?')),
+    'frio': (('tremer', 'Как холодно!'), ('tremer', 'Где куртка?')),
 }
 NOME_TEMPO = {'chuva': 'Дождь', 'tempestade': 'Гроза', 'neve': 'Снег', 'neblina': 'Туман',
               'vento': 'Ветер', 'nublado': 'Облачно', 'sol': 'Ясно'}
