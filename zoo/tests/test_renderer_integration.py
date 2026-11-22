@@ -65,6 +65,32 @@ class FullRendererIntegration(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + "\n" + proc.stderr)
         self.assertEqual(proc.stdout.count("ok "), 11)
 
+    def test_existing_dispatcher_uses_sprite_then_falls_back(self):
+        code = PROBE + r'''
+seen = []
+def simulated_sprite(fb, hero, cx, feet, scale, eyes, mouth, sick, **options):
+    seen.append(hero)
+    return (100, 50, 40, [(99, 82), (121, 82)])
+d.zoo_sprites.draw = simulated_sprite
+sprite_fb = FB()
+d.usar(sprite_fb)
+metrics = d.personagem("cachorro", 110, 205)
+assert metrics == (100, 50, 40), metrics
+assert seen == ["cachorro"], seen
+assert sprite_fb.draws == 0, "the procedural renderer should be skipped"
+
+d.zoo_sprites.draw = lambda *args, **kwargs: None
+procedural_fb = FB()
+d.usar(procedural_fb)
+metrics = d.personagem("cachorro", 110, 205)
+assert procedural_fb.draws > 0, "procedural fallback was not called"
+assert metrics[2] > 0
+'''
+        proc = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=str(ROOT), capture_output=True, text=True, timeout=25)
+        self.assertEqual(proc.returncode, 0, proc.stdout + "\\n" + proc.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
