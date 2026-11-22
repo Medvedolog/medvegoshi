@@ -48,7 +48,7 @@ def safe_id(value):
         return False
     for letter in value:
         if not (("a" <= letter <= "z") or ("0" <= letter <= "9")
-                or letter in "_-"):
+                or letter == "_"):
             return False
     return True
 
@@ -166,7 +166,11 @@ def make_catalogue(found):
     names = {x[0]: x[1] for x in BUILTINS}
     heights = {x[0]: x[2] for x in BUILTINS}
     phrases = {}
-    for key in sorted(found):
+    # Keep the first two Zoo additions in their established menu positions.
+    # Later IDs are sorted for reproducible menu order.
+    ordered = [x for x in ("pip", "girafa") if x in found]
+    ordered += [x for x in sorted(found) if x not in ("pip", "girafa")]
+    for key in ordered:
         if key in names:
             continue
         data = found[key]
