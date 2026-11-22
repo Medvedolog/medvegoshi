@@ -8,6 +8,8 @@ FIRMWARE=/tmp/micropython_s3_spiram_oct.bin
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "=== MedveGoshi: установка на ESP32-S3 IPS 1.83 ==="
+echo "ВНИМАНИЕ: эта установка только для IPS ST7789/CST816D."
+echo "Waveshare AMOLED 1.8 V1 (SH8601/FT3168) пока НЕ поддерживается."
 echo ""
 
 # Verifica porta
