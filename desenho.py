@@ -1333,7 +1333,9 @@ def botao_pet(x, y):
 
 # ------------------------------------------------------------ menu de ajustes
 MENU_FUNDO = 272
-MODOS = (('pet', 'Уход'), ('companion', 'Жизнь'), ('explore', 'Гулять'))
+MODOS = (('pet', 'Забота'), ('companion', 'Сам'), ('explore', 'Гуляшки'))
+MENU_MODE_X, MENU_MODE_STEP, MENU_MODE_W = 20, 68, 64
+MENU_MODE_Y, MENU_MODE_H = 40, 30
 VEL_MIN = {1: 30, 2: 15, 3: 10}
 AJUSTES_ROT = ('-1 мин', '-1 ч', '+1 ч', '+1 мин')
 AJUSTES_MIN = (-1, -60, 60, 1)
@@ -1390,7 +1392,8 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
         rect(36 + i * 4, o + 19 - i * 3, 3, 3 + i * 3, CREME if i < (0, 2, 3)[wifi] else MUTEDM)
     escrever('Режим', 20, o + 29, CREME)
     for i, (mid, rot) in enumerate(MODOS):
-        segmento(20 + i * 68, o + 40, 64, 30, rot, modo == mid)
+        segmento(MENU_MODE_X + i * MENU_MODE_STEP, o + MENU_MODE_Y,
+                 MENU_MODE_W, MENU_MODE_H, rot, modo == mid)
     escrever('Питомец', 16, o + 76, CREME)
     segmento(116, o + 73, 108, 14, 'Сменить друга', bool(pendente))
     mostra = pendente or id
@@ -1451,9 +1454,9 @@ def menu_toque(x, y, hora_modo, confirma=None, clock_write=True):
         return ('som', None)
     if y < 26 and 16 <= x < 49:
         return ('wifi', None)
-    if 40 <= y < 70:
-        i, local_x = divmod(x - 20, 68)
-        if 0 <= i < 3 and local_x < 64:
+    if MENU_MODE_Y <= y < MENU_MODE_Y + MENU_MODE_H:
+        i, local_x = divmod(x - MENU_MODE_X, MENU_MODE_STEP)
+        if 0 <= i < len(MODOS) and local_x < MENU_MODE_W:
             return ('modo', MODOS[i][0])
     if 73 <= y < 87 and 116 <= x < 224:
         return ('personagem', 1)

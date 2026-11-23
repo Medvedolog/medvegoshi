@@ -7,6 +7,7 @@ import unittest
 
 from ports import v1_menu_font as font
 from ports.v1_scale import VIEWPORT_LARGE
+from test_settings_menu_ru import load_menu
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,7 +96,8 @@ class TestLabelRouting(unittest.TestCase):
             'W': 240, 'H': 284, 'MENU_FUNDO': 272,
             'ri': lambda x: int(math.floor(x + 0.5)), 'C': self.wire_color,
             'ELENCO': ('girafa', 'pip'), 'NOMES': {'girafa': 'Жирафик', 'pip': 'Пип'},
-            'MODOS': (('pet', 'Уход'), ('companion', 'Жизнь'), ('explore', 'Гулять')),
+            **{name: value for name, value in load_menu().items()
+               if name == 'MODOS' or name.startswith('MENU_MODE_')},
             'AJUSTES_ROT': ('-1 мин', '-1 ч', '+1 ч', '+1 мин'),
             'MENU_CLOCK_X': 16, 'MENU_CLOCK_STEP': 53, 'MENU_CLOCK_W': 49,
             'VEL_MIN': {1: 30, 2: 15, 3: 10},
@@ -178,6 +180,38 @@ class TestLabelRouting(unittest.TestCase):
                                         and top <= py and py + ph <= bottom
                                         for px, py, pw, ph, _ in fb.spans), s)
                 self.assertTrue(set(expected).issubset({label[0] for label in self.captured}))
+
+    def test_production_mode_labels_fit_original_cells_and_native_ink(self):
+        import font_ru
+
+        self.render()
+        w, h = self.env['MENU_MODE_W'], self.env['MENU_MODE_H']
+        for i, (_, label) in enumerate(self.env['MODOS']):
+            with self.subTest(label=label):
+                row = next(args for args in self.captured if args[0] == label)
+                _, logical_x, logical_y, color, esc, box = row
+                left = self.env['MENU_MODE_X'] + i * self.env['MENU_MODE_STEP']
+                top = self.env['MENU_MODE_Y']
+                self.assertEqual(box, (left, top, w, h))
+                self.assertGreaterEqual(w - len(label) * 8, 8)
+                old = Recorder()
+                for j, ch in enumerate(label):
+                    self.assertTrue(font_ru.draw_char(old, ch, logical_x + j * 8,
+                                                     logical_y, color))
+                self.assertTrue(old.spans)
+                self.assertTrue(all(left + 4 <= x and x + dx <= left + w - 4
+                                    and top <= y and y + dy <= top + h
+                                    for x, y, dx, dy, _ in old.spans))
+                origin = VIEWPORT_LARGE.pixel_origin
+                px0, py0 = origin(left, top)
+                px1, py1 = origin(left + w, top + h)
+                native = Recorder()
+                font.draw(native, label, (px0 + px1 - font.measure(label, esc)) // 2,
+                          (py0 + py1 - font.height(esc)) // 2, color, esc)
+                self.assertTrue(native.spans)
+                self.assertTrue(all(px0 + 5 <= x and x + dx <= px1 - 5
+                                    and py0 <= y and y + dy <= py1
+                                    for x, y, dx, dy, _ in native.spans))
 
     def test_unsupported_label_still_draws_logically(self):
         self.render(legenda='Пип 🐻')
