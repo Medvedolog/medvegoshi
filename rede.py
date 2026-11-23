@@ -205,7 +205,12 @@ def _ligar_radio():
             import espnow
             en = espnow.ESPNow()
         en.active(True)
-        en.add_peer(TODOS)
+        try:
+            en.add_peer(TODOS)
+        except OSError as e:
+            # The ESP32 singleton may already have registered this peer.
+            if len(e.args) < 2 or e.args[1] != 'ESP_ERR_ESPNOW_EXIST':
+                raise
     except (ImportError, AttributeError, OSError, ValueError, RuntimeError) as e:
         _desativar_amigos(e)
 

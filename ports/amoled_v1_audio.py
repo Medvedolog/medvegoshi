@@ -109,7 +109,8 @@ class V1Audio:
         mute = self._bus.readfrom_mem(ES8311_ADDR, DAC_MUTE, 1)
         volume = self._bus.readfrom_mem(ES8311_ADDR, DAC_VOLUME, 1)
         want = MUTE_BITS if muted else 0
-        if len(mute) != 1 or (mute[0] & MUTE_BITS) != want or volume != bytes((self._volume,)):
+        if (not isinstance(mute, (bytes, bytearray)) or len(mute) != 1 or
+                (mute[0] & MUTE_BITS) != want or volume != bytes((self._volume,))):
             raise AudioUnavailable("ES8311 DAC mute/volume readback mismatch")
 
     def _configure(self, volume):

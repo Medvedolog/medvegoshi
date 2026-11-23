@@ -48,6 +48,11 @@ class RadioPolicyTest(unittest.TestCase):
         self.radio.active.assert_called_once_with(True)
         self.peers.active.assert_called_once_with(True)
         self.assertFalse(r._sync_clock)
+        r.ficar_offline(True)
+        r.ficar_offline(False)
+        self.assertEqual(self.peers.add_peer.call_count, 2)
+        self.assertEqual([call.args for call in self.peers.active.call_args_list],
+                         [(True,), (False,), (True,)])
 
     def test_v1_weather_opt_in_does_not_read_or_write_system_rtc(self):
         r = self.rede
@@ -93,6 +98,12 @@ class RadioPolicyTest(unittest.TestCase):
         with patch('builtins.print'):
             r.ficar_offline(True)
         self.radio.active.assert_called_once_with(False)
+
+    def test_existing_espnow_broadcast_peer_is_not_a_driver_failure(self):
+        self.peers.add_peer.side_effect = OSError(123, "ESP_ERR_ESPNOW_EXIST")
+        self.rede.iniciar(sync_clock=False)
+        self.peers.active.assert_called_once_with(True)
+        self.assertIs(self.rede.en, self.peers)
 
     def test_sta_keeps_working_when_peer_add_fails(self):
         self.peers.add_peer.side_effect = OSError("ESP-NOW add failed")

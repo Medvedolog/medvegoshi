@@ -53,7 +53,6 @@ def _byte(bus, addr, reg):
     return data[0] if data is not None else None
 
 
-
 class ReadOnlyClock:
     """PCF85063A calendar. Unavailable data is never mistaken for real time."""
 
@@ -110,10 +109,10 @@ class Accel:
         ctrl1, ctrl2, ctrl7 = (self._reg(r) for r in (_IMU_CTRL1, _IMU_CTRL2, _IMU_CTRL7))
         if ctrl1 is None or ctrl2 is None or ctrl7 is None:
             raise ProfileUnavailable("QMI8658 control registers unreadable")
-        if ctrl7 == 0 and ctrl2 == 0:
+        if ctrl7 == 0 and ctrl2 == 0 and not ctrl1 & 1:
             # Only the power-on/default standby register combination may be
             # modified; a merely disabled sensor may be owned by other code.
-            revised = (ctrl1 | _IMU_AUTOINC) & 0xFE
+            revised = ctrl1 | _IMU_AUTOINC
             self._set(_IMU_CTRL1, revised)
             self._set(_IMU_CTRL2, _IMU_4G_250HZ)
             # Do not enable measurement if either setting failed silently.
@@ -125,7 +124,7 @@ class Accel:
             ctrl1, ctrl2, ctrl7 = revised, _IMU_4G_250HZ, self._reg(_IMU_CTRL7)
             if ctrl7 != _IMU_AEN:
                 raise ProfileUnavailable("QMI8658 accelerometer enable not confirmed")
-        # Reject unknown scaling, active self-test, sync, and attitude modes
+        # Reject unknown scaling, active self-test, sync and reserved modes
         # instead of forcefully modifying a sensor already owned by other code.
         scale = (ctrl2 >> 4) & 7
         odr = ctrl2 & 0x0F
@@ -190,7 +189,15 @@ class SilentAudio:
 
     available = False
     microphone_available = False
-    ligado = False
+
+    @property
+    def ligado(self):
+        return False
+
+    @ligado.setter
+    def ligado(self, _value):
+        # The shared menu preference does not turn missing hardware on.
+        pass
 
     def tocar(self, _name):
         return False

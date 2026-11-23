@@ -144,6 +144,8 @@ class TestAMOLEDV1Runtime(unittest.TestCase):
         self.assertEqual(p.bateria.porcentagem(), 82)
         self.assertTrue(p.bateria.carregando())
         self.assertFalse(p.bateria.tecla())
+        p.som.ligado = True
+        self.assertFalse(p.som.ligado)
         self.assertFalse(p.som.tocar("fala1"))
         self.assertEqual(p.som.volume_mic(), 0)
         self.assertEqual([w for w in rig.writes if w[0] == 0x6B],
@@ -227,11 +229,13 @@ class TestAMOLEDV1Runtime(unittest.TestCase):
 
 
     def test_suspect_imu_control_states_never_get_reconfigured(self):
-        for ctrl2, ctrl7 in ((0, 0x80), (0x80, 0), (0x15, 0),
-                             (0x15, 4), (0x15, 0x41)):
-            with self.subTest(ctrl2=ctrl2, ctrl7=ctrl7):
+        for ctrl1, ctrl2, ctrl7 in ((0x60, 0, 0x80), (0x60, 0x80, 0),
+                                     (0x60, 0x15, 0), (0x60, 0x15, 4),
+                                     (0x60, 0x15, 0x41), (0x21, 0, 0)):
+            with self.subTest(ctrl1=ctrl1, ctrl2=ctrl2, ctrl7=ctrl7):
                 r = Rig()
-                r.reg[0x6B, 3], r.reg[0x6B, 8] = bytes((ctrl2,)), bytes((ctrl7,))
+                for reg, value in ((2, ctrl1), (3, ctrl2), (8, ctrl7)):
+                    r.reg[0x6B, reg] = bytes((value,))
                 with self.assertRaises(rt.ProfileUnavailable):
                     r.build(i2c=r)
                 self.assertFalse(r.writes)
