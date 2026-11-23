@@ -36,6 +36,55 @@ def _idle(count):
     return tuple({} for _ in range(count))
 
 
+def _remap_inputs(inputs, screen_mode, physical_touches):
+    """Legacy scripts use the 1:1 panel as their logical-coordinate carrier."""
+    if screen_mode not in (v1.SCALE_NATIVE, v1.SCALE_LARGE):
+        raise ValueError("invalid V1 screen mode: " + str(screen_mode))
+    if screen_mode == v1.SCALE_NATIVE or physical_touches:
+        return inputs
+    mapped = []
+    for event in inputs:
+        point = event.get("touch")
+        if point is None:
+            mapped.append(event)
+            continue
+        logical = v1.physical_to_logical(*point)
+        row = dict(event)
+        if logical is None:
+            # A deliberately rejected old margin sample must not become
+            # an active touch when the large viewport covers that margin.
+            row.pop("touch", None)
+        else:
+            row["touch"] = v1.VIEWPORT_LARGE.logical_to_physical(*logical)
+        mapped.append(row)
+    return tuple(mapped)
+
+
+class _WireOverlayFrameBuffer:
+    """Physical RGB565 fixture: native menu glyphs modify the scaled bytes."""
+    def __init__(self, buf, width, height):
+        self.buf, self.width, self.height = buf, width, height
+
+    def fill_rect(self, x, y, width, height, color):
+        left, top = max(0, x), max(0, y)
+        right, bottom = min(self.width, x + width), min(self.height, y + height)
+        if left >= right or top >= bottom:
+            return
+        # MicroPython RGB565 stores each 16-bit word little-endian.
+        # The game's byte-swapped palette is already prepared for the wire.
+        row = struct.pack("<H", color & 0xFFFF) * (right - left)
+        for yy in range(top, bottom):
+            start = 2 * (yy * self.width + left)
+            self.buf[start:start + len(row)] = row
+
+
+def _framebuffer(buf, width, height, fmt):
+    viewport = v1.VIEWPORT_LARGE
+    if fmt == RGB565 and (width, height) == (viewport.width, viewport.height):
+        return _WireOverlayFrameBuffer(buf, width, height)
+    return FrameBuffer(buf, width, height, fmt)
+
+
 # Each touch moves through the real FT3168 register/data path; in particular
 # do not call a pet switch function directly. Include release/animation time
 # so menu hit areas correspond to the externally visible controls.
@@ -160,12 +209,17 @@ class _HostPipModule:
 
 
 def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
-            native_pip=False, app_path=None):
+            native_pip=False, app_path=None, screen_mode="1:1",
+            physical_touches=False):
     """Run real principal() with scripted touch/BOOT and no live saves.
 
     app_path may name a trusted v1_game_app.py in an extracted bundle. Run
     the real launcher with simulated native module identities and register
     I/O. Already imported host packages can still come from this checkout.
+
+    By default, scripted touch samples use the legacy 1:1 panel coordinates,
+    translated through the selected viewport. Pass physical_touches=True
+    for raw samples already expressed in the active physical panel space.
     """
     if not inputs or len(inputs) > 96:
         raise ValueError("1..96 frames required")
@@ -181,7 +235,7 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
         # cannot retain a fake clock after the harness has returned.
         from zoo.pip import game as pip_game
         host_pip = _HostPipModule()
-    rig = _GameRig(inputs)
+    rig = _GameRig(_remap_inputs(inputs, screen_mode, physical_touches))
     machine = rig.machine()
     machine.I2C = lambda *_args, **_kw: rig
     if app_path is not None:
@@ -193,7 +247,7 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
             return object()
         machine.SPI = qspi_only
         del machine.PWM, machine.I2S
-    framebuf = SimpleNamespace(FrameBuffer=FrameBuffer, RGB565=RGB565,
+    framebuf = SimpleNamespace(FrameBuffer=_framebuffer, RGB565=RGB565,
                                MONO_HLSB=MONO_HLSB)
     native = SimpleNamespace(QSPIPanel=rig.native_panel, AMOLED=AMOLED)
     if app_path is not None:
@@ -206,6 +260,7 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
     clock = SimpleNamespace(ticks_ms=lambda: 10_000 + rig.frame * 40,
                             ticks_diff=lambda a, b: a - b,
                             ticks_add=lambda a, b: a + b,
+                            sleep_ms=lambda _ms: None,  # setup settling on simulated hardware
                             gmtime=time.gmtime,
                             mktime=calendar.timegm,
                             localtime=lambda epoch: time.gmtime(epoch))
@@ -317,7 +372,7 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
                 setattr(hw, name, forbid_ips)
             random.seed(1)
             if app_path is None:
-                instrument_profile(enabled=True, confirmed_v1=True)
+                instrument_profile(enabled=True, confirmed_v1=True, screen_mode=screen_mode)
                 runtime_handoff.stage(profile, allow_wifi=False)
                 try:
                     main = runpy.run_path(str(entry), run_name="_medve_v1_host")
@@ -333,7 +388,7 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
             else:
                 amoled_v1_runtime.create_profile = instrument_profile
                 try:
-                    amoled_v1_launch.run(enabled=True, confirmed_v1=True)
+                    amoled_v1_launch.run(enabled=True, confirmed_v1=True, screen_mode=screen_mode)
                 except _FrameLimit:
                     pass
                 finally:
@@ -347,6 +402,7 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
                       "pet": game_state["cfg"]["personagem"],
                       "life_stage": game_state["fase_vida"](),
                       "runtime_profile": game_state["runtime_profile_id"],
+                      "screen_mode": screen_mode,
                       "rtc_write_enabled": game_state["runtime_clock_write"],
                       "offline_forced": game_state["runtime_allow_wifi"] is False,
                       "offline_callback_used": bool(offline_calls),
@@ -397,6 +453,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--scenario", choices=("care", "switch"), default="care")
+    parser.add_argument("--screen-mode", choices=(v1.SCALE_NATIVE, v1.SCALE_LARGE),
+                        default=v1.SCALE_NATIVE)
     parser.add_argument("--native-pip", action="store_true",
                         help="exercise Pip through the optional desktop C adapter")
     parser.add_argument("--pip-out", type=Path,
@@ -409,9 +467,10 @@ def main(argv=None):
     if args.scenario == "switch":
         pictures = {} if args.pip_out is not None else None
         image, report = emulate(SWITCH_SCRIPT, fixtures={"girafa": 50, "pip": 36},
-                                pet_images=pictures, native_pip=args.native_pip)
+                                pet_images=pictures, native_pip=args.native_pip,
+                                screen_mode=args.screen_mode)
     else:
-        image, report = emulate()
+        image, report = emulate(screen_mode=args.screen_mode)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("xb") as file:
         image.save(file, format="PNG")

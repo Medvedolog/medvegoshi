@@ -1,7 +1,7 @@
 import struct
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from ports import amoled_v1, amoled_v1_runtime as rt
 
@@ -197,8 +197,9 @@ class TestAMOLEDV1Runtime(unittest.TestCase):
         r = Rig(touch=False)
         with patch("time.sleep") as sleeper:
             p = r.build(i2c=r)
-        sleeper.assert_called_once_with(0.05)
-        self.assertEqual(r.writes[:2], [(0x20, 3, b"\xFB"), (0x20, 1, b"\xAC")])
+        self.assertEqual(sleeper.call_args_list, [call(0.02), call(0.08), call(0.02), call(0.02)])
+        self.assertEqual(r.writes[:4], [(0x20, 1, b"\xA8"), (0x20, 3, b"\xFB"),
+                                       (0x20, 1, b"\xAC"), (0x20, 3, b"\xFB")])
         self.assertEqual(p.toque.ler(), (20, 30))
 
     def test_active_accelerometer_is_read_without_reconfiguration(self):

@@ -4,9 +4,9 @@ V1 ONLY: SH8601 QSPI + FT3168 I2C 0x38, TCA9554 0x20.
 V2 CO5300/CST820 is explicitly rejected.
 
 The existing game uses a 240x284 RGB565 framebuf and ST7789 byte-swapped
-colors. Keep that exact drawing ABI and transfer its big-endian RGB565 bytes
-into the centre of the 368x448 V1 display through the native QSPI panel
-transport. The surrounding pixels remain black.
+colors. Preserve that drawing ABI; transmit either a 1:1 reference or a
+near-full, aspect-preserving viewport through native QSPI. Touch uses the
+same transform as the pixels.
 
 This module never flashes firmware. It must only run on a suitable
 MicroPython build with amoled.QSPIPanel and amoled.AMOLED.
@@ -16,12 +16,13 @@ No attempt to emulate SH8601 with regular SPI. Not hardware-tested.
 Reference: github.com/dobodu/Lilygo_Waveshare_Amoled_Micropython/
 examples/config/WS_180_AMOLED.py (MIT)
 """
-LOGICAL_W = 240
-LOGICAL_H = 284
-PANEL_W = 368
-PANEL_H = 448
-OFFSET_X = (PANEL_W - LOGICAL_W) // 2
-OFFSET_Y = (PANEL_H - LOGICAL_H) // 2
+import time as _time
+
+from ports.v1_scale import (LOGICAL_W, LOGICAL_H, PANEL_W, PANEL_H,
+                            SCALE_LARGE, SCALE_NATIVE, VIEWPORT_LARGE,
+                            VIEWPORT_NATIVE, Scaler, viewport_for)
+
+OFFSET_X, OFFSET_Y = VIEWPORT_NATIVE.x, VIEWPORT_NATIVE.y
 FRAME_BYTES = LOGICAL_W * LOGICAL_H * 2
 
 _LCD_CASET = 0x2A
@@ -33,15 +34,13 @@ def _address_window(start, size):
     return bytes((start >> 8, start & 0xFF, last >> 8, last & 0xFF))
 
 
-_COLUMN_WINDOW = _address_window(OFFSET_X, LOGICAL_W)
-_ROW_WINDOW = _address_window(OFFSET_Y, LOGICAL_H)
-
 TOUCH_ADDR = 0x38
 V2_TOUCH_ADDR = 0x15
 EXPANDER_ADDR = 0x20
 I2C_SCL = 14
 I2C_SDA = 15
 
+QSPI_HZ = 40_000_000  # Waveshare SH8601 QSPI preset
 GPIO_CS = 12
 GPIO_CLK = 11
 GPIO_TE = 13  # NOT panel reset; reset goes through TCA9554 EXIO0
@@ -73,10 +72,12 @@ def validate_v1_bus(i2c, verified_v1=False):
     if EXPANDER_ADDR not in present:
         raise BoardMismatch("TCA9554 (0x20) not found; wrong board")
     if TOUCH_ADDR not in present and verified_v1:
+        # FT3168 datasheet 3.5: at least 5ms reset and 70ms until
+        # points are reported. Do not pulse a responding controller.
+        set_expander_bit(i2c, EXPANDER_TOUCH_RESET_BIT, False)
+        _settle(20)
         set_expander_bit(i2c, EXPANDER_TOUCH_RESET_BIT, True)
-        # The FT3168 requires reset release before its first I2C response.
-        import time
-        time.sleep_ms(50) if hasattr(time, "sleep_ms") else time.sleep(0.05)
+        _settle(80)
         present = set(i2c.scan())
     if TOUCH_ADDR not in present:
         raise BoardMismatch("FT3168 0x38 not found; confirm V1 label first")
@@ -85,14 +86,23 @@ def validate_v1_bus(i2c, verified_v1=False):
     return present
 
 
+def _settle(ms):
+    if hasattr(_time, "sleep_ms"):
+        _time.sleep_ms(ms)
+    else:
+        _time.sleep(ms / 1000)
+
+
 def set_expander_bit(i2c, bit, enabled):
     """Set one TCA9554 output and retain every unrelated pin's state."""
     conf = i2c.readfrom_mem(EXPANDER_ADDR, 0x03, 1)[0]
     output = i2c.readfrom_mem(EXPANDER_ADDR, 0x01, 1)[0]
     mask = 1 << bit
-    i2c.writeto_mem(EXPANDER_ADDR, 0x03, bytes((conf & ~mask,)))
+    # Stage the latch before enabling an output, so a stale latch
+    # cannot momentarily drive the opposite state when it was an input.
     new_value = (output | mask) if enabled else (output & ~mask)
     i2c.writeto_mem(EXPANDER_ADDR, 0x01, bytes((new_value,)))
+    i2c.writeto_mem(EXPANDER_ADDR, 0x03, bytes((conf & ~mask,)))
 
 
 def enable_amoled_power(i2c):
@@ -100,26 +110,16 @@ def enable_amoled_power(i2c):
     set_expander_bit(i2c, EXPANDER_POWER_BIT, True)
 
 
-def physical_to_logical(x, y):
-    """Map only the letterboxed 240x284 game region; ignore black margins."""
-    if not isinstance(x, int) or not isinstance(y, int):
-        return None
-    if not (OFFSET_X <= x < OFFSET_X + LOGICAL_W and
-            OFFSET_Y <= y < OFFSET_Y + LOGICAL_H):
-        return None
-    return x - OFFSET_X, y - OFFSET_Y
-
-
-def logical_to_physical(x, y):
-    if not (0 <= x < LOGICAL_W and 0 <= y < LOGICAL_H):
-        return None
-    return x + OFFSET_X, y + OFFSET_Y
+# Compatibility for the small independent diagnostics and previews.
+physical_to_logical = VIEWPORT_NATIVE.physical_to_logical
+logical_to_physical = VIEWPORT_NATIVE.logical_to_physical
 
 
 class FT3168Touch:
     """Minimal FT3168 register read, no reset/power writes during sampling."""
-    def __init__(self, i2c):
+    def __init__(self, i2c, viewport=VIEWPORT_NATIVE):
         self.i2c = i2c
+        self.viewport = viewport
 
     def ler(self):
         # TP_INT can be a pulse. Sampling its level would drop contacts
@@ -138,17 +138,41 @@ class FT3168Touch:
         y = ((data[3] & 0x0F) << 8) | data[4]
         if not (0 <= x < PANEL_W and 0 <= y < PANEL_H):
             return None
-        return physical_to_logical(x, y)
+        return self.viewport.physical_to_logical(x, y)
 
 
 class Tela:
     """Game-compatible 240x284 framebuffer; native driver owns AMOLED QSPI."""
-    def __init__(self, display, panel, framebuffer_module):
+    def __init__(self, display, panel, framebuffer_module, viewport=VIEWPORT_NATIVE):
         self.display = display
         self.panel = panel
         self.buf = bytearray(FRAME_BYTES)
         self.fb = framebuffer_module.FrameBuffer(
             self.buf, LOGICAL_W, LOGICAL_H, framebuffer_module.RGB565)
+        self.viewport = viewport
+        self._columns = _address_window(viewport.x, viewport.width)
+        self._rows = _address_window(viewport.y, viewport.height)
+        self.menu_text = None
+        self._scaler = self._menu = self._native_fb = None
+        self.wire_buf = self.buf
+        if viewport is VIEWPORT_LARGE:
+            from ports import v1_menu_font
+            self._font = v1_menu_font
+            self._scaler = Scaler(viewport)
+            self.wire_buf = bytearray(self._scaler.output_bytes)
+            self._native_fb = framebuffer_module.FrameBuffer(
+                self.wire_buf, viewport.width, viewport.height, framebuffer_module.RGB565)
+            self._menu = []
+            self.menu_text = self._queue_text
+
+    def _queue_text(self, text, x, y, color, esc=1):
+        # Limit storage to known settings labels. In an unexpected case the
+        # remaining labels are drawn by the original logical renderer.
+        if esc not in (1, 2) or len(self._menu) >= 32 or not self._font.supports(text):
+            return False
+        x, y = self.viewport.pixel_origin(x, y)
+        self._menu.append((text, x, y, color, esc))
+        return True
 
     def brilho(self, percent):
         if not (0 <= percent <= 100):
@@ -163,18 +187,28 @@ class Tela:
         # direct transfer, so refresh() afterwards would overwrite this frame.
         # Set the SH8601 window ourselves and send all RGB565 wire bytes;
         # native tx_color issues RAMWR and uses the actual buffer length.
-        self.panel.tx_param(_LCD_CASET, _COLUMN_WINDOW)
-        self.panel.tx_param(_LCD_RASET, _ROW_WINDOW)
-        self.panel.tx_color(0, self.buf)
+        try:
+            if self._scaler is not None:
+                self._scaler.copy(self.buf, self.wire_buf)
+                if self._menu:
+                    for label in self._menu:
+                        self._font.draw(self._native_fb, *label)
+            self.panel.tx_param(_LCD_CASET, self._columns)
+            self.panel.tx_param(_LCD_RASET, self._rows)
+            self.panel.tx_color(0, self.wire_buf)
+        finally:
+            if self._menu:
+                self._menu.clear()
 
 
 def prepare_v1(i2c, machine_module=None, amoled_module=None,
-               framebuffer_module=None, verified_v1=False):
+               framebuffer_module=None, verified_v1=False, screen_mode=SCALE_NATIVE):
     """Explicit opt-in driver init; fail closed when dependencies are absent.
 
     Requires separately built native MicroPython QSPI support. This module
     is NOT shipped or enabled by the IPS installer.
     """
+    viewport = viewport_for(screen_mode)  # validate before any hardware I/O
     validate_v1_bus(i2c, verified_v1=verified_v1)
     if amoled_module is None:
         try:
@@ -196,18 +230,21 @@ def prepare_v1(i2c, machine_module=None, amoled_module=None,
     data = tuple(Pin(pin, Pin.OUT) for pin in GPIO_DATA)
 
     # Requires a compiled QSPI controller; ordinary SPI is insufficient.
-    spi = SPI(2, baudrate=80_000_000, sck=clock,
+    spi = SPI(2, baudrate=QSPI_HZ, sck=clock,
               mosi=None, miso=None, polarity=0, phase=0)
     panel = amoled_module.QSPIPanel(
-        spi=spi, data=data, dc=data[1], cs=cs, pclk=80_000_000,
+        spi=spi, data=data, dc=data[1], cs=cs, pclk=QSPI_HZ,
         width=PANEL_W, height=PANEL_H)
     if not (callable(getattr(panel, "tx_param", None)) and
             callable(getattr(panel, "tx_color", None))):
         raise DriverUnavailable("Native SH8601 QSPI transport is unavailable")
-    # Real V1 panel reset EXIO0 and touch reset EXIO2 are not ESP32 GPIOs.
-    # Release the panel reset first. Power is on EXIO1.
-    set_expander_bit(i2c, EXPANDER_PANEL_RESET_BIT, True)
+    # Waveshare pulses its V1 panel reset through EXIO0. Assert it
+    # while powering/stabilizing EXIO1, but do not cycle an already-on rail.
+    set_expander_bit(i2c, EXPANDER_PANEL_RESET_BIT, False)
     enable_amoled_power(i2c)
+    _settle(20)
+    set_expander_bit(i2c, EXPANDER_PANEL_RESET_BIT, True)
+    _settle(20)
     display = amoled_module.AMOLED(
         panel, type=2, bpp=16, auto_refresh=False)
     display.reset()
@@ -216,6 +253,6 @@ def prepare_v1(i2c, machine_module=None, amoled_module=None,
     # Establish black borders once; only the centred game changes later.
     display.fill(0)
     display.refresh()
-    screen = Tela(display, panel, framebuffer_module)
+    screen = Tela(display, panel, framebuffer_module, viewport)
     screen.brilho(50)
-    return screen, FT3168Touch(i2c)
+    return screen, FT3168Touch(i2c, viewport)

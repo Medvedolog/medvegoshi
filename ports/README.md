@@ -73,8 +73,7 @@ ST7789 и обычная версия MicroPython с `machine.SPI` не заме
 `medvegoshi-giraffe-preview-and-ips-pack`.
 
 В архиве:
-- `qa-amoled-v1/v1-viewport-240x284.png` — **фактическая геометрия
-  экспериментального порта**: 240×284 в центре 368×448.
+- `qa-amoled-v1/v1-viewport-240x284.png` — геометрия диагностического 1:1: 240×284 в центре 368×448.
 - `qa-amoled-v1/all_expressions.png` — отдельно арт-предпросмотр
   Жирафика, увеличенный для оценки дизайна.
 - `qa-ips/` — исходный IPS-предпросмотр и отчёт о ресурсах.
@@ -92,8 +91,11 @@ python3 -m unittest discover -s zoo/tests -p 'test_*.py'
 - 240×284×2 = **136 320 байт** для штатного `framebuf` игры;
 - 368×448×2 = **329 728 байт** для полного нативного RGB565 буфера
   (если выбранная реализация драйвера его выделяет);
-- оба буфера вместе — **466 048 байт**, без расходов MicroPython,
-  Zoo, драйверов, аудио и мозга. Физических замеров PSRAM/FPS пока нет.
+- крупный режим дополнительно выделяет один **320 160-байтовый** выходной
+  буфер 368×435 и таблицы координат; буфер повторно используется между кадрами;
+- три буфера вместе, если нативный драйвер выделяет весь framebuffer панели:
+  **786 208 байт**, без накладных расходов, памяти DMA, Zoo, аудио и мозга.
+  Физических замеров PSRAM/FPS пока нет.
 
 ## Нативная сборка MicroPython с SH8601/QSPI — воспроизводимый прототип
 
@@ -148,7 +150,8 @@ python3 -m unittest discover -s tests -p 'test_amoled_native_build.py'
 - [x] Интегрировать порт с `main.py` **без второй копии игры**.
 - [ ] Перенести QMI8658, RTC, ES8311/AXP2101 через совместимый HAL;
   кнопка PWR идёт через PMIC, а не копируется с IPS GPIO.
-- [ ] Адаптировать нативное 368×448 UI, память, FPS и энергосбережение.
+- [x] Крупный игровой вид 368×435 с физическим шрифтом русских настроек.
+- [ ] Измерить реальный FPS, память, читаемость и энергосбережение.
 - [ ] Только после этого снять запрет с V1 в установщике.
 
 **V2 в объём этой работы не входит.**
@@ -254,13 +257,44 @@ RTC не подменяется выдуманной датой. По умолч
 устройство и не меняет часы через NTP. Сохранённый автономный режим
 блокирует включение радио до ручного переключения. У IPS остаётся прежний запуск.
 
+Ручной вход V1 по умолчанию выбирает `screen_mode="large"`: вид 368×435
+с полями 6 и 7 пикселей сверху и снизу. `screen_mode="1:1"` оставляет
+диагностические 240×284. Координаты тача рассчитываются по той же таблице
+соответствия, что и пиксели. Игра остаётся пиксельной; текст полностью
+открытого меню настроек рисуется в выходном разрешении, а не растягивается.
+При анимации меню и поверх системных сообщений сохраняется штатная
+логическая отрисовка. На IPS масштабирования нет.
+
+### Сверка с исходниками платы
+
+- **Экран SH8601:** [официальный BSP V1](https://github.com/waveshareteam/Waveshare-ESP32-components/blob/c77caf968fa6b11f3b6a416c853c578d012a8cea/bsp/esp32_s3_touch_amoled_1_8/esp32_s3_touch_amoled_1_8.c#L377-L419)
+  использует [настройку QSPI 40 МГц](https://github.com/waveshareteam/Waveshare-ESP32-components/blob/310ccc681289046194f6a1aa7489bf157761888b/display/lcd/esp_lcd_sh8601/include/esp_lcd_sh8601.h#L96-L110),
+  вместо прежних 80 МГц. [Пример Waveshare](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.8/blob/01fd3200370a4417b257e8a4c185a04ef931342a/examples/arduino/examples/02_Drawing_board/02_Drawing_board.ino#L34-L61)
+  подтверждает reset через EXIO0; удерживаем его при включении EXIO1, не циклируя
+  питание. Патч к [dobodu](https://github.com/dobodu/Lilygo_Waveshare_Amoled_Micropython/blob/97934b7c35b1720a14fd69e4e1322bb5684b9b2c/amoled/amoled_qspi_bus.c#L75-L153)
+  поднимает CS и сообщает об ошибках команды, RAMWR и передачи пикселей.
+- **Тач FT3168:** контроллер и разводка подтверждены Waveshare. Если тач
+  не отвечает и маркировка V1 уже подтверждена, держим EXIO2 в reset 20 мс
+  и ждём 80 мс после отпускания по [таблице 3-5 FT3168](https://files.waveshare.com/wiki/common/FT3168.pdf#page=11).
+  Регистр идентификатора 0xA0 не стал новым обязательным условием.
+- **Звук ES8311:** [схема Waveshare](https://files.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.8/ESP32-S3-Touch-AMOLED-1.8.pdf)
+  подтверждает усилитель NS4150B и GPIO46. Его [даташит](https://datasheet.lcsc.com/lcsc/2209161630_Shenzhen-Nsiway-Tech-NS4150B_C189961.pdf#page=3)
+  указывает типичный запуск за 120 мс (не гарантию максимума); драйвер
+  теперь ждёт 150 мс без остановки игры, с заглушённым ЦАП, до подачи звука.
+- **Wi-Fi:** вызовы сверены с [MicroPython WLAN](https://github.com/micropython/micropython/blob/e0e9fbb17ed6fd06bb76e266ae554784c9c80804/ports/esp32/network_wlan.c#L214-L269)
+  и [ESP-NOW](https://github.com/micropython/micropython/blob/e0e9fbb17ed6fd06bb76e266ae554784c9c80804/ports/esp32/modespnow.c#L510-L543).
+  Необязательная диагностика Wi-Fi создаёт WLAN и инициализирует
+  драйвер, но сама не включает интерфейс и не запускает сканирование.
+  Запросы погоды синхронные, перегруженная очередь ESP-NOW также может
+  задержать кадр. Звук и Wi-Fi сначала испытывать отдельно.
+
 Этот путь проверяется на ПК тем же `main.principal()` через временные
 сохранения и настоящие адаптеры с имитацией железа. Сценарий
 `--scenario switch` кормит двух питомцев через тач, переключает их в
 меню и проверяет сохранения:
 
 ```sh
-python -m ports.v1_full_game_emulate --scenario switch --out build/v1-return.png --pip-out build/v1-pip.png
+python -m ports.v1_full_game_emulate --screen-mode large --scenario switch --out build/v1-return.png --pip-out build/v1-pip.png
 python -m ports.v1_full_game_emulate --scenario switch --native-pip --out build/v1-pip-c.png
 ```
 

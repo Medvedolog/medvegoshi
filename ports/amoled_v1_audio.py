@@ -20,6 +20,8 @@ SAMPLE_RATE = 16000
 DMA_BYTES = 8192
 FRAMES = 256
 FRAME_BYTES = 8
+PRIME_MS = (FRAMES * 1000 + SAMPLE_RATE - 1) // SAMPLE_RATE
+PA_WARMUP_MS = 150  # NS4150B startup is 120 ms typical, not a specified maximum.
 MAX_WRITES_PER_UPDATE = 4
 DRAIN_MS = 90  # At most 64 ms in pinned ESP32 DMA, plus margin.
 MAX_CLIP_MS = 4000
@@ -77,6 +79,7 @@ class V1Audio:
         self._pending = None
         self._offset = self._end = 0
         self._drain_until = None
+        self._warmup_until = None
         self._natural_drain = False
         self._prime = self._more = False
         self._closed = False
@@ -182,6 +185,7 @@ class V1Audio:
             self._pa.value(0)
         finally:
             self._amplifying = False
+            self._warmup_until = None
             if self._codec_claimed:
                 self._reg(DAC_MUTE, MUTE_BITS)
 
@@ -257,6 +261,17 @@ class V1Audio:
                 self._start(now)
             if self._clock.ticks_diff(now, self._started) >= MAX_CLIP_MS:
                 raise AudioUnavailable("audio exceeded playback watchdog")
+            if self._warmup_until is not None:
+                ready = self._ready()  # Notice a stream fault even while muted.
+                if self._clock.ticks_diff(now, self._warmup_until) < 0 or not ready:
+                    return
+                # The warm-up interval elapsed. Never unmute if mute/gain
+                # drifted while waiting. Only silence has been queued so far.
+                self._verify_dac(muted=True)
+                self._reg(DAC_MUTE, 0)
+                self._verify_dac(muted=False)
+                self._started = self._clock.ticks_ms()
+                self._warmup_until = None
             for _ in range(MAX_WRITES_PER_UPDATE):
                 if not self._ready():
                     return
@@ -273,12 +288,15 @@ class V1Audio:
                     return
                 if self._prime:
                     self._prime = False
-                    self._reg(DAC_MUTE, 0)
-                    # Keep the physical amp low until the digital mute and
-                    # conservative volume are both independently confirmed.
-                    self._verify_dac(muted=False)
+                    self._verify_dac(muted=True)
                     self._pa.value(1)
                     self._amplifying = True
+                    # write() accepts bytes into DMA; it does not certify
+                    # that silence has reached the wire. Wait at least one
+                    # chunk and let the amp settle while the DAC stays muted.
+                    self._warmup_until = self._clock.ticks_add(
+                        self._clock.ticks_ms(), max(PRIME_MS, PA_WARMUP_MS))
+                    return
                 elif not self._more:
                     self._active = False
                     self._natural_drain = True

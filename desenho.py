@@ -1338,9 +1338,10 @@ AJUSTES_MIN = (-1, -60, 60, 1)
 MENU_CLOCK_X, MENU_CLOCK_STEP, MENU_CLOCK_W = 16, 53, 49
 
 
-def _seg(x, y, w, h, rot, ligado, fundo=TRAY_BTN):
+def _seg(x, y, w, h, rot, ligado, fundo=TRAY_BTN, escrever=None):
     rrect(x, y, w, h, 6, ACC if ligado else fundo)
-    texto(rot, x + ri((w - len(rot) * 8) / 2), y + ri((h - 8) / 2), INK if ligado else CREME)
+    (escrever or texto)(rot, x + ri((w - len(rot) * 8) / 2), y + ri((h - 8) / 2),
+                        INK if ligado else CREME)
 
 
 def alca():
@@ -1348,15 +1349,30 @@ def alca():
 
 
 def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, confirma=None,
-         legenda='', fase='adulto', wifi=1, clock_write=True):
+         legenda='', fase='adulto', wifi=1, clock_write=True, menu_text=None):
     """Painel de ajustes com a borda de baixo em y = borda (0 a 272).
     pendente = personagem escolhido nas setas e ainda nao confirmado;
     confirma = 'trocar' ou 'zerar' mostra a acao no lugar da hora;
-    wifi = barrinhas do canto (tocar nelas abre o Wi-Fi): 0 sem rede, 1 configurada, 2 internet ok."""
+    wifi = barrinhas do canto (tocar nelas abre o Wi-Fi): 0 sem rede, 1 configurada, 2 internet ok.
+    menu_text can route just the fully open panel's labels to the native display.
+    It receives logical coordinates and RGB565 and returns True when captured.
+    """
+    escrever, central, segmento = texto, centro, _seg
+    if menu_text is not None and borda == MENU_FUNDO:
+        def escrever(s, x, y, c, esc=1):
+            if not menu_text(s, ri(x), ri(y), C(c), esc):
+                texto(s, x, y, c, esc)
+
+        def central(s, y, c, esc=1):
+            escrever(s, (W - len(s) * 8 * esc) / 2, y, c, esc)
+
+        def segmento(x, y, w, h, rot, ligado, fundo=TRAY_BTN):
+            _seg(x, y, w, h, rot, ligado, fundo, escrever)
+
     o = borda - MENU_FUNDO                     # tudo desce junto com o painel
     rect(0, o, W, MENU_FUNDO - 10, TRAY)
     rrect(0, o + MENU_FUNDO - 22, W, 22, 10, TRAY)
-    centro('Настройки', o + 9, BRANCO, 2)
+    central('Настройки', o + 9, BRANCO, 2)
     onda = CREME if som_ligado else MUTEDM
     rect(196, o + 13, 3, 5, CREME); poly(198, o + 15, (0, -1, 6, -5, 6, 8, 0, 4), CREME)
     rect(206, o + 13, 1, 5, onda); rect(209, o + 11, 1, 9, onda)
@@ -1364,11 +1380,11 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
         linha(194, o + 22, 211, o + 9, VERMELHO)
     for i in range(3):
         rect(36 + i * 4, o + 19 - i * 3, 3, 3 + i * 3, CREME if i < (0, 2, 3)[wifi] else MUTEDM)
-    texto('Режим', 20, o + 29, CREME)
+    escrever('Режим', 20, o + 29, CREME)
     for i, (mid, rot) in enumerate(MODOS):
-        _seg(20 + i * 68, o + 40, 64, 30, rot, modo == mid)
-    texto('Питомец', 16, o + 76, CREME)
-    _seg(116, o + 73, 108, 14, 'Сменить друга', bool(pendente))
+        segmento(20 + i * 68, o + 40, 64, 30, rot, modo == mid)
+    escrever('Питомец', 16, o + 76, CREME)
+    segmento(116, o + 73, 108, 14, 'Сменить друга', bool(pendente))
     mostra = pendente or id
     n = len(ELENCO)
     idx = ELENCO.index(mostra) if mostra in ELENCO else 0
@@ -1382,38 +1398,38 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
                    s=0.4 if mostra in ('pato', 'calopsita') else 0.45, cru=True)
     poly(14, o + 119, (0, 0, 8, -7, 8, 7), CREME); poly(226, o + 119, (0, 0, -8, -7, -8, 7), CREME)
     if pendente:
-        centro(NOMES[pendente] + '?', o + 156, ACC)
+        central(NOMES[pendente] + '?', o + 156, ACC)
     else:
-        centro(legenda or NOMES[id], o + 156, CREME)
+        central(legenda or NOMES[id], o + 156, CREME)
     if confirma:
         rrect(16, o + 168, 208, 74, 8, TRAY_BTN)
         if confirma == 'trocar':
-            centro('Сменить друга?', o + 176, CREME)
-            centro('Прогресс сохранится', o + 190, ACC)
+            central('Сменить друга?', o + 176, CREME)
+            central('Прогресс сохранится', o + 190, ACC)
             confirm_label = 'Сменить'
         else:
-            centro('Сбросить прогресс?', o + 176, CREME)
-            centro('Этот друг начнёт с яйца', o + 190, ACC)
+            central('Сбросить прогресс?', o + 176, CREME)
+            central('Этот друг начнёт с яйца', o + 190, ACC)
             confirm_label = 'Сбросить'
-        _seg(24, o + 206, 92, 28, confirm_label, True)
-        _seg(124, o + 206, 92, 28, 'Отмена', False, TRAY)
+        segmento(24, o + 206, 92, 28, confirm_label, True)
+        segmento(124, o + 206, 92, 28, 'Отмена', False, TRAY)
     else:
-        texto('Время', 20, o + 171, CREME)
-        _seg(20, o + 182, 98, 26, 'Обычное', hora_modo == 'real')
-        _seg(122, o + 182, 98, 26, 'Быстрое', hora_modo == 'sim')
+        escrever('Время', 20, o + 171, CREME)
+        segmento(20, o + 182, 98, 26, 'Обычное', hora_modo == 'real')
+        segmento(122, o + 182, 98, 26, 'Быстрое', hora_modo == 'sim')
         if hora_modo == 'sim':
             for i, v in enumerate((1, 2, 3)):
-                _seg(20 + i * 68, o + 214, 64, 22, '%dx' % v, vel == v)
-            centro('сутки за %d мин' % VEL_MIN[vel], o + 244, MUTEDM)
+                segmento(20 + i * 68, o + 214, 64, 22, '%dx' % v, vel == v)
+            central('сутки за %d мин' % VEL_MIN[vel], o + 244, MUTEDM)
         else:
             if clock_write:
                 for i, rot in enumerate(AJUSTES_ROT):
-                    _seg(MENU_CLOCK_X + i * MENU_CLOCK_STEP, o + 214, MENU_CLOCK_W, 22, rot, False)
+                    segmento(MENU_CLOCK_X + i * MENU_CLOCK_STEP, o + 214, MENU_CLOCK_W, 22, rot, False)
             else:
-                centro('Часы: только чтение', o + 221, CREME)
-            centro('Сейчас ' + relogio, o + 240, CREME)
-        _seg(16, o + 248, 52, 18, 'Сброс', False)
-        _seg(172, o + 248, 52, 18, 'Звук' if som_ligado else 'Тихо', som_ligado)
+                central('Часы: только чтение', o + 221, CREME)
+            central('Сейчас ' + relogio, o + 240, CREME)
+        segmento(16, o + 248, 52, 18, 'Сброс', False)
+        segmento(172, o + 248, 52, 18, 'Звук' if som_ligado else 'Тихо', som_ligado)
     rrect(100, o + 256, 40, 4, 2, CREME)
     if borda < H:
         hl(0, borda, W, (24, 18, 26))

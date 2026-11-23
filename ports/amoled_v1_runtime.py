@@ -263,7 +263,8 @@ def _preflight(i2c, clock, audio_requested):
 
 def create_profile(*, enabled=False, confirmed_v1=False, allow_power_key=False,
                    audio_factory=None, i2c=None, machine_module=None,
-                   native_module=None, framebuffer_module=None, clock=None):
+                   native_module=None, framebuffer_module=None, clock=None,
+                   screen_mode=amoled_v1.SCALE_NATIVE):
     """Construct a game-compatible runtime, never autorun or flash anything.
 
     confirmed_v1 refers to the actual physical label, not a signature inferred
@@ -273,6 +274,7 @@ def create_profile(*, enabled=False, confirmed_v1=False, allow_power_key=False,
     """
     if enabled is not True or confirmed_v1 is not True:
         raise ProfileUnavailable("Enable explicitly and confirm the physical AMOLED V1 label")
+    amoled_v1.viewport_for(screen_mode)  # reject invalid layout before scanning or writing
     if type(allow_power_key) is not bool:
         raise TypeError("allow_power_key must be a bool")
     if audio_factory is not None and not callable(audio_factory):
@@ -306,7 +308,7 @@ def create_profile(*, enabled=False, confirmed_v1=False, allow_power_key=False,
     movement.setup()
     screen, touch = amoled_v1.prepare_v1(
         i2c, machine_module=machine_module, amoled_module=native_module,
-        framebuffer_module=framebuffer_module, verified_v1=False)
+        framebuffer_module=framebuffer_module, verified_v1=False, screen_mode=screen_mode)
     boot = Pin(BOOT_PIN, Pin.IN, Pin.PULL_UP)
     pwr = PowerKey(i2c) if allow_power_key else None
     battery = Battery(i2c, pwr)

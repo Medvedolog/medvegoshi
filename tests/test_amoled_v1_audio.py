@@ -166,6 +166,11 @@ class Fixture:
 
     def amp(self): return self.pins[0].value_now
 
+    def feed_first_samples(self, sound):
+        sound.atualizar()
+        self.advance(max(a.PRIME_MS, a.PA_WARMUP_MS))
+        sound.atualizar()
+
 
 class V1AudioTests(unittest.TestCase):
     def test_no_writes_or_pins_on_false_confirmation_v2_and_wrong_codec(self):
@@ -213,10 +218,24 @@ class V1AudioTests(unittest.TestCase):
         sound.atualizar()
         self.assertEqual(fx.tx.writes, [b"\0" * 8])
         self.assertEqual(fx.amp(), 0)
+        fx.advance(25)  # A partial prime does not start the warm-up.
         fx.tx.limit = None
         sound.atualizar()
         self.assertEqual(fx.voice.starts, [("happy", 16000)])
         self.assertEqual(fx.tx.writes[1], b"\0" * (a.FRAMES * 8 - 8))
+        self.assertEqual(fx.amp(), 1)
+        self.assertEqual(fx.bus.regs[a.DAC_MUTE], a.MUTE_BITS)
+        self.assertEqual(fx.voice.renders, 0)
+        self.assertEqual(len(fx.tx.writes), 2)
+        self.assertEqual(fx.clock.ms, 65525)  # No sleep in the update.
+        fx.advance(a.PA_WARMUP_MS - 1)
+        sound.atualizar()
+        self.assertEqual(fx.bus.regs[a.DAC_MUTE], a.MUTE_BITS)
+        self.assertEqual(fx.voice.renders, 0)
+        self.assertEqual(len(fx.tx.writes), 2)
+        fx.advance(1)
+        sound.atualizar()
+        self.assertEqual(fx.bus.regs[a.DAC_MUTE], 0)
         self.assertEqual(fx.tx.writes[2][:16],
                          b"\0\0\x34\x12\0\0\x34\x12\0\0\xcc\xed\0\0\xcc\xed")
         self.assertEqual(fx.amp(), 1)
@@ -246,14 +265,58 @@ class V1AudioTests(unittest.TestCase):
         self.assertFalse(fx.tx.active)
         self.assertIn("watchdog", sound.last_error)
 
+    def test_amp_warmup_timeout_stays_dac_muted_and_shuts_down(self):
+        fx = Fixture()
+        sound = fx.make()
+        fx.clock.ms = 65500
+        self.assertTrue(sound.play_pip("happy"))
+        sound.atualizar()
+        self.assertEqual(fx.amp(), 1)
+        fx.tx.ready = False
+        fx.advance(a.PA_WARMUP_MS)
+        sound.atualizar()
+        self.assertTrue(sound.available)
+        self.assertEqual(fx.bus.regs[a.DAC_MUTE], a.MUTE_BITS)
+        self.assertEqual(fx.voice.renders, 0)
+        fx.advance(a.MAX_CLIP_MS - a.PA_WARMUP_MS)
+        sound.atualizar()
+        self.assertFalse(sound.available)
+        self.assertEqual(fx.amp(), 0)
+        self.assertEqual(fx.bus.regs[a.DAC_MUTE], a.MUTE_BITS)
+        self.assertIn("watchdog", sound.last_error)
+        self.assertFalse(fx.tx.active)
+
+    def test_mute_close_or_poll_error_during_warmup_never_writes_pcm(self):
+        for action in ("mute", "close", "poll"):
+            with self.subTest(action=action):
+                fx = Fixture()
+                sound = fx.make()
+                self.assertTrue(sound.play_pip("yawn"))
+                sound.atualizar()
+                self.assertEqual(fx.amp(), 1)
+                if action == "mute":
+                    sound.ligado = False
+                    sound.ligado = True
+                elif action == "close":
+                    sound.close()
+                else:
+                    fx.tx.error = 8
+                    sound.atualizar()
+                self.assertEqual(fx.amp(), 0)
+                fx.advance(a.PA_WARMUP_MS + a.DRAIN_MS)
+                sound.atualizar()
+                self.assertEqual(fx.bus.regs[a.DAC_MUTE], a.MUTE_BITS)
+                self.assertEqual(fx.tx.writes, [b"\0" * (a.FRAMES * a.FRAME_BYTES)])
+                self.assertEqual(fx.voice.renders, 0)
+
     def test_muting_cancels_pending_and_old_dma_stays_muted(self):
         fx = Fixture()
         sound = fx.make()
         fx.voice.more = True
         self.assertTrue(sound.play_pip("purr"))
-        sound.atualizar()
+        fx.feed_first_samples(sound)
         self.assertEqual(fx.amp(), 1)
-        self.assertLessEqual(len(fx.tx.writes), a.MAX_WRITES_PER_UPDATE)
+        self.assertLessEqual(len(fx.tx.writes) - 1, a.MAX_WRITES_PER_UPDATE)
         sound.ligado = False
         self.assertEqual(fx.amp(), 0)
         self.assertFalse(sound.play_pip("nom"))
@@ -274,7 +337,7 @@ class V1AudioTests(unittest.TestCase):
                 sound = fx.make()
                 fx.voice.more = True
                 sound.play_pip("nom")
-                sound.atualizar()
+                fx.feed_first_samples(sound)
                 self.assertEqual(fx.amp(), 1)
                 if fault == "native":
                     fx.voice.fail = True
@@ -298,7 +361,7 @@ class V1AudioTests(unittest.TestCase):
         self.assertFalse(sound.play_pip("tick"))
         self.assertFalse(sound.tocar("unknown"))
         self.assertTrue(sound.tocar("clique"))
-        sound.atualizar()
+        fx.feed_first_samples(sound)
         self.assertGreater(len(fx.tx.writes), 1)
         self.assertTrue(any(fx.tx.writes[1]))
         self.assertEqual(fx.voice.starts, [])
@@ -326,7 +389,7 @@ class V1AudioTests(unittest.TestCase):
                 self.assertEqual(fx.tx.deinit_count, 1)
                 self.assertNotIn(("pa", 1), fx.trace)
 
-    def test_unmute_nack_and_excess_gain_leave_amp_off(self):
+    def test_pre_enable_read_error_and_excess_gain_never_enable_amp(self):
         for nack in (False, True):
             fx = Fixture()
             sound = fx.make()
@@ -341,6 +404,27 @@ class V1AudioTests(unittest.TestCase):
             self.assertFalse(sound.available)
             self.assertTrue(sound.last_error)
             self.assertFalse(fx.tx.active)
+
+    def test_warmup_gain_drift_or_unmute_nack_shuts_amp_off_before_pcm(self):
+        for nack in (False, True):
+            with self.subTest(nack=nack):
+                fx = Fixture()
+                sound = fx.make()
+                self.assertTrue(sound.tocar("clique"))
+                sound.atualizar()
+                self.assertEqual(fx.amp(), 1)
+                self.assertEqual(fx.bus.regs[a.DAC_MUTE], a.MUTE_BITS)
+                if nack:
+                    fx.bus.fail_reg = a.DAC_MUTE
+                else:
+                    fx.bus.readback[a.DAC_VOLUME] = b"\xff"
+                fx.advance(a.PA_WARMUP_MS)
+                sound.atualizar()
+                self.assertEqual(fx.amp(), 0)
+                self.assertFalse(sound.available)
+                self.assertTrue(sound.last_error)
+                self.assertFalse(fx.tx.active)
+                self.assertEqual(fx.tx.writes, [b"\0" * (a.FRAMES * a.FRAME_BYTES)])
 
 
 class RealVoicePcmTest(unittest.TestCase):

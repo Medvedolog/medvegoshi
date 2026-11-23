@@ -27,6 +27,36 @@ def _ensure(path, marker):
         raise ValueError("unexpected pinned upstream layout: " + str(path))
 
 
+def _checked_qspi_source(source):
+    # dobodu holds CS low across RAMWR and every color chunk. A failed
+    # transfer must release CS before MicroPython unwinds, not continue with
+    # later chunks. The successful command/payload format is unchanged.
+    helper = """static void qspi_check_result(amoled_qspi_bus_obj_t *panel, esp_err_t result)
+{
+    if (result != ESP_OK) {
+        mp_hal_pin_od_high(panel->cs_pin);
+        mp_raise_msg_varg(&mp_type_OSError, MP_ERROR_TEXT("%d(spi_device_polling_transmit)"), result);
+    }
+}
+
+"""
+    marker = "\nstatic void hal_lcd_qspi_panel_tx_param("
+    replacements = [(marker, "\n" + helper + marker[1:])]
+    for indent, transaction in (("    ", "&t"),
+                                ("    ", "(spi_transaction_t *)&t"),
+                                ("        ", "(spi_transaction_t *)&t")):
+        call = "spi_device_polling_transmit(spi_obj->spi, " + transaction + ")"
+        replacements.append((
+            "\n" + indent + call + ";\n",
+            "\n" + indent + "qspi_check_result(qspi_panel_obj, " + call + ");\n",
+        ))
+    for original, patched in replacements:
+        if source.count(original) != 1:
+            raise ValueError("unexpected pinned QSPI transfer source; re-review upstream")
+        source = source.replace(original, patched, 1)
+    return source
+
+
 def prepare(micropython, driver):
     micropython, driver = Path(micropython), Path(driver)
     board_dir = micropython / "ports/esp32/boards/ESP32_GENERIC_S3"
@@ -58,6 +88,13 @@ def prepare(micropython, driver):
     orig = module.read_text()
     if "5 add_library" not in orig or "21 # Link" not in orig:
         raise ValueError("CMake recipe changed; re-review upstream manually")
+    qspi = driver / "amoled/amoled_qspi_bus.c"
+    # Preserve the source checkout's line endings (the pinned blob uses CRLF).
+    qspi_original = qspi.read_bytes()
+    qspi_source = _checked_qspi_source(qspi_original.decode("utf-8").replace("\r\n", "\n"))
+    if b"\r\n" in qspi_original:
+        qspi_source = qspi_source.replace("\n", "\r\n")
+    qspi_bytes = qspi_source.encode("utf-8")
     cmake = (
         "add_library(usermod_amoled INTERFACE)\n"
         "target_sources(usermod_amoled INTERFACE\n"
@@ -69,21 +106,23 @@ def prepare(micropython, driver):
         ")\n"
         "target_link_libraries(usermod INTERFACE usermod_amoled)\n"
     )
+    partitions = micropython / "ports/esp32/partitions-16MiB.csv"
+    if partitions.exists() and partitions.read_text() != PARTITIONS:
+        raise ValueError("refusing to replace existing partitions")
     module.write_text(cmake)
+    qspi.write_bytes(qspi_bytes)
     current = config.read_text()
     if "CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y" not in current:
         config.write_text(current.rstrip() +
                           "\nCONFIG_ESPTOOLPY_FLASHSIZE_16MB=y\n"
                           "CONFIG_PARTITION_TABLE_CUSTOM=y\n"
                           'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-16MiB.csv"\n')
-    partitions = micropython / "ports/esp32/partitions-16MiB.csv"
-    if partitions.exists() and partitions.read_text() != PARTITIONS:
-        raise ValueError("refusing to replace existing partitions")
     partitions.write_text(PARTITIONS)
     return {
         "upstream": DRIVER_SHA, "micropython": MICROPYTHON_SHA,
         "board": BOARD, "variant": VARIANT,
         "cmake_sha256": hashlib.sha256(cmake.encode()).hexdigest(),
+        "qspi_sha256": hashlib.sha256(qspi_bytes).hexdigest(),
         "partition_sha256": hashlib.sha256(PARTITIONS.encode()).hexdigest(),
     }
 

@@ -99,14 +99,19 @@ class V1EmulatorRegressions(unittest.TestCase):
             extracted = root / "app"
             package_app(game_module.ROOT, archive)
             with zipfile.ZipFile(archive) as archive:
+                self.assertIn("ports/v1_scale.py", archive.namelist())
+                self.assertIn("ports/v1_menu_font.py", archive.namelist())
                 archive.extractall(extracted)
             app = extracted / "v1_game_app.py"
-            with patch.object(amoled_v1_launch, "run", wraps=amoled_v1_launch.run) as launch:
-                _, report = game_sim(({},), app_path=app)
-            launch.assert_called_once_with(enabled=True, confirmed_v1=True)
-        self.assertEqual(report["frames"], 1)
-        self.assertEqual(report["runtime_profile"], "amoled_1_8_v1")
-        self.assertTrue(report["packaged_entry"])
+            for mode in (port.SCALE_NATIVE, port.SCALE_LARGE):
+                with self.subTest(mode=mode), patch.object(
+                        amoled_v1_launch, "run", wraps=amoled_v1_launch.run) as launch:
+                    _, report = game_sim(({},), app_path=app, screen_mode=mode)
+                    launch.assert_called_once_with(enabled=True, confirmed_v1=True, screen_mode=mode)
+                    self.assertEqual(report["frames"], 1)
+                    self.assertEqual(report["runtime_profile"], "amoled_1_8_v1")
+                    self.assertEqual(report["screen_mode"], mode)
+                    self.assertTrue(report["packaged_entry"])
 
     def test_full_frame_repaints_after_simulated_missing_panel_transfer(self):
         inputs = ({}, _touch(28, 240)) + _idle(4)

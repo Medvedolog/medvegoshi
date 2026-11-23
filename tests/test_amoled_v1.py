@@ -167,7 +167,7 @@ class AMOLEDV1Contracts(unittest.TestCase):
         port.enable_amoled_power(self.bus)
         self.assertEqual(self.bus.register[(0x20, 0x03)], 0xFD)
         self.assertEqual(self.bus.register[(0x20, 0x01)], 0x26)
-        self.assertEqual([x[1] for x in self.bus.writes], [3, 1])
+        self.assertEqual([x[1] for x in self.bus.writes], [1, 3])
         self.assertTrue(all(x[0] == 0x20 for x in self.bus.writes))
 
     def test_v2_rejected_before_any_gpio_or_i2c_write(self):
@@ -227,7 +227,7 @@ class AMOLEDV1Contracts(unittest.TestCase):
             port.validate_v1_bus(bus)
         self.assertEqual(bus.writes, [])
         self.assertIn(0x38, port.validate_v1_bus(bus, verified_v1=True))
-        self.assertEqual([i[1] for i in bus.writes], [3, 1])
+        self.assertEqual([i[1] for i in bus.writes], [1, 3, 1, 3])
         self.assertEqual(bus.register[(0x20, 0x03)] & 4, 0)
 
     def test_native_compiled_qspi_dependencies_required(self):
@@ -248,8 +248,11 @@ class AMOLEDV1Contracts(unittest.TestCase):
         self.assertEqual(NativeModule.last_display.kwargs["type"], 2)
         self.assertIs(NativeModule.last_display.kwargs["auto_refresh"], False)
         self.assertEqual(FakeSPI.calls[0][0], 2)
-        self.assertEqual(FakeSPI.calls[0][1]["baudrate"], 80_000_000)
+        self.assertEqual(FakeSPI.calls[0][1]["baudrate"], 40_000_000)
         self.assertEqual(FakeSPI.calls[0][1]["mosi"], None)
+        self.assertEqual(NativeModule.last_panel["pclk"], 40_000_000)
+        self.assertEqual([data[0] & 3 for _, reg, data in self.bus.writes if reg == 1],
+                         [0, 2, 3])
         self.assertEqual(self.bus.register[(0x20, 0x01)] & 0x03, 0x03)
         self.assertNotIn((21, FakePin.IN), FakePin.creations)
         self.assertNotIn((13, FakePin.OUT), FakePin.creations)

@@ -28,12 +28,14 @@ def _launch(profile, allow_wifi, importer=None):
 
 
 def run(*, enabled=False, confirmed_v1=False, allow_wifi=False,
-        allow_power_key=False, audio_factory=None):
+        allow_power_key=False, audio_factory=None, screen_mode="large"):
     """Start a verified V1 profile explicitly. Wi-Fi is off unless opted in."""
     if enabled is not True or confirmed_v1 is not True:
         raise RuntimeError("experimental launch requires explicit V1 label confirmation")
     if type(allow_wifi) is not bool or type(allow_power_key) is not bool:
         raise ValueError("experimental flags must be bool")
+    from ports.v1_scale import viewport_for
+    viewport_for(screen_mode)
     import os
     if APP_NAME in sys.modules:
         raise RuntimeError("restart before selecting AMOLED V1 again")
@@ -46,7 +48,7 @@ def run(*, enabled=False, confirmed_v1=False, allow_wifi=False,
     from ports.amoled_v1_runtime import create_profile
     profile = create_profile(enabled=True, confirmed_v1=True,
                              allow_power_key=allow_power_key,
-                             audio_factory=audio_factory)
+                             audio_factory=audio_factory, screen_mode=screen_mode)
     try:
         result = _launch(profile, allow_wifi)
     except BaseException:

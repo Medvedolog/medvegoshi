@@ -1,10 +1,28 @@
 """Pinned native QSPI source prep tests; no downloads, firmware or hardware."""
+import hashlib
 from pathlib import Path
 import tempfile
 import unittest
 
 from ports import prepare_firmware as build
 from ports.v1_game_demo import show_giraffe
+
+
+QSPI_TRANSFER_FIXTURE = """/* Unrelated source */
+static void hal_lcd_qspi_panel_tx_param(void) {
+    mp_hal_pin_od_low(qspi_panel_obj->cs_pin);
+    spi_device_polling_transmit(spi_obj->spi, &t);
+    mp_hal_pin_od_high(qspi_panel_obj->cs_pin);
+}
+static void hal_lcd_qspi_panel_tx_color(void) {
+    mp_hal_pin_od_low(qspi_panel_obj->cs_pin);
+    spi_device_polling_transmit(spi_obj->spi, (spi_transaction_t *)&t);
+    do {
+        spi_device_polling_transmit(spi_obj->spi, (spi_transaction_t *)&t);
+    } while (len > 0);
+    mp_hal_pin_od_high(qspi_panel_obj->cs_pin);
+}
+"""
 
 
 class FirmwarePreparationTest(unittest.TestCase):
@@ -33,6 +51,8 @@ class FirmwarePreparationTest(unittest.TestCase):
         for src in ("amoled.c", "amoled_qspi_bus.c", "jpg/tjpgd565.c",
                     "mpfile/mpfile.c", "schrift/schrift.c"):
             (module / src).write_text("/* test stub */\n")
+        self.qspi = module / "amoled_qspi_bus.c"
+        self.qspi.write_bytes(QSPI_TRANSFER_FIXTURE.replace("\n", "\r\n").encode())
 
     def test_exact_pinned_sources_and_safe_cmake(self):
         self.assertEqual(len(build.MICROPYTHON_SHA), 40)
@@ -53,6 +73,32 @@ class FirmwarePreparationTest(unittest.TestCase):
         self.assertIn("CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y", cfg)
         self.assertIn("CONFIG_PARTITION_TABLE_CUSTOM=y", cfg)
         self.assertEqual((self.driver / "LICENSE").read_text(), "MIT License\n")
+        self.assertEqual(d["qspi_sha256"], hashlib.sha256(self.qspi.read_bytes()).hexdigest())
+
+    def test_checked_qspi_covers_param_ramwr_and_payload(self):
+        build.prepare(self.mp, self.driver)
+        prepared = self.qspi.read_text()
+        self.assertEqual(prepared.count("qspi_check_result(qspi_panel_obj, spi_device_polling_transmit("), 3)
+        self.assertIn("    qspi_check_result(qspi_panel_obj, spi_device_polling_transmit(spi_obj->spi, &t));", prepared)
+        self.assertIn("        qspi_check_result(qspi_panel_obj, spi_device_polling_transmit(", prepared)
+        self.assertNotIn("\n    spi_device_polling_transmit(", prepared)
+        self.assertNotIn("\n        spi_device_polling_transmit(", prepared)
+        self.assertNotIn(b"\n", self.qspi.read_bytes().replace(b"\r\n", b""))
+        helper = prepared.split("static void hal_lcd_qspi_panel_tx_param(", 1)[0]
+        self.assertIn("if (result != ESP_OK)", helper)
+        self.assertLess(helper.index("mp_hal_pin_od_high("), helper.index("mp_raise_msg_varg("))
+        self.assertIn("&mp_type_OSError", helper)
+
+    def test_refuse_qspi_transfer_drift_before_writes(self):
+        original = self.qspi.read_bytes()
+        modified = original.replace(b"spi_device_polling_transmit", b"spi_device_transmit", 1)
+        self.qspi.write_bytes(modified)
+        cmake = self.driver / "amoled/micropython.cmake"
+        expected_cmake = cmake.read_bytes()
+        with self.assertRaisesRegex(ValueError, "unexpected pinned QSPI transfer source"):
+            build.prepare(self.mp, self.driver)
+        self.assertEqual(self.qspi.read_bytes(), modified)
+        self.assertEqual(cmake.read_bytes(), expected_cmake)
 
     def test_refuse_unknown_amoled_upstream(self):
         path = self.driver / "amoled/micropython.cmake"
