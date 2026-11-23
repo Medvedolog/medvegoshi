@@ -312,16 +312,17 @@ static mp_obj_t pip_eyes_draw_into(size_t n_args, const mp_obj_t *args)
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pip_eyes_draw_into_obj, 4, 5, pip_eyes_draw_into);
 
-#ifdef MEDVEGOSHI_APP_INDEX_SHA256
-static const MP_DEFINE_STR_OBJ(app_index_sha256_obj, MEDVEGOSHI_APP_INDEX_SHA256);
+/* The qstr scanner may omit transitive CMake definitions. Keep the key
+ * visible even when scanning (or building) without an application digest. */
+#ifndef MEDVEGOSHI_APP_INDEX_SHA256
+#define MEDVEGOSHI_APP_INDEX_SHA256 ""
 #endif
+static const MP_DEFINE_STR_OBJ(app_index_sha256_obj, MEDVEGOSHI_APP_INDEX_SHA256);
 
 static const mp_rom_map_elem_t pip_native_globals_table[] = {
     {MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_pip_native)},
     {MP_ROM_QSTR(MP_QSTR_ABI_VERSION), MP_ROM_INT(1)},
-#ifdef MEDVEGOSHI_APP_INDEX_SHA256
     {MP_ROM_QSTR(MP_QSTR_APP_INDEX_SHA256), MP_ROM_PTR(&app_index_sha256_obj)},
-#endif
     {MP_ROM_QSTR(MP_QSTR_MAX_STATE_BYTES), MP_ROM_INT(STATE_HEAD + 256)},
     {MP_ROM_QSTR(MP_QSTR_VOICE_MAX_BYTES), MP_ROM_INT(VOICE_MAX_BYTES)},
     {MP_ROM_QSTR(MP_QSTR_EYES_MAX_WIDTH), MP_ROM_INT(PIP_EYE_MAX_W)},
