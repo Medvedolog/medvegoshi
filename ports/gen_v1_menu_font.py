@@ -1,12 +1,14 @@
-"""Host only: regenerate the bitmap font using Pillow and DejaVu Sans Mono Bold.
+"""Host only: rasterize the native body and heading from Noto Sans Bold.
 
 Run from the root:
-  python -m ports.gen_v1_menu_font /path/to/DejaVuSansMono-Bold.ttf
+  python -m ports.gen_v1_menu_font /usr/share/fonts/truetype/noto/NotoSans-Bold.ttf
 
-The checked-in data used Pillow 13.0.0 / FreeType 2.14.3 and a font with
-SHA-256 0d3c03d1b667192f91223660a3163325cf83132662fe4d9f7d6e596bf7a995c2.
+Pinned input: Google Noto Sans Bold v2.004 from Debian fonts-noto-core.
+SHA-256 e83493c945848ecd4a9ad0f6d19164541a0d3e23a9c952304a00a46e00272ac5.
+The checked-in output used Pillow 13.0.0 / FreeType 2.14.3.
 """
 import argparse
+from hashlib import sha256
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -14,40 +16,49 @@ from PIL import Image, ImageDraw, ImageFont
 from ports import v1_menu_font as target
 
 MARKER = '# Generated font spans below. Do not edit by hand.\n'
-SIZE, BASELINE, THRESHOLD = 15, 11, 96
+FONT_SHA = 'e83493c945848ecd4a9ad0f6d19164541a0d3e23a9c952304a00a46e00272ac5'
 
 
-def rasterize(font):
-    offsets, spans = bytearray(b'\0\0'), bytearray()
+def rasterize(font, size_index):
+    offsets = bytearray(b'\0\0')
+    widths, spans = bytearray(), bytearray()
     chars = ''.join(chr(u) for u in range(32, 127))
     chars += ''.join(chr(u) for u in range(0x0410, 0x0450)) + target._EXTRA
+    height, baseline, pad = target.height(size_index), target.baseline(size_index), target._X_PAD
+    assert len({font.getlength(c) for c in '0123456789'}) == 1, 'digits should be tabular'
     for ch in chars:
         left, top, right, bottom = font.getbbox(ch, anchor='ls')
-        baseline = max(BASELINE, -top)  # make room for accents in this glyph
-        x = (target.ADVANCE - round(font.getlength(ch))) // 2
-        if not (bottom + baseline <= target.HEIGHT and 0 <= x + left <= x + right <= target.ADVANCE):
+        if not (-pad <= left and top + baseline >= 0 and bottom + baseline <= height):
             raise ValueError('glyph would be cropped: ' + repr(ch))
-        image = Image.new('L', (target.ADVANCE, target.HEIGHT))
-        ImageDraw.Draw(image).text((x, baseline), ch, font=font, fill=255, anchor='ls')
-        for y in range(target.HEIGHT):
+        width = right + pad
+        image = Image.new('L', (width, height))
+        ImageDraw.Draw(image).text((pad, baseline), ch, font=font, fill=255, anchor='ls')
+        coverage = image.point([(pixel * 3 + 127) // 255 for pixel in range(256)])
+        for y in range(height):
             x = 0
-            while x < target.ADVANCE:
-                if image.getpixel((x, y)) < THRESHOLD:
+            while x < width:
+                alpha = coverage.getpixel((x, y))
+                if not alpha:
                     x += 1
                     continue
                 start = x
-                while x < target.ADVANCE and image.getpixel((x, y)) >= THRESHOLD:
+                while x < width and x < start + 16 and coverage.getpixel((x, y)) == alpha:
                     x += 1
-                spans.extend(((y << 4) | start, x - start))
+                if not (y < 32 and start < 32):
+                    raise ValueError('span would overflow: ' + repr(ch))
+                spans.extend(((y << 3) | (alpha << 1) | (start >> 4),
+                              ((start & 15) << 4) | (x - start - 1)))
+        widths.append(round(font.getlength(ch) * 4))
         offsets.extend(len(spans).to_bytes(2, byteorder='little'))
-    return offsets, spans
+    return widths, offsets, spans
 
 
 def literals(name, data):
-    # Avoid runtime hex decoding and intermediate glyph/row containers.
+    # No decoding or per-glyph allocations on device. repr keeps ASCII runs
+    # compact while escaping all bytes that would be unsafe in Python source.
     lines = [name + ' = (']
-    for i in range(0, len(data), 18):
-        lines.append("    b'" + ''.join('\\x%02x' % n for n in data[i:i + 18]) + "'")
+    for i in range(0, len(data), 24):
+        lines.append('    ' + repr(bytes(data[i:i + 24])))
     return '\n'.join(lines + [')', ''])
 
 
@@ -55,14 +66,18 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('font', type=Path)
     args = p.parse_args()
-    font = ImageFont.truetype(str(args.font), SIZE)
-    if font.getname() != ('DejaVu Sans Mono', 'Bold'):
-        p.error('expected DejaVu Sans Mono Bold')
-    offsets, spans = rasterize(font)
+    if sha256(args.font.read_bytes()).hexdigest() != FONT_SHA:
+        p.error('expected the pinned Noto Sans Bold asset')
     output = Path(target.__file__)
-    header, _, _ = output.read_text(encoding='utf-8').partition(MARKER)
-    output.write_text(header + MARKER + literals('_OFFSETS', offsets) + '\n'
-                      + literals('_SPANS', spans), encoding='utf-8')
+    header, found, _ = output.read_text(encoding='utf-8').partition(MARKER)
+    if not found:
+        p.error('expected the generated data marker')
+    font_tables = []
+    for size, index, name in ((16, 1, 'BODY'), (25, 2, 'HEADING')):
+        font = ImageFont.truetype(str(args.font), size)
+        for field, data in zip(('WIDTHS', 'OFFSETS', 'SPANS'), rasterize(font, index)):
+            font_tables.append(literals('_%s_%s' % (name, field), data))
+    output.write_text(header + MARKER + '\n'.join(font_tables), encoding='utf-8')
 
 
 if __name__ == '__main__':

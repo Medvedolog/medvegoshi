@@ -152,7 +152,8 @@ class Tela:
         self.viewport = viewport
         self._columns = _address_window(viewport.x, viewport.width)
         self._rows = _address_window(viewport.y, viewport.height)
-        self.menu_text = None
+        self.menu_text = self.menu_notice = None
+        self._notice = None
         self._scaler = self._menu = self._native_fb = None
         self.wire_buf = self.buf
         if viewport is VIEWPORT_LARGE:
@@ -164,15 +165,43 @@ class Tela:
                 self.wire_buf, viewport.width, viewport.height, framebuffer_module.RGB565)
             self._menu = []
             self.menu_text = self._queue_text
+            self.menu_notice = self._queue_notice
 
-    def _queue_text(self, text, x, y, color, esc=1):
-        # Limit storage to known settings labels. In an unexpected case the
-        # remaining labels are drawn by the original logical renderer.
+    def _queue_text(self, text, x, y, color, esc=1, box=None):
         if esc not in (1, 2) or len(self._menu) >= 32 or not self._font.supports(text):
             return False
-        x, y = self.viewport.pixel_origin(x, y)
-        self._menu.append((text, x, y, color, esc))
+        origin = self.viewport.pixel_origin
+        x, y = origin(x, y)
+        y -= 2  # baseline aligns with the legacy label anchor
+        if box is not None:
+            bx, by, bw, bh = box
+            left, top = origin(bx, by)
+            right, bottom = origin(bx + bw, by + bh)
+            x = (left + right - self._font.measure(text, esc)) // 2
+            if bh:
+                y = (top + bottom - self._font.height(esc)) // 2
+        if y + self._font.height(esc) > 0 and y < self.viewport.height:
+            self._menu.append((text, x, y, color, esc))
         return True
+
+    def _queue_notice(self, text, bg, fg):
+        self._notice = (text, bg, fg)
+        return True
+
+    def _draw_notice(self):
+        text, bg, fg = self._notice
+        width = self._font.measure(text)
+        w = min(self.viewport.width - 16, width + 32)
+        x = (self.viewport.width - w) // 2
+        _, y = self.viewport.pixel_origin(0, 36)
+        h = 27
+        # Rounded corners without relying on framebuf ellipse in host fixtures.
+        for row in range(h):
+            edge = min(row, h - 1 - row)
+            inset = (9, 6, 4, 3, 2, 1, 1)[edge] if edge < 7 else 0
+            self._native_fb.fill_rect(x + inset, y + row, w - 2 * inset, 1, bg)
+        self._font.draw(self._native_fb, text, (self.viewport.width - width) // 2,
+                        y + (h - self._font.height()) // 2, fg)
 
     def brilho(self, percent):
         if not (0 <= percent <= 100):
@@ -193,12 +222,15 @@ class Tela:
                 if self._menu:
                     for label in self._menu:
                         self._font.draw(self._native_fb, *label)
+                if self._notice is not None:
+                    self._draw_notice()
             self.panel.tx_param(_LCD_CASET, self._columns)
             self.panel.tx_param(_LCD_RASET, self._rows)
             self.panel.tx_color(0, self.wire_buf)
         finally:
             if self._menu:
                 self._menu.clear()
+            self._notice = None
 
 
 def prepare_v1(i2c, machine_module=None, amoled_module=None,

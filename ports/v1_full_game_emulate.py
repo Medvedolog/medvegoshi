@@ -65,6 +65,15 @@ class _WireOverlayFrameBuffer:
     def __init__(self, buf, width, height):
         self.buf, self.width, self.height = buf, width, height
 
+    def pixel(self, x, y, color=None):
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return None
+        at = 2 * (y * self.width + x)
+        if color is None:
+            return self.buf[at] | (self.buf[at + 1] << 8)
+        self.buf[at] = color & 0xFF
+        self.buf[at + 1] = (color >> 8) & 0xFF
+
     def fill_rect(self, x, y, width, height, color):
         left, top = max(0, x), max(0, y)
         right, bottom = min(self.width, x + width), min(self.height, y + height)

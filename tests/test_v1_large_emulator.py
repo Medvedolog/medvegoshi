@@ -114,6 +114,23 @@ class LargeV1EmulatorTest(unittest.TestCase):
                       "Часы: только чтение"):
             self.assertIn(label, labels)
 
+    def test_same_native_title_style_before_during_and_after_menu_motion(self):
+        title = []
+        original_draw = v1_menu_font.draw
+
+        def record(surface, text, x, y, color, esc=1):
+            if text == "Настройки":
+                title.append((x, y, color, esc))
+            return original_draw(surface, text, x, y, color, esc)
+
+        with patch.object(v1_menu_font, "draw", side_effect=record):
+            _, result = emulate(_OPEN, screen_mode=v1.SCALE_LARGE)
+        self.assertTrue(result["menu_opened"])
+        self.assertGreater(len(set(y for _, y, _, _ in title)), 1)
+        self.assertEqual(len({(x, color, esc) for x, _, color, esc in title}), 1)
+        self.assertEqual([y for _, y, _, _ in title],
+                         sorted(y for _, y, _, _ in title))
+
 
 if __name__ == "__main__":
     unittest.main()

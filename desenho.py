@@ -1285,7 +1285,9 @@ def chamado(k, cx, top, meia, t, urgente=False):
         ell(x + 11, y - 10, 5, 5, VERMELHO); texto('!', x + 8, y - 14, BRANCO)
 
 
-def sistema(s):
+def sistema(s, native=None):
+    if native is not None and native(s, C(TRAY), C(CREME)):
+        return
     w = len(s) * 8 + 20
     x = ri((W - w) / 2)
     rrect(x, 36, w, 18, 9, TRAY)
@@ -1354,20 +1356,26 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
     pendente = personagem escolhido nas setas e ainda nao confirmado;
     confirma = 'trocar' ou 'zerar' mostra a acao no lugar da hora;
     wifi = barrinhas do canto (tocar nelas abre o Wi-Fi): 0 sem rede, 1 configurada, 2 internet ok.
-    menu_text can route just the fully open panel's labels to the native display.
-    It receives logical coordinates and RGB565 and returns True when captured.
+    menu_text draws native settings labels on every animation frame when set.
+    It receives logical coordinates, RGB565, and an optional alignment box.
     """
     escrever, central, segmento = texto, centro, _seg
-    if menu_text is not None and borda == MENU_FUNDO:
+    if menu_text is not None:
         def escrever(s, x, y, c, esc=1):
             if not menu_text(s, ri(x), ri(y), C(c), esc):
                 texto(s, x, y, c, esc)
 
         def central(s, y, c, esc=1):
-            escrever(s, (W - len(s) * 8 * esc) / 2, y, c, esc)
+            x = (W - len(s) * 8 * esc) / 2
+            if not menu_text(s, ri(x), ri(y), C(c), esc, (0, y, W, 0)):
+                texto(s, x, y, c, esc)
 
         def segmento(x, y, w, h, rot, ligado, fundo=TRAY_BTN):
-            _seg(x, y, w, h, rot, ligado, fundo, escrever)
+            rrect(x, y, w, h, 6, ACC if ligado else fundo)
+            color = INK if ligado else CREME
+            lx, ly = x + ri((w - len(rot) * 8) / 2), y + ri((h - 8) / 2)
+            if not menu_text(rot, lx, ly, C(color), 1, (x, y, w, h)):
+                texto(rot, lx, ly, color)
 
     o = borda - MENU_FUNDO                     # tudo desce junto com o painel
     rect(0, o, W, MENU_FUNDO - 10, TRAY)

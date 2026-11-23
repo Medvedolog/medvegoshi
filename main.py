@@ -1540,9 +1540,7 @@ def desenhar_sobreposicoes(agora):
         d.bateria_fraca(agora)
     aviso_visivel = sis_txt and time.ticks_diff(sis_ate, agora) > 0
     if menu_borda >= 1:
-        # Native labels are drawn last by the AMOLED sink. Keep the logical
-        # layer when a save/switch banner must cover them.
-        menu_text = None if aviso_visivel else getattr(tela, 'menu_text', None)
+        menu_text = getattr(tela, 'menu_text', None)
         d.menu(int(menu_borda), cfg['modo'], cfg['personagem'], cfg['hora'], cfg['vel'],
                relogio_txt(hora_real()), cfg['som'], menu_pend, menu_conf, legenda_vida(), fase_vida(),
                rede.situacao() if runtime_allow_wifi else 0, runtime_clock_write, menu_text)
@@ -1550,7 +1548,7 @@ def desenhar_sobreposicoes(agora):
         d.alca()
     # Show save/switch results above the settings panel, not behind it.
     if aviso_visivel:
-        d.sistema(sis_txt)
+        d.sistema(sis_txt, getattr(tela, 'menu_notice', None))
 
 
 # ------------------------------------------------------------ menu de ajustes
