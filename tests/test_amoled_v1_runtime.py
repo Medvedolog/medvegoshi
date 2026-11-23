@@ -27,7 +27,7 @@ class Rig:
         self.pin_calls, self.spi, self.i2c_calls = [], [], []
         self.panel, self.display = None, None
         self.mktime_inputs = []
-        self.fail_write = None
+        self.fail_write, self.drop_write = None, None
         rig = self
 
         class Pin:
@@ -61,6 +61,8 @@ class Rig:
         self.writes.append((a, r, data))
         if (a, r) == self.fail_write:
             raise OSError("fixture NACK")
+        if (a, r) == self.drop_write:
+            return
         if (a, r) == (0x34, 0x49):
             self.reg[a, r] = bytes((self.reg[a, r][0] & ~data[0],))
         else:
@@ -222,6 +224,51 @@ class TestAMOLEDV1Runtime(unittest.TestCase):
             r.build(i2c=r)
         self.assertEqual(r.pin_calls, [])
         self.assertTrue(all(w[0] == 0x6B for w in r.writes))
+
+
+    def test_suspect_imu_control_states_never_get_reconfigured(self):
+        for ctrl2, ctrl7 in ((0, 0x80), (0x80, 0), (0x15, 0),
+                             (0x15, 4), (0x15, 0x41)):
+            with self.subTest(ctrl2=ctrl2, ctrl7=ctrl7):
+                r = Rig()
+                r.reg[0x6B, 3], r.reg[0x6B, 8] = bytes((ctrl2,)), bytes((ctrl7,))
+                with self.assertRaises(rt.ProfileUnavailable):
+                    r.build(i2c=r)
+                self.assertFalse(r.writes)
+                self.assertIsNone(r.panel)
+
+    def test_imu_dropped_preconfiguration_write_stops_before_enable(self):
+        for register in (2, 3):
+            r = Rig()
+            r.drop_write = (0x6B, register)
+            with self.subTest(register=register), self.assertRaisesRegex(
+                    rt.ProfileUnavailable, "standby configuration"):
+                r.build(i2c=r)
+            self.assertNotIn((0x6B, 8, b"\x01"), r.writes)
+            self.assertIsNone(r.panel)
+
+    def test_failed_imu_recheck_never_reuses_previous_scale(self):
+        r = Rig()
+        mov = r.build(i2c=r).mov
+        self.assertEqual(mov.read_g(), 1.0)
+        del r.reg[0x6B, 3]
+        with self.assertRaises(rt.ProfileUnavailable):
+            mov.setup()
+        self.assertIsNone(mov.read_g())
+
+    def test_rtc_leap_day_is_one_burst_and_fault_recovery_not_cached(self):
+        r = Rig()
+        rtc = rt.ReadOnlyClock(r, r.clock)
+        leap = bytes((0x59, 0x59, 0x23, 0x29, 6, 0x02, 0x28))
+        for data, expected in ((leap, (2028, 2, 29, 23, 59, 59)),
+                               (leap[:-1] + b"\x27", None),
+                               (leap[:4] + b"\x07" + leap[5:], None),
+                               (None, None), (BCD, CAL)):
+            r.reads.clear()
+            r.reg[0x51, 4] = data
+            self.assertEqual(rtc.ler(), expected)
+            self.assertEqual(r.reads, [(0x51, 0, 1), (0x51, 4, 7)])
+        self.assertFalse(r.writes)
 
     def test_short_power_clears_only_its_w1c_when_armed(self):
         r = Rig()

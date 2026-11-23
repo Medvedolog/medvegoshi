@@ -28,7 +28,7 @@ def _read(i2c, address, reg, n):
         data = i2c.readfrom_mem(address, reg, n)
     except OSError:
         return None
-    return data if len(data) == n else None
+    return data if isinstance(data, (bytes, bytearray)) and len(data) == n else None
 
 
 def _bcd(value):
@@ -38,22 +38,23 @@ def _bcd(value):
     return high * 10 + low
 
 
-def _clock_status(i2c, present):
-    if RTC_ADDR not in present:
-        return "missing"
+def read_calendar(i2c):
+    """Return (status, calendar) from the NXP PCF85063A, without writes."""
     # NXP PCF85063A datasheet 7.2.1: game expects a running 24-hour RTC.
     control = _read(i2c, RTC_ADDR, RTC_CTRL1_REG, 1)
     if control is None:
-        return "unreadable"
+        return "unreadable", None
     if control[0] & 0x20:
-        return "stopped"
+        return "stopped", None
     if control[0] & 0x82:  # 12-hour mode or external clock test mode
-        return "unsupported_mode"
+        return "unsupported_mode", None
+    # NXP PCF85063A sections 7.3-7.4: all calendar counters latch during
+    # one transfer. Do not split date and time across a rollover.
     data = _read(i2c, RTC_ADDR, RTC_TIME_REG, 7)
     if data is None:
-        return "unreadable"
+        return "unreadable", None
     if data[0] & 0x80:  # oscillator stop: don't invent a date or clear it
-        return "unset"
+        return "unset", None
     try:
         second = _bcd(data[0] & 0x7F)
         minute = _bcd(data[1] & 0x7F)
@@ -62,15 +63,18 @@ def _clock_status(i2c, present):
         month = _bcd(data[5] & 0x1F)
         year = 2000 + _bcd(data[6])
     except ValueError:
-        return "invalid"
-    if not (second < 60 and minute < 60 and hour < 24 and 1 <= month <= 12):
-        return "invalid"
+        return "invalid", None
+    if not (second < 60 and minute < 60 and hour < 24 and 1 <= month <= 12
+            and (data[4] & 7) <= 6):
+        return "invalid", None
     days = (31, 28 + (year % 4 == 0), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
     if not 1 <= day <= days[month - 1]:
-        return "invalid"
+        return "invalid", None
     # The existing game treats older times as unset; let the user choose
     # whether to correct the actual clock outside the read-only probe.
-    return "valid" if year >= 2025 else "stale"
+    if year < 2025:
+        return "stale", None
+    return "valid", (year, month, day, hour, minute, second)
 
 
 def probe(i2c, *, confirmed_v1=False, native_module=None):
@@ -92,7 +96,7 @@ def probe(i2c, *, confirmed_v1=False, native_module=None):
             for name in ("QSPIPanel", "AMOLED")
         ),
         "imu_addr": matches[0] if len(matches) == 1 else None,
-        "rtc": _clock_status(i2c, present),
+        "rtc": read_calendar(i2c)[0] if RTC_ADDR in present else "missing",
         "pmu_identified": (
             PMU_ADDR in present
             and _read(i2c, PMU_ADDR, PMU_ID_REG, 1) == bytes((PMU_ID,))

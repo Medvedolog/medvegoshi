@@ -66,6 +66,7 @@ class V1Audio:
 
     def __init__(self, i2c, machine, native, clock, select_api, volume):
         self._bus, self._native, self._clock = i2c, native, clock
+        self._volume = volume
         self._mono = bytearray(FRAMES * 2)
         self._stereo = bytearray(FRAMES * FRAME_BYTES)
         self._view = memoryview(self._stereo)
@@ -104,6 +105,13 @@ class V1Audio:
     def _reg(self, address, value):
         self._bus.writeto_mem(ES8311_ADDR, address, bytes((value,)))
 
+    def _verify_dac(self, muted):
+        mute = self._bus.readfrom_mem(ES8311_ADDR, DAC_MUTE, 1)
+        volume = self._bus.readfrom_mem(ES8311_ADDR, DAC_VOLUME, 1)
+        want = MUTE_BITS if muted else 0
+        if len(mute) != 1 or (mute[0] & MUTE_BITS) != want or volume != bytes((self._volume,)):
+            raise AudioUnavailable("ES8311 DAC mute/volume readback mismatch")
+
     def _configure(self, volume):
         self._reg(0x00, 0x1F)
         self._clock.sleep_ms(20)
@@ -114,6 +122,7 @@ class V1Audio:
         for addr, value in _CODEC_PROFILE:
             self._reg(addr, value)
         self._reg(DAC_VOLUME, volume)
+        self._verify_dac(muted=True)
 
     @property
     def available(self):
@@ -264,6 +273,9 @@ class V1Audio:
                 if self._prime:
                     self._prime = False
                     self._reg(DAC_MUTE, 0)
+                    # Keep the physical amp low until the digital mute and
+                    # conservative volume are both independently confirmed.
+                    self._verify_dac(muted=False)
                     self._pa.value(1)
                     self._amplifying = True
                 elif not self._more:

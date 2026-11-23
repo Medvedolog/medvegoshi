@@ -1,7 +1,7 @@
 """Explicit experimental V1 game launcher, never an installer or boot hook.
 
-The V1 game application must be available as v1_game_app.py, a manually
-staged copy of main.py, not installed as boot-time main.py on this board.
+The V1 game application must be available as v1_game_app.py, the
+paired application from the build artifact, not installed as boot-time main.py on this board.
 Leave this entry point gated until physical V1 smoke tests pass.
 """
 import sys
@@ -41,8 +41,19 @@ def run(*, enabled=False, confirmed_v1=False, allow_wifi=False,
         os.stat(APP_NAME + ".py")
     except OSError:
         raise RuntimeError("the separately staged V1 application is missing")
+    from ports.v1_bundle_guard import verify_runtime
+    verify_runtime()  # no GPIO, hardware profile or save access before this
     from ports.amoled_v1_runtime import create_profile
     profile = create_profile(enabled=True, confirmed_v1=True,
                              allow_power_key=allow_power_key,
                              audio_factory=audio_factory)
-    return _launch(profile, allow_wifi)
+    try:
+        result = _launch(profile, allow_wifi)
+    except BaseException:
+        try:
+            profile.close()
+        except Exception:
+            pass  # preserve the original failure
+        raise
+    profile.close()
+    return result

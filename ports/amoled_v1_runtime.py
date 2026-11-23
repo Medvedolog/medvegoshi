@@ -12,7 +12,7 @@ import math
 import struct
 
 from ports import amoled_v1, v1_game_hal
-from ports.v1_bringup import BOOT_PIN, PWR_ENABLE_REG, PWR_SHORT, PowerKey
+from ports.v1_bringup import BOOT_PIN, PowerKey
 
 I2C_ID = 0
 I2C_FREQ = 400000
@@ -45,19 +45,13 @@ def _read(bus, addr, reg, count):
         data = bus.readfrom_mem(addr, reg, count)
     except OSError:
         return None
-    return data if len(data) == count else None
+    return data if isinstance(data, (bytes, bytearray)) and len(data) == count else None
 
 
 def _byte(bus, addr, reg):
     data = _read(bus, addr, reg, 1)
     return data[0] if data is not None else None
 
-
-def _bcd(value):
-    hi, lo = value >> 4, value & 0x0F
-    if hi > 9 or lo > 9:
-        raise ValueError("invalid BCD")
-    return hi * 10 + lo
 
 
 class ReadOnlyClock:
@@ -70,32 +64,12 @@ class ReadOnlyClock:
         self._clock = clock
 
     def ler(self):
-        addr = v1_game_hal.RTC_ADDR
-        ctrl = _byte(self.i2c, addr, v1_game_hal.RTC_CTRL1_REG)
-        if ctrl is None or ctrl & 0xA2:
-            # External test clock, oscillator stopped or 12-hour mode.
-            return None
-        data = _read(self.i2c, addr, v1_game_hal.RTC_TIME_REG, 7)
-        if data is None or data[0] & 0x80:
-            return None
-        try:
-            s = _bcd(data[0] & 0x7F)
-            m = _bcd(data[1] & 0x7F)
-            h = _bcd(data[2] & 0x3F)
-            d = _bcd(data[3] & 0x3F)
-            month = _bcd(data[5] & 0x1F)
-            y = 2000 + _bcd(data[6])
-        except ValueError:
-            return None
-        if not (0 <= s < 60 and 0 <= m < 60 and 0 <= h < 24
-                and 1 <= month <= 12 and 2025 <= y <= 2099):
-            return None
-        max_day = (31, 28 + (y % 4 == 0), 31, 30, 31, 30,
-                   31, 31, 30, 31, 30, 31)[month - 1]
-        return (y, month, d, h, m, s) if 1 <= d <= max_day else None
+        return v1_game_hal.read_calendar(self.i2c)[1]
 
     def epoch(self):
-        calendar = self.ler()
+        return self._to_epoch(self.ler())
+
+    def _to_epoch(self, calendar):
         if calendar is None:
             return 0
         try:
@@ -131,23 +105,31 @@ class Accel:
         self.i2c.writeto_mem(self.address, register, bytes((value,)))
 
     def setup(self):
+        # Never reuse the previous range after a failed (re)initialization.
+        self.counts_per_g = None
         ctrl1, ctrl2, ctrl7 = (self._reg(r) for r in (_IMU_CTRL1, _IMU_CTRL2, _IMU_CTRL7))
         if ctrl1 is None or ctrl2 is None or ctrl7 is None:
             raise ProfileUnavailable("QMI8658 control registers unreadable")
-        if not ctrl7 & 0x0F:
-            # Only a sensor already in standby is reconfigured. No reset,
-            # self-test, wake-on-motion, gyro or FIFO commands are issued.
-            self._set(_IMU_CTRL1, (ctrl1 | _IMU_AUTOINC) & 0xFE)
+        if ctrl7 == 0 and ctrl2 == 0:
+            # Only the power-on/default standby register combination may be
+            # modified; a merely disabled sensor may be owned by other code.
+            revised = (ctrl1 | _IMU_AUTOINC) & 0xFE
+            self._set(_IMU_CTRL1, revised)
             self._set(_IMU_CTRL2, _IMU_4G_250HZ)
-            self._set(_IMU_CTRL7, _IMU_AEN)
-            ctrl1, ctrl2, ctrl7 = (self._reg(r) for r in (_IMU_CTRL1, _IMU_CTRL2, _IMU_CTRL7))
-            if ctrl1 is None or ctrl2 != _IMU_4G_250HZ or ctrl7 != _IMU_AEN:
+            # Do not enable measurement if either setting failed silently.
+            if (self._reg(_IMU_CTRL1) != revised or
+                    self._reg(_IMU_CTRL2) != _IMU_4G_250HZ or
+                    self._reg(_IMU_CTRL7) != 0):
                 raise ProfileUnavailable("QMI8658 standby configuration not confirmed")
+            self._set(_IMU_CTRL7, _IMU_AEN)
+            ctrl1, ctrl2, ctrl7 = revised, _IMU_4G_250HZ, self._reg(_IMU_CTRL7)
+            if ctrl7 != _IMU_AEN:
+                raise ProfileUnavailable("QMI8658 accelerometer enable not confirmed")
         # Reject unknown scaling, active self-test, sync, and attitude modes
         # instead of forcefully modifying a sensor already owned by other code.
         scale = (ctrl2 >> 4) & 7
         odr = ctrl2 & 0x0F
-        if (not ctrl7 & _IMU_AEN or ctrl7 & 0x88 or ctrl2 & 0x80
+        if (not ctrl7 & _IMU_AEN or ctrl7 & 0xCC or ctrl2 & 0x80
                 or not ctrl1 & _IMU_AUTOINC or ctrl1 & 0x01
                 or scale >= len(_IMU_COUNTS_PER_G) or 9 <= odr <= 11):
             raise ProfileUnavailable("Unsupported active QMI8658 configuration")
@@ -199,11 +181,6 @@ class Battery:
 
     def tecla(self):
         if self._power_key is None:
-            return False
-        if self._reg(v1_game_hal.PMU_ID_REG) != v1_game_hal.PMU_ID:
-            return False
-        enabled = self._reg(PWR_ENABLE_REG)
-        if enabled is None or not enabled & PWR_SHORT:
             return False
         return self._power_key.poll() is True
 
@@ -262,8 +239,12 @@ def _preflight(i2c, clock, audio_requested):
             _byte(i2c, v1_game_hal.PMU_ADDR, v1_game_hal.PMU_ID_REG) != v1_game_hal.PMU_ID):
         raise ProfileUnavailable("AXP2101 identity not confirmed")
     rtc = ReadOnlyClock(i2c, clock)
-    if v1_game_hal.RTC_ADDR not in present or rtc.epoch() <= 0:
-        raise ProfileUnavailable("A valid running PCF85063A RTC is required")
+    if v1_game_hal.RTC_ADDR not in present:
+        raise ProfileUnavailable("PCF85063A RTC is missing")
+    status, calendar = v1_game_hal.read_calendar(i2c)
+    if status != "valid" or rtc._to_epoch(calendar) <= 0:
+        raise ProfileUnavailable("A valid running PCF85063A RTC is required: " +
+                                 ("clock_api" if status == "valid" else status))
     imu = [address for address in v1_game_hal.IMU_ADDRS if address in present and
            _byte(i2c, address, v1_game_hal.IMU_WHO_AM_I) == v1_game_hal.IMU_ID]
     if len(imu) != 1:

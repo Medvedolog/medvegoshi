@@ -3,7 +3,8 @@
 # Alto-falante ES8311 | Microfones ES7210
 import time, struct, math, framebuf
 from array import array
-from machine import Pin, SPI, PWM, I2S
+from machine import Pin
+# The common viewport and RGB565 helpers do not require legacy IPS peripherals.
 
 W, H = 240, 284
 
@@ -17,6 +18,7 @@ def cor(r, g, b):
 # ---------------------------------------------------------------- Tela
 class Tela:
     def __init__(self):
+        from machine import SPI, PWM
         self.spi = SPI(1, baudrate=40_000_000, polarity=0, phase=0,
                        sck=Pin(6), mosi=Pin(7))
         self.dc = Pin(4, Pin.OUT, value=0)
@@ -255,6 +257,7 @@ class Som:
         except Exception as e:
             print('Alto-falante indisponivel:', e)
         try:
+            from machine import PWM
             # o ES7210 precisa de um clock mestre; geramos com PWM no pino 16
             self.mclk = PWM(Pin(16), freq=self.TAXA * 256, duty_u16=32768)
             self._iniciar_es7210()
@@ -322,6 +325,7 @@ class Som:
         if not self.mic_ok or self.mic:
             return
         try:
+            from machine import I2S
             # buffer pequeno: cada leitura pega so ~8 ms de audio recente e nao segura o jogo
             self.mic = I2S(0, sck=Pin(9), ws=Pin(45), sd=Pin(10), mode=I2S.RX,
                            bits=16, format=I2S.STEREO, rate=self.TAXA, ibuf=4096)
@@ -382,6 +386,7 @@ class Som:
         self._parar()
         self._fechar_mic()                         # o barramento de audio e compartilhado
         try:
+            from machine import I2S
             tx = I2S(0, sck=Pin(9), ws=Pin(45), sd=Pin(8), mode=I2S.TX,
                      bits=16, format=I2S.STEREO, rate=self.TAXA, ibuf=self.FILA)
             tx.irq(self._sem_espera)               # modo sem bloqueio: o jogo nao para enquanto toca

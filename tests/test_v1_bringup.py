@@ -8,6 +8,7 @@ class Bus:
     def __init__(self, chip_id=0x4A, enabled=0x08, status=0):
         self.regs = {0x03: chip_id, 0x41: enabled, 0x49: status}
         self.writes = []
+        self.fail_ack = False
 
     def readfrom_mem(self, addr, reg, count):
         assert (addr, count) == (0x34, 1)
@@ -16,6 +17,8 @@ class Bus:
     def writeto_mem(self, addr, reg, data):
         self.writes.append((addr, reg, data))
         assert (addr, reg, data) == (0x34, 0x49, b"\x08")
+        if self.fail_ack:
+            raise OSError("AXP2101 W1C NACK")
         self.regs[reg] &= ~data[0]
 
 
@@ -84,6 +87,32 @@ class V1BringupTest(unittest.TestCase):
         for disabled in (Bus(chip_id=0x47, status=0x08), Bus(enabled=0, status=0x08)):
             self.assertIsNone(bringup.PowerKey(disabled).poll())
             self.assertEqual(disabled.writes, [])
+
+
+    def test_ack_recovery_discards_possibly_stale_press(self):
+        bus = Bus(status=0x0c)
+        bus.fail_ack = True
+        key = bringup.PowerKey(bus)
+        self.assertTrue(key.enabled)
+        self.assertIsNone(key.poll())
+        bus.fail_ack = False
+        self.assertFalse(key.poll())
+        self.assertEqual(bus.regs[0x49], 0x04)
+        bus.regs[0x49] |= 0x08
+        self.assertTrue(key.poll())
+        self.assertFalse(key.poll())
+
+    def test_changed_pmu_identity_or_irq_permission_prevent_w1c(self):
+        bus = Bus()
+        key = bringup.PowerKey(bus)
+        for reg, invalid, valid in ((0x03, 0x47, 0x4A), (0x41, 0, 8)):
+            bus.regs[0x49], bus.regs[reg] = 0x0c, invalid
+            n = len(bus.writes)
+            self.assertIsNone(key.poll())
+            self.assertEqual(len(bus.writes), n)
+            bus.regs[reg] = valid
+            self.assertFalse(key.poll())
+            self.assertEqual(bus.regs[0x49], 4)
 
     def test_opt_in_and_revision_guard_before_boot_or_pmic(self):
         calls = []

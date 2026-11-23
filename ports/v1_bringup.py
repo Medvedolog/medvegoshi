@@ -22,29 +22,41 @@ class PowerKey:
     def __init__(self, i2c):
         self.i2c = i2c
         self.enabled = False
+        self._armed = False
         try:
-            self.enabled = (self._read(AXP_ID_REG) == AXP_ID and
-                            bool(self._read(PWR_ENABLE_REG) & PWR_SHORT))
+            self.enabled = self._short_enabled()
         except OSError:
             pass
-        # Discard an old latched event; only count presses during this run.
+        # The first verified poll only establishes a fresh baseline.
         self.poll()
 
     def _read(self, register):
         data = self.i2c.readfrom_mem(AXP_ADDR, register, 1)
-        if len(data) != 1:
+        if not isinstance(data, (bytes, bytearray)) or len(data) != 1:
             raise OSError("short AXP2101 read")
         return data[0]
+
+    def _short_enabled(self):
+        return (self._read(AXP_ID_REG) == AXP_ID and
+                bool(self._read(PWR_ENABLE_REG) & PWR_SHORT))
 
     def poll(self):
         if not self.enabled:
             return None
         try:
-            if not self._read(PWR_STATUS_REG) & PWR_SHORT:
+            if not self._short_enabled():
+                self._armed = False
+                return None
+            pressed = bool(self._read(PWR_STATUS_REG) & PWR_SHORT)
+            if pressed:
+                self.i2c.writeto_mem(AXP_ADDR, PWR_STATUS_REG, bytes((PWR_SHORT,)))
+            if not self._armed:
+                self._armed = True
                 return False
-            self.i2c.writeto_mem(AXP_ADDR, PWR_STATUS_REG, bytes((PWR_SHORT,)))
-            return True
+            return pressed
         except OSError:
+            # If a read or W1C failed, the next observable IRQ may be stale.
+            self._armed = False
             return None
 
 

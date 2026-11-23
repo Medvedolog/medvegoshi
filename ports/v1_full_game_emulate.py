@@ -7,6 +7,7 @@ handoff consumed by the device game application.
 
 import argparse
 import calendar
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -19,7 +20,7 @@ import time
 from types import SimpleNamespace
 
 from ports import amoled_v1 as v1, amoled_v1_runtime, runtime_handoff
-from ports.emulate_v1 import AMOLED, FrameBuffer, MONO_HLSB, RGB565, Rig
+from ports.emulate_v1 import AMOLED, FrameBuffer, MONO_HLSB, Panel, RGB565, Rig
 
 ROOT = Path(__file__).resolve().parents[1]
 # Real game touch script: feed, drag settings down, then close with BOOT.
@@ -96,6 +97,35 @@ def _blocked(*_args, **_kwargs):
     raise AssertionError("no network or RTC writes in host V1 smoke")
 
 
+def _stage_extracted_app(entry):
+    """Copy allowlisted, already extracted bundle files into the temp game cwd."""
+    from ports.package_amoled_v1_app import APP_FILES, STATUS_NAME
+    from ports.v1_bundle_guard import INDEX, MAX_INDEX, verify_files
+    if entry.name != "v1_game_app.py":
+        raise ValueError("expected extracted v1_game_app.py")
+    allowed = {name for _, name in APP_FILES} | {STATUS_NAME, INDEX}
+
+    def open_source(name, mode):
+        if name not in allowed:
+            raise OSError("unexpected extracted app member")
+        return (entry.parent / name).open(mode)
+
+    with open_source(INDEX, "rb") as handle:
+        index = handle.read(MAX_INDEX + 1)
+    if len(index) > MAX_INDEX:
+        raise ValueError("oversized extracted application index")
+    digest = hashlib.sha256(index).hexdigest()
+    verify_files(digest, open_source)
+    for line in index.decode("ascii").splitlines():
+        _, name = line.split("  ", 1)
+        target = Path(name)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with open_source(name, "rb") as source:
+            target.write_bytes(source.read())
+    Path(INDEX).write_bytes(index)
+    return digest
+
+
 class _HostPipModule:
     """Translate the desktop C core into the MicroPython module's shape.
 
@@ -129,8 +159,14 @@ class _HostPipModule:
         self.pet = self.Pet.restore(blob)
 
 
-def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True, native_pip=False):
-    """Run real principal() with scripted touch/BOOT and no live saves."""
+def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
+            native_pip=False, app_path=None):
+    """Run real principal() with scripted touch/BOOT and no live saves.
+
+    app_path may name a trusted v1_game_app.py in an extracted bundle. Run
+    the real launcher with simulated native module identities and register
+    I/O. Already imported host packages can still come from this checkout.
+    """
     if not inputs or len(inputs) > 96:
         raise ValueError("1..96 frames required")
     fixtures = {"girafa": 50} if fixtures is None else dict(fixtures)
@@ -138,6 +174,7 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True, na
         raise ValueError("adult Little Giraffe is the initial fixture")
     if native_pip and "pip" not in fixtures:
         raise ValueError("native Pip scenario requires a Pip slot")
+    entry = ROOT / "main.py" if app_path is None else Path(app_path).resolve(strict=True)
     host_pip = None
     if native_pip:
         # Import before applying shims so the persistent Python package
@@ -147,9 +184,24 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True, na
     rig = _GameRig(inputs)
     machine = rig.machine()
     machine.I2C = lambda *_args, **_kw: rig
+    if app_path is not None:
+        # V1 still needs MicroPython SPI(2) as the native QSPI bus carrier,
+        # but must not use IPS SPI pins, PWM backlight or I2S/audio methods.
+        def qspi_only(bus, *, sck, **opts):
+            if bus != 2 or sck.number != v1.GPIO_CLK or opts.get("mosi") is not None:
+                raise AssertionError("application attempted non-V1 SPI")
+            return object()
+        machine.SPI = qspi_only
+        del machine.PWM, machine.I2S
     framebuf = SimpleNamespace(FrameBuffer=FrameBuffer, RGB565=RGB565,
                                MONO_HLSB=MONO_HLSB)
     native = SimpleNamespace(QSPIPanel=rig.native_panel, AMOLED=AMOLED)
+    if app_path is not None:
+        class NativePanel(Panel):
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+                rig.panel = self
+        native.QSPIPanel = NativePanel
     sound_events, menu_history, pet_trace = [], [], []
     clock = SimpleNamespace(ticks_ms=lambda: 10_000 + rig.frame * 40,
                             ticks_diff=lambda a, b: a - b,
@@ -162,6 +214,9 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True, na
         draw_to_panel = tela.mostrar
 
         def render_and_limit():
+            nonlocal game_state
+            if not game_state and app_path is not None:
+                game_state = vars(sys.modules["v1_game_app"])
             tela.fb.flush()
             draw_to_panel()
             menu_history.append(game_state["menu_alvo"])
@@ -192,9 +247,10 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True, na
              "rede": network, "network": SimpleNamespace(WLAN=_blocked), "socket": no_socket}
     if host_pip is not None:
         shims["pip_native"] = host_pip
-    keys = (*shims, "hw", "desenho", "vida")
+    keys = (*shims, "hw", "desenho", "vida", "amoled", "pip_native", "v1_game_app")
     prior = {key: sys.modules.get(key) for key in keys}
     original_cwd = Path.cwd()
+    original_sys_path = sys.path[:]
     random_state = random.getstate()
     game_state = {}
     profile = None
@@ -202,6 +258,18 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True, na
         try:
             from zoo import pet_slots, registry
             os.chdir(directory)
+            if app_path is not None:
+                from ports import amoled_v1_launch, v1_bundle_guard
+                digest = _stage_extracted_app(entry)
+                native_pip_api = host_pip or SimpleNamespace()
+                native_pip_api.ABI_VERSION = 1
+                native_pip_api.APP_INDEX_SHA256 = digest
+                for name in v1_bundle_guard.REQUIRED_PIP:
+                    if not hasattr(native_pip_api, name):
+                        setattr(native_pip_api, name, lambda *_a, **_kw: None)
+                shims.update(amoled=native, pip_native=native_pip_api)
+                sys.modules.pop("v1_game_app", None)
+                sys.path.insert(0, directory)
             # Isolated adult slots; never migrate or open an owner's save.
             Path("config.json").write_text(json.dumps({
                 "personagem": "girafa", "modo": "pet", "hora": "real",
@@ -222,18 +290,24 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True, na
                 sys.modules.pop(key, None)
             sys.modules.update(shims)
             import hw
-            profile = amoled_v1_runtime.create_profile(
-                enabled=True, confirmed_v1=True, machine_module=machine,
-                native_module=native, framebuffer_module=framebuf, clock=clock)
-            wrap_screen(profile.tela)
-            original_sound = profile.som.tocar
-            def log_silent_sound(name):
-                sound_events.append(name)
-                return original_sound(name)
-            profile.som.tocar = log_silent_sound
-            # For the invalid case, lose valid RTC *after* factory preflight
-            # to verify the real main handles a subsequently failed read.
-            rig.rtc_valid = rtc_valid
+            create_profile = amoled_v1_runtime.create_profile
+
+            def instrument_profile(**opts):
+                nonlocal profile
+                profile = create_profile(
+                    machine_module=machine, native_module=native,
+                    framebuffer_module=framebuf, clock=clock, **opts)
+                wrap_screen(profile.tela)
+                original_sound = profile.som.tocar
+
+                def log_silent_sound(name):
+                    sound_events.append(name)
+                    return original_sound(name)
+
+                profile.som.tocar = log_silent_sound
+                # Simulate loss after factory preflight, not at its probe.
+                rig.rtc_valid = rtc_valid
+                return profile
             def forbid_ips(*args, **kwargs):
                 raise AssertionError("V1 handoff fell back to legacy IPS hardware")
             # Keep actual dimensions and color conversion, but trap all
@@ -242,26 +316,41 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True, na
             for name in ("Tela", "Toque", "Movimento", "Relogio", "Som", "Bateria"):
                 setattr(hw, name, forbid_ips)
             random.seed(1)
-            runtime_handoff.stage(profile, allow_wifi=False)
-            try:
-                main = runpy.run_path(str(ROOT / "main.py"), run_name="_medve_v1_host")
-                if runtime_handoff.take() is not None:
-                    raise AssertionError("main did not consume the V1 profile")
-            finally:
-                runtime_handoff.clear()
-            game_state = main["principal"].__globals__
+            if app_path is None:
+                instrument_profile(enabled=True, confirmed_v1=True)
+                runtime_handoff.stage(profile, allow_wifi=False)
+                try:
+                    main = runpy.run_path(str(entry), run_name="_medve_v1_host")
+                    if runtime_handoff.take() is not None:
+                        raise AssertionError("main did not consume the V1 profile")
+                finally:
+                    runtime_handoff.clear()
+                game_state = main["principal"].__globals__
+                try:
+                    main["principal"]()
+                except _FrameLimit:
+                    pass
+            else:
+                amoled_v1_runtime.create_profile = instrument_profile
+                try:
+                    amoled_v1_launch.run(enabled=True, confirmed_v1=True)
+                except _FrameLimit:
+                    pass
+                finally:
+                    amoled_v1_runtime.create_profile = create_profile
+                if (game_state.get("__name__") != amoled_v1_launch.APP_NAME or
+                        Path(game_state["__file__"]).parent != Path(directory)):
+                    raise AssertionError("launcher did not execute the staged application")
             if game_state["runtime_profile_id"] != profile.profile_id:
                 raise AssertionError("main did not enter the staged V1 profile")
-            try:
-                main["principal"]()
-            except _FrameLimit:
-                pass
             report = {"scope": "HOST_ONLY", "frames": rig.frame,
                       "pet": game_state["cfg"]["personagem"],
                       "life_stage": game_state["fase_vida"](),
                       "runtime_profile": game_state["runtime_profile_id"],
                       "rtc_write_enabled": game_state["runtime_clock_write"],
-                      "offline_forced": bool(offline_calls),
+                      "offline_forced": game_state["runtime_allow_wifi"] is False,
+                      "offline_callback_used": bool(offline_calls),
+                      "packaged_entry": app_path is not None,
                       "last_system_notice": game_state["sis_txt"],
                       "mode": game_state["cfg"]["modo"],
                       "food_before": fixtures["girafa"], "food_after": game_state["pet"]["fome"],
@@ -292,9 +381,10 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True, na
             session = game_state.get("pip_session")
             if session is not None:
                 session.close()
-            if profile is not None:
+            if profile is not None and app_path is None:
                 profile.close()
             os.chdir(original_cwd)
+            sys.path[:] = original_sys_path
             random.setstate(random_state)
             for key, module in prior.items():
                 if module is None:

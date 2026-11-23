@@ -12,3 +12,8 @@ target_sources(usermod_pip_native INTERFACE
 )
 target_include_directories(usermod_pip_native INTERFACE "${PIP_VENDOR_UI}")
 target_link_libraries(usermod INTERFACE usermod_pip_native)
+
+if(DEFINED ENV{MEDVEGOSHI_APP_INDEX_SHA256})
+    target_compile_definitions(usermod_pip_native INTERFACE
+        MEDVEGOSHI_APP_INDEX_SHA256="$ENV{MEDVEGOSHI_APP_INDEX_SHA256}")
+endif()

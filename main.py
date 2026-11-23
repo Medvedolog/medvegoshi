@@ -205,8 +205,11 @@ def fator_tempo():
 
 def hora_de_silencio():
     """De noite o bichinho nao faz barulho, mesmo com o som ligado. Vale o relogio de verdade."""
-    h = hora_real()
-    return h >= SILENCIO_DE or h < SILENCIO_ATE
+    t = relogio.ler()
+    if t is None:
+        # V1 cannot prove that it is daytime when the read-only RTC is lost.
+        return not runtime_clock_write
+    return t[3] >= SILENCIO_DE or t[3] < SILENCIO_ATE
 
 
 def acertar_som():
@@ -1063,6 +1066,11 @@ def falar_do_tempo():
 
 def atualizar_rede(agora):
     global wx_agora, amigo_perto, limpou_presentes
+    if time.ticks_diff(agora, limpou_presentes) > 10000:
+        limpou_presentes = agora
+        limpar_presentes()
+    if not runtime_allow_wifi:
+        return
     vivo = fase_vida() not in ('ovo', 'estrela')
     epoch = relogio.epoch()
     for ev in rede.passo(agora, epoch, cfg['personagem'], vivo):
@@ -1095,9 +1103,7 @@ def atualizar_rede(agora):
             iniciar_anim('festa')
     elif wx_agora and vt >= prox_fala_clima and vida_livre() and not L['asleep'] and not sono_vida():
         falar_do_tempo()
-    if time.ticks_diff(agora, limpou_presentes) > 10000:
-        limpou_presentes = agora
-        limpar_presentes()
+
 
 
 def trocar_offline():
@@ -1116,6 +1122,11 @@ def abrir_wifi():
     global reancorar
     if not runtime_allow_wifi:
         sistema('Радио выкл.', 3000)
+        return
+    if not runtime_clock_write:
+        # The existing open provisioning AP targets the stock IPS boot path
+        # and calls machine.reset() on save. V1 is not an autoboot app.
+        sistema('Wi-Fi: через ПК', 3000)
         return
     epoch = relogio.epoch()
     if epoch:
@@ -1530,7 +1541,7 @@ def desenhar_sobreposicoes(agora):
     if menu_borda >= 1:
         d.menu(int(menu_borda), cfg['modo'], cfg['personagem'], cfg['hora'], cfg['vel'],
                relogio_txt(hora_real()), cfg['som'], menu_pend, menu_conf, legenda_vida(), fase_vida(),
-               rede.situacao(), runtime_clock_write)
+               rede.situacao() if runtime_allow_wifi else 0, runtime_clock_write)
     else:
         d.alca()
     # Show save/switch results above the settings panel, not behind it.
@@ -1816,24 +1827,26 @@ def principal():
         if not runtime_clock_write:
             raise RuntimeError('AMOLED V1 RTC stopped or unreadable; refusing game loop')
         relogio.acertar(2026, 1, 1, 12, 0, 0)
-    if runtime_allow_wifi:
-        rede.iniciar()
-    if not runtime_allow_wifi or cfg.get('offline'):
-        rede.ficar_offline(True)
-    iniciar_sim(hora_real())
-    recuperar_tempo_desligado()
-    anterior = ultimo_gc = time.ticks_ms()
-    while True:
-        agora = time.ticks_ms()
-        if reancorar:
-            reancorar, anterior = False, agora
-        dt = time.ticks_diff(agora, anterior)
-        anterior = agora
-        passo(agora, dt)
-        tela.mostrar()
-        if time.ticks_diff(agora, ultimo_gc) > 1000:     # limpar a memoria a cada quadro custava caro
-            ultimo_gc = agora
-            gc.collect()
+    try:
+        if runtime_allow_wifi:
+            rede.iniciar(sync_clock=runtime_clock_write, start_radio=not bool(cfg.get('offline')))
+        iniciar_sim(hora_real())
+        recuperar_tempo_desligado()
+        anterior = ultimo_gc = time.ticks_ms()
+        while True:
+            agora = time.ticks_ms()
+            if reancorar:
+                reancorar, anterior = False, agora
+            dt = time.ticks_diff(agora, anterior)
+            anterior = agora
+            passo(agora, dt)
+            tela.mostrar()
+            if time.ticks_diff(agora, ultimo_gc) > 1000:     # limpar a memoria a cada quadro custava caro
+                ultimo_gc = agora
+                gc.collect()
+    finally:
+        if runtime_allow_wifi and not runtime_clock_write:
+            rede.ficar_offline(True)
 
 
 if __name__ == '__main__':

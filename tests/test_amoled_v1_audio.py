@@ -16,7 +16,8 @@ class Bus:
     def __init__(self, trace, found=(0x18, 0x20, 0x38), chip=(0x83, 0x11)):
         self.trace, self.found, self.chip = trace, found, chip
         self.regs = {}
-        self.fail_reg = None
+        self.fail_reg = self.fail_read = None
+        self.readback = {}
 
     def scan(self):
         return self.found
@@ -25,7 +26,13 @@ class Bus:
         self.trace.append(("read", address, reg, size))
         if address != a.ES8311_ADDR or size != 1:
             raise AssertionError("unexpected bus read")
-        return bytes((self.chip[reg - 0xFD],))
+        if reg == self.fail_read:
+            raise OSError("codec read failed")
+        if reg in self.readback:
+            return self.readback[reg]
+        if reg in (0xFD, 0xFE):
+            return bytes((self.chip[reg - 0xFD],))
+        return bytes((self.regs[reg],))
 
     def writeto_mem(self, address, reg, data):
         if address != a.ES8311_ADDR:
@@ -306,6 +313,34 @@ class V1AudioTests(unittest.TestCase):
         self.assertFalse(fx.tx.active)
         self.assertEqual(fx.bus.regs[a.DAC_MUTE], a.MUTE_BITS)
         self.assertNotIn(("pa", 1), fx.trace)
+
+    def test_bad_muted_startup_readback_never_enables_amp(self):
+        for reg, value in ((a.DAC_MUTE, b""), (a.DAC_MUTE, b"\x00"),
+                           (a.DAC_VOLUME, b"\xff")):
+            with self.subTest(reg=reg, value=value):
+                fx = Fixture()
+                fx.bus.readback[reg] = value
+                with self.assertRaisesRegex(a.AudioUnavailable, "readback mismatch"):
+                    fx.make()
+                self.assertEqual(fx.amp(), 0)
+                self.assertEqual(fx.tx.deinit_count, 1)
+                self.assertNotIn(("pa", 1), fx.trace)
+
+    def test_unmute_nack_and_excess_gain_leave_amp_off(self):
+        for nack in (False, True):
+            fx = Fixture()
+            sound = fx.make()
+            if nack:
+                fx.bus.fail_read = a.DAC_MUTE
+            else:
+                fx.bus.readback[a.DAC_VOLUME] = b"\xff"
+            self.assertTrue(sound.tocar("clique"))
+            sound.atualizar()
+            self.assertEqual(fx.amp(), 0)
+            self.assertNotIn(("pa", 1), fx.trace)
+            self.assertFalse(sound.available)
+            self.assertTrue(sound.last_error)
+            self.assertFalse(fx.tx.active)
 
 
 class RealVoicePcmTest(unittest.TestCase):

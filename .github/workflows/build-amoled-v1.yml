@@ -1,13 +1,9 @@
-name: Experimental AMOLED V1 MicroPython QSPI build
+name: Paired experimental AMOLED V1 firmware and app
 
 on:
   workflow_dispatch:
   push:
     branches: ["feature/russian-game-ui"]
-    paths:
-      - ".github/workflows/build-amoled-v1.yml"
-      - "ports/build_amoled_v1.sh"
-      - "ports/prepare_firmware.py"
 
 permissions:
   contents: read
@@ -31,8 +27,9 @@ jobs:
           cd build/amoled-v1-native/output
           sha256sum --check SHA256SUMS
           test -s medvegoshi-amoled-v1-experimental.bin
+          test -s medvegoshi-v1-app-UNTESTED.zip
           python3 -c 'import json; x=json.load(open("BUILD-METADATA.json")); assert x["installable"] is False and x["status"]=="BUILT_NOT_HARDWARE_TESTED"'
-      - name: Upload EXPERIMENTAL untested QSPI firmware
+      - name: Upload matched experimental V1 firmware and app (untested)
         uses: actions/upload-artifact@v4
         with:
           name: medvegoshi-v1-native-UNTESTED
