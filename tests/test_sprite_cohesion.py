@@ -199,3 +199,17 @@ class NativeSpriteTests(unittest.TestCase):
                 eyes.append(eye.tobytes())
             images.append(tuple(eyes))
         self.assertEqual(len(set(images)), 5)
+
+    def test_caramel_tail_tapers_and_mirrors_in_every_pose(self):
+        poses = {(p[0], p[1]) for p in self.art._DOG_POSES}
+        poses.update(((34, -12), (38, -22)))
+        for tx, ty in poses:
+            right, _ = self.art._dog_tail(tx, ty, 1)
+            left, _ = self.art._dog_tail(tx, ty, -1)
+            n = len(right) // 2
+            points = list(zip(right[::2], right[1::2]))
+            self.assertEqual(list(zip(left[::2], left[1::2])), [(-x, y) for x, y in points])
+            widths = [math.hypot(points[k][0] - points[-1-k][0],
+                                 points[k][1] - points[-1-k][1]) for k in range(n // 2)]
+            self.assertTrue(all(a > b for a, b in zip(widths, widths[1:])))
+            self.assertAlmostEqual(widths[-1], 1.6)

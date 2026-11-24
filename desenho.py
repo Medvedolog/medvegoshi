@@ -781,6 +781,45 @@ def _dog_pose(motion, olhos, boca, doente):
     return tx, ty, ear, paw, nod, facing, tongue
 
 
+_DOG_TAILS = {}
+
+
+def _dog_tail(tx, ty, facing):
+    key = (tx, ty, facing)
+    cached = _DOG_TAILS.get(key)
+    if cached:
+        return cached
+    # One cubic curve starting inside the haunch, curling up as it wags.
+    # The sleepy tail lies down instead. Width tapers all the way to the tip.
+    x0, y0 = 18, -21
+    x1, y1 = 27, -23 if ty < -24 else -16
+    x2, y2 = tx - 3, ty + (12 if ty < -24 else 2)
+    x3, y3 = tx + 1, ty - 3
+    centres = []
+    for i in range(8):
+        t = i / 7
+        u = 1 - t
+        x = u*u*u*x0 + 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t*x3
+        y = u*u*u*y0 + 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t*y3
+        dx = u*u*(x1-x0) + 2*u*t*(x2-x1) + t*t*(x3-x2)
+        dy = u*u*(y1-y0) + 2*u*t*(y2-y1) + t*t*(y3-y2)
+        ds = math.sqrt(dx*dx + dy*dy) or 1
+        centres.append((x, y, -dy/ds, dx/ds))
+    outer_widths = (5.4, 5.0, 4.7, 4.4, 3.8, 3.1, 2.3, 0.8)
+    inner_widths = (3.3, 3.0, 2.8, 2.7, 2.3, 1.8, 1.0)
+
+    def band(widths):
+        above, below = [], []
+        for (x, y, nx, ny), r in zip(centres, widths):
+            above.append((facing * (x + nx*r), y + ny*r))
+            below.append((facing * (x - nx*r), y - ny*r))
+        return tuple(v for point in above + below[::-1] for v in point)
+
+    cached = (band(outer_widths), band(inner_widths))
+    _DOG_TAILS[key] = cached
+    return cached
+
+
 def cachorro(cx, pe, olhos, boca, doente, s, ol, motion=None):
     """Карамелька: puppy silhouette and caramel toy-style shading."""
     tx, ty, ears, paw, nod, facing, tongue = _dog_pose(motion, olhos, boca, doente)
@@ -792,18 +831,11 @@ def cachorro(cx, pe, olhos, boca, doente, s, ol, motion=None):
     ear_brown, ear_glint = (140, 70, 42), (197, 114, 68)
     red, scarf, scarflight = (140, 44, 44), (207, 70, 65), (252, 121, 98)
 
-    # Single tail silhouette attached to the hip in every wag/sleep pose.
-    # A contrasting tip makes the movement readable at tiny scale as well.
-    def tail_shape(color, inner=False):
-        sx = facing
-        mid_x, mid_y = (25 + tx) * 0.5 + 1, (-20 + ty) * 0.5
-        m = 2 if inner else 0
-        P(0, 0, (sx * (17 + m), -26 + m, sx * mid_x, mid_y - 8 + m,
-                 sx * (tx - 3), ty - 5 + m, sx * (tx + 4 - m), ty - 5 + m,
-                 sx * (tx + 5 - m), ty + 2, sx * (tx - 1), ty + 7 - m,
-                 sx * (mid_x + 1), mid_y + 3 - m, sx * (20 + m), -14 - m), color)
-    tail_shape(rim); tail_shape(mid, True)
-    E((tx - 1) * facing, ty + .5, 3.7, 3.1, gold)
+    # Outline and fur follow the same curved centreline. A tapered end
+    # without a pale cap reads as a tail, not a second paw.
+    outer, inner = _dog_tail(tx, ty, facing)
+    P(0, 0, outer, rim)
+    P(0, 0, inner, mid)
 
     # Low hindquarters and two front feet give it a sitting puppy posture.
     E(-18, -17, 13.5, 15.5, rim, 1); E(18, -17, 13.5, 15.5, rim, 1)
