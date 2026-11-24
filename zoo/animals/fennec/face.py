@@ -136,26 +136,25 @@ def render(E, R, P, A, eyes="normal", mouth="sorriso", sick=False, motion=None):
     anchors = ((-12.8, -78+nod), (12.8, -78+nod))
     for side, (x, y) in zip(_SIDES, anchors):
         if asleep or eyes == 'fechados':
-            A(x, y+1.1, 5.7, 2.9, INK, 2, 2)
+            A(x, y+.85, 4.6, 2.45, INK, 2, 2)
         elif eyes in ('feliz','alegre'):
-            A(x, y+3.4, 6.7, 5.0, INK, 1, 3)
+            A(x, y+2.8, 5.25, 4.2, INK, 1, 2)
+        elif eyes == 'sono':
+            A(x, y+.4, 5.15, 3.9, INK, 2, 2)
+            E(x, y+1.95, 3.1, 1.4, AMBER_EYE)
         else:
+            # Small, rounder eyes, two diagonal sparkles and a tiny lash
+            # at each outer corner, as in the hand-drawn close-up.
             wide = eyes in ('susto','assustado')
-            if eyes == 'sono':
-                P(x, y, (-7*side,-1,-2*side,1,3*side,1,7*side,-2,
-                         4*side,4,0,5,-4*side,4), INK)
-                E(x, y+2.8, 3, 1.35, AMBER_EYE)
-            else:
-                h = 1.14 if wide else 1.0
-                P(x, y, (-7.9*side, .9, -5.7*side,-3.2*h, -2.6*side,-4.9*h,
-                         2.6*side,-5.6*h, 8.5*side,-4, 6.6*side,1.8*h,
-                         3.3*side,4.5*h, -.4*side,5.25*h, -4.7*side,4.1*h), INK)
-                P(x, y, (-5.9*side,.7, -3.9*side,-2.4*h, -.9*side,-3.4*h,
-                         3.1*side,-4.45*h, 6.6*side,-3.3, 5.1*side,1.3*h,
-                         2*side,3.6*h, -.9*side,4.15*h, -3.4*side,3.2*h), AMBER_EYE)
-                E(x+.3*side, y+.45, 4.25, 3.3*h, GOLD_EYE)
-                E(x+.45*side, y-.05, 2.8 if wide else 2.35, 3.95*h, PUPIL)
-                R(x-1.1, y-1.95, 1.4, 1.4, LUSTRE)
+            E(x, y, 5.65, 5.7 if wide else 5.15, INK)
+            E(x, y+.45, 4.4, 4.5 if wide else 4.0, AMBER_EYE)
+            E(x, y+.9, 3.7, 3.3, GOLD_EYE)
+            E(x, y-.25, 2.95, 3.45 if wide else 3.05, PUPIL)
+            P(x, y, (2.7*side,-3.8, 3.6*side,-6.7, 4.4*side,-6.7,
+                     4.15*side,-3.8, 6.15*side,-5.3, 6.4*side,-4.1,
+                     4.7*side,-2.6), INK)
+            R(x-1.95, y-2.85, 1.9, 1.8, LUSTRE)
+            R(x+1.45, y+1.2, 1.0, 1.0, LUSTRE)
     for x in (-21, 21):
         E(x, -69.5+nod, 3.85, 2.1, (136,164,102) if sick else (242,155,151))
     for x, y in ((-10,-65), (-13,-64), (10,-65), (13,-64)):

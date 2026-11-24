@@ -173,9 +173,13 @@ class NativeSpriteTests(unittest.TestCase):
             landmarks.append(points)
         gold = c.fb.color(wire_color(*face.GOLD_EYE))
         pupil = c.fb.color(wire_color(*face.PUPIL))
+        sparkle = c.fb.color(wire_color(*face.LUSTRE))
         for eye in landmarks[-2:]:
             self.assertIn(gold, {color for _, _, color in eye})
             self.assertIn(pupil, {color for _, _, color in eye})
+            shine = {(x, y) for x, y, color in eye if color == sparkle}
+            self.assertGreaterEqual(len(shine), 2)
+            self.assertLess(largest_component(shine), len(shine))
 
         pivot = 196 - self.art.HTOP['fennec'] * 0.45
         for angle in (-0.4, 0.46, 1.13, -1.4):
