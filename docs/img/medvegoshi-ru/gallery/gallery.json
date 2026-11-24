@@ -178,7 +178,7 @@
       "visible_text": [],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "7d9f832fc75d4982d8848b8005cc15ffdaf24e7b115b4f5f6705dc107da29de4"
+      "sha256": "d8b55b042836512863fd6e14331ccce44fa66c391cf5f2126b866335f8aa23ed"
     },
     {
       "file": "capi-settings.png",
@@ -193,7 +193,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "85758563ee8e0f31d171c1b6a0b00f48e887d01ad6d6e61bb612e1b357e6c4b1"
+      "sha256": "241a4326bbf176b433f0d532021ca3d8f7b90f5bb3931a285d17cb76fba6939b"
     },
     {
       "file": "elefante-settings.png",
@@ -373,7 +373,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "72d7ca92d77bb9ad433507b3c3dbff55db1dc2fbffda958409ad152954bd1245"
+      "sha256": "f7beced062babb6aca445af69144a93ae4032e9e49d9db694e17584d0af9fbf0"
     },
     {
       "file": "fennec-settings.png",
@@ -388,7 +388,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "ac42dcfa75ab67ca4200f5d523f81c56e634cad3c1dada7478bc90c0f389b793"
+      "sha256": "18f6f8c6f61350b6579826c27bdda08aa1fdef2bbf100d27cd3c025ed4bea10a"
     }
   ]
 }

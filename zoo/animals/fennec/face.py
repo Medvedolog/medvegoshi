@@ -1,4 +1,4 @@
-"""Фенек: pixel art from the sketch's oversized ears, shy paws and w-smile."""
+"""Фенек: expressive pixel fox with a tapered muzzle and grounded paws."""
 
 OUTLINE = (113, 62, 46)
 DEEP = (159, 76, 42)
@@ -80,23 +80,34 @@ def render(E, R, P, A, eyes="normal", mouth="sorriso", sick=False, motion=None):
     E(0, -31, 22.4, 28.2, AMBER, 1)
     E(0, -31, 20.5, 26.1, DEEP); E(-1.4, -35, 18.5, 23.2, ORANGE)
     E(-6, -39, 12.4, 16.6, TANGERINE)
-    # Cream bib and little front paws coming together like in the drawing.
+    # Cream bib and long forelegs braced on the ground, like a seated fox.
     P(0, -41, (-16,-7,-9,-12,9,-12,16,-7,13,0,9,4,7,10,0,17,
                 -7,10,-10,5,-14,0), CREAM_SHADE)
     P(-1, -42, (-13,-5,-7,-10,7,-10,14,-5,10,0,6,4,0,14,-7,7,-10,0), CREAM)
     for side in _SIDES:
+        # A tucked back foot is visible outside the straighter foreleg.
+        back = side * 19
+        E(back, -5.1, 7.6, 4.75, AMBER, 1)
+        E(back-.65, -5.65, 6, 3.1, ORANGE)
+        R(back-1.15, -3.8, 1.25, 1.6, DEEP)
+    for side in _SIDES:
+        x = side * 9.8
         step = max(0, lift * side)
-        P(side*13, -29-step/2, (-6*side,-3,2*side,-5,6*side,-1,4*side,6,
-                                -2*side,12,-7*side,12,-7*side,7), DEEP)
-        P(side*13, -30-step/2, (-4*side,-2,2*side,-3,4*side,0,2*side,6,
-                                -3*side,10,-6*side,10,-5*side,5), ORANGE)
-        E(side*5.8, -18-step/2, 4.7, 3.8, HONEY)
-        E(side*10.5, -3.7-step, 10.6, 6.3, AMBER, 1)
-        E(side*10.5-.6, -4.7-step, 8.8, 4.5, CREAM_SHADE)
-        E(side*10.5-1.3, -5.5-step, 6.6, 2.8, CREAM)
-        R(side*10.5-.3, -3.2-step, 1.1, 2, AMBER)
+        P(x, 0, (-5*side,-36,4*side,-37,6.8*side,-31,6.5*side,-20,
+                 4.9*side,-4-step,3.7*side,1-step,-4*side,1-step,
+                 -5.7*side,-6-step,-3.5*side,-20), DEEP)
+        P(x, 0, (-3.1*side,-34,3.8*side,-35,5.2*side,-30,4.9*side,-20,
+                 3.25*side,-6-step,2.5*side,-1-step,-2.6*side,-1-step,
+                 -3.7*side,-6-step,-2*side,-20), ORANGE if side > 0 else HONEY)
+        P(x, 0, (-2.6*side,-18,2.6*side,-16,2.8*side,-6-step,2.1*side,-2-step,
+                 -2.4*side,-2-step,-3.0*side,-7-step), CREAM_SHADE)
+        E(x, -2.1-step, 6.9, 4.35, DEEP)
+        E(x-.6, -2.8-step, 5.8, 3.35, CREAM_SHADE)
+        E(x-1.15, -3.6-step, 4.4, 1.75, CREAM)
+        R(x-2.2, -1.45-step, 1.1, 1.5, AMBER)
+        R(x+1.4, -1.45-step, 1.1, 1.5, AMBER)
 
-    # The huge rounded ears are taller than the forehead and visibly pink.
+    # The huge fanned ears are taller than the forehead and visibly pink.
     bounce = (-2 if happy else (1 if asleep else 0))
     _ear(P, -1, -84 + nod, bounce + 1)
     _ear(P, 1, -84 + nod, bounce - 1)
@@ -115,8 +126,12 @@ def render(E, R, P, A, eyes="normal", mouth="sorriso", sick=False, motion=None):
     P(0, -74+nod, (-29,0,-25,-7,-18,-9,-11,-7,-6,-1,-1,2,4,0,9,-6,
                    16,-8,24,-6,28,-1,26,4,19,7,11,12,7,16,0,18,
                    -7,16,-11,12,-19,8,-25,5), CREAM)
-    E(-.4, -62.9+nod, 10.2, 7.7, CREAM_SHADE)
-    E(-1.2, -63.7+nod, 8.3, 6.45, CREAM)
+    # A small projecting snout with its own shadow and lit plane.
+    P(0, -64.1+nod, (-12,0,-8,-5,-4,-8,4,-8,9,-4,12,1,8,7,2,10,
+                     -4,9,-9,6), CREAM_SHADE)
+    P(-.7, -64.8+nod, (-9,0,-6,-4,-3,-6,4,-6,7,-3,9,1,5,6,1,8,
+                      -4,7,-7,5), (255, 235, 195))
+
 
     anchors = ((-12.8, -78+nod), (12.8, -78+nod))
     for side, (x, y) in zip(_SIDES, anchors):
@@ -145,15 +160,19 @@ def render(E, R, P, A, eyes="normal", mouth="sorriso", sick=False, motion=None):
         E(x, -69.5+nod, 3.85, 2.1, (136,164,102) if sick else (242,155,151))
     for x, y in ((-10,-65), (-13,-64), (10,-65), (13,-64)):
         E(x,y+nod,1,.72,DEEP)
-    P(0, -64.8+nod, (-4.7,-1.6,-2.3,-3,2.4,-3,4.5,-1.7,3,.6,
-                    0,2.7,-2.4,.75), INK)
-    R(-.65, -63.3+nod, 1.3, 2.5, INK)
+    # Soft triangular black nose, edged by a tiny, warm specular line.
+    P(0, -64.5+nod, (-6.2,-1.9,-3.9,-4.2,3.7,-4.2,6.1,-2.3,5.9,.1,
+                    3,3.3,0,4.8,-3.1,3.3,-5.9,.4), INK)
+    P(0, -64.5+nod, (-4.9,-1.7,-3.1,-3.2,2.9,-3.2,4.8,-1.9,3,.3,
+                    -.4,.8,-3.3,-.1), (97, 63, 66))
+    R(-2.8, -67.4+nod, 3.05, 1.15, (177, 129, 118))
+    R(-.7, -60.25+nod, 1.4, 2.5, INK)
     if mouth in ('o','aberta') or (action=='eating' and (now//170)%2):
-        E(0, -59+nod, 3.85, 3.75, INK)
-        E(0, -58+nod, 2.2, 1.4, PINK)
+        E(0, -56.5+nod, 3.7, 3.05, INK)
+        E(0, -55.8+nod, 2.1, 1.15, PINK)
     elif mouth == 'triste':
         A(0, -57.8+nod, 4.1, 2.9, INK, 1, 2)
     elif not asleep:
-        A(-2.8, -61.4+nod, 3.4, 2.55, INK, 2, 2)
-        A(2.8, -61.4+nod, 3.4, 2.55, INK, 2, 2)
+        A(-2.8, -58.8+nod, 3.4, 2.4, INK, 2, 2)
+        A(2.8, -58.8+nod, 3.4, 2.4, INK, 2, 2)
     return anchors
