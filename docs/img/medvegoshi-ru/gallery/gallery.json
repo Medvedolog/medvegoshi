@@ -31,15 +31,13 @@
     {
       "file": "pato-play.png",
       "id": "pato",
-      "name_ru": "Утка",
+      "name_ru": "Совёнка",
       "kind": "play",
-      "state_ru": "Ночь и сон",
-      "visible_text": [
-        "Пойду спать..."
-      ],
+      "state_ru": "Вечер в берете",
+      "visible_text": [],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "4b151c1bf16a46721cc35aad05f3391f9793983d6d0c04f205490c5f65e96393"
+      "sha256": "780155d4705e433aabc0dccef8c882d19bfe449878d7ae5c5738000aa043c8e6"
     },
     {
       "file": "polvo-play.png",
@@ -208,22 +206,22 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "2cf9329eadfeb79ffeb51492c746a07e77386c7acf0f3504f088bbd5dcb847b1"
+      "sha256": "4b5eae4beb1706183d454070b262c76c545e1d559645eff2d9dd3e90317de9f9"
     },
     {
       "file": "pato-settings.png",
       "id": "pato",
-      "name_ru": "Утка",
+      "name_ru": "Совёнка",
       "kind": "settings",
       "state_ru": "Выбор питомца",
       "visible_text": [
         "Настройки",
         "Питомец",
-        "Утка"
+        "Совёнка"
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "c3b7df5af96bb69eab585af51d2f361c81e7f10d9bab4d9ce9c963fe7ae64646"
+      "sha256": "812de6750daaaf512c4d0333eb6bdba1d32a9d34a349b342c3e6db1de1278ef8"
     },
     {
       "file": "polvo-settings.png",
@@ -238,7 +236,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "fde21ee027903278692eef1fc077f1d724b212d5ff0949a32dd1fa2cd4eac3fc"
+      "sha256": "012d9e6e13009fffa323ad987a89763555b2dc4c41ae5386d60f465f351cd815"
     },
     {
       "file": "calopsita-settings.png",
