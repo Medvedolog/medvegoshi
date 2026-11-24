@@ -1,5 +1,5 @@
 # Testa e grava as telas das novidades: amigos por perto e presentes, clima de verdade,
-# portal do Wi-Fi, botoes (BOOT segurado e BOOT + PWR) e o Naufrago.
+# portal do Wi-Fi e botoes (BOOT segurado e BOOT + PWR).
 # Uso: cd previa && micropython novidades.py   (depois: python3 montar.py)
 import sys
 sys.path.insert(0, '.')
@@ -217,15 +217,7 @@ segundos(7, -38); assert main.amigo_perto == 'pato' and R.enviados
 segundos(3, -80); avancar(8000)
 print('botoes ok')
 
-# --- naufrago
-assert 'naufrago' in d.ELENCO and len(d.ELENCO) == 10
-preparar('companion', 10, 'naufrago'); T.agora = T.agora - T.agora % 3800 + 400; gravar('novo_naufrago')
-ph = d.fase_de(10); d.rect(0, 0, 240, 284, ph['ceu'][1])
-combos = (('normal', 'sorriso'), ('feliz', 'aberta'), ('fechados', 'dormindo'), ('susto', 'o'), ('sono', 'triste'), ('normal', 'meia'))
-for i, (o, b) in enumerate(combos):
-    d.personagem('naufrago', 40 + (i % 3) * 80, 130 + (i // 3) * 130, o, b, doente=(i == 4))
-open('out/novo_naufrago_expr.565', 'wb').write(main.tela.buf)
-preparar('pet', 10, 'naufrago'); main.pet['idade_min'] = 2 * main.DIA_MIN; T.agora += 300; gravar('novo_naufrago_filhote')
-preparar('companion', 10, 'naufrago'); main.pet['idade_min'] = 22 * main.DIA_MIN; main.pet['vida_adulto'] = 15; T.agora += 300; gravar('novo_naufrago_idoso')
-preparar('pet', 10, 'naufrago'); main.menu_borda, main.menu_alvo = 272.0, 272; gravar('novo_menu')
+# --- menu: apenas os nove personagens ativos
+assert 'naufrago' not in d.ELENCO and len(d.ELENCO) == 9
+preparar('pet', 10, 'capi'); main.menu_borda, main.menu_alvo = 272.0, 272; gravar('novo_menu')
 print('tudo ok')

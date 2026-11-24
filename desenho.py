@@ -85,8 +85,6 @@ CAR = (214, 148, 78); CAR_ESC = (160, 98, 44); CAR_CL = (252, 224, 182); CAR_ORE
 GATO = (58, 54, 70); GATO_CL = (226, 222, 234); GATO_IRIS = (200, 232, 90)
 ET = (112, 200, 92); ET_ESC = (58, 138, 62); ET_CL = (190, 240, 120)
 SAPO = (150, 200, 56); SAPO_ESC = (96, 146, 36); SAPO_CL = (214, 232, 140)
-NAU = (234, 168, 116); NAU_ESC = (194, 122, 76); NAU_CABELO = (107, 62, 30); NAU_BARBA = (138, 90, 50)
-NAU_CAMISA = (236, 226, 200); NAU_SHORT = (64, 98, 170)
 
 
 # ------------------------------------------------------------ primitivas
@@ -772,38 +770,11 @@ def sapinho(cx, pe, olhos, boca, doente, s, ol):
         termometro(cx + 34 * s, pe - 56 * s)
     return pe - 46 * s, pe - 88 * s, 35 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-15, -74, 9.5), (15, -74, 9.5))]
 
-
-def naufrago(cx, pe, olhos, boca, doente, s, ol):
-    """O cara da ilha do Companion (companion.mundocapi.com): cabelo e barba de naufrago,
-    camisa rasgada e short azul."""
-    E, P, R, A = _rel(cx, pe, s, ol, lambda c: NAU_ESC if c == NAU else None)
-    E(-10, -2, 8, 4, NAU_ESC, 1); E(10, -2, 8, 4, NAU_ESC, 1)                # pes descalcos
-    E(0, -17, 24, 15, NAU_SHORT, 1)
-    E(0, -37, 26, 25, NAU_CAMISA, 1)
-    P(0, -17, (-23, -6, -16, 5, -9, -3, 0, 6, 9, -3, 16, 5, 23, -6), NAU_CAMISA)   # barra rasgada
-    P(0, -58, (-7, 0, 7, 0, 0, 11), NAU)                                     # gola aberta
-    E(-23, -36, 6, 11, NAU, 1); E(23, -36, 6, 11, NAU, 1)                    # bracos
-    E(0, -78, 31, 26, NAU_CABELO, 1)
-    P(-9, -100, (-7, 6, 7, 6, -4, -9), NAU_CABELO); P(7, -101, (-7, 7, 7, 7, 6, -9), NAU_CABELO)
-    E(0, -71, 25, 21, NAU)
-    E(0, -58, 19, 11, NAU_BARBA)
-    E(0, -59, 8, 5.5, NAU)                                                   # boca no meio da barba
-    P(0, -90, (-16, 0, -6, 8, 0, 1, 8, 9, 17, 0), NAU_CABELO)                # franja
-    bc = ENJOADA if doente else (240, 150, 130)
-    E(-19, -68, 5, 3, bc); E(19, -68, 5, 3, bc)
-    _olhos(E, R, A, ((-10, -76, 6), (10, -76, 6)), olhos, PRETO, NAU)
-    E(0, -67, 3, 2.5, NAU_ESC)
-    _boca(E, A, boca, 0, -61, 0.8, PRETO)
-    if doente:
-        termometro(cx + 32 * s, pe - 60 * s)
-    return pe - 74 * s, pe - 106 * s, 31 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-10, -76, 6), (10, -76, 6))]
-
-
-ELENCO = ('capi', 'elefante', 'pato', 'polvo', 'calopsita', 'cachorro', 'gato', 'et', 'sapinho', 'naufrago')
+ELENCO = ('capi', 'elefante', 'pato', 'polvo', 'calopsita', 'cachorro', 'gato', 'et', 'sapinho')
 NOMES = {'capi': 'Capi', 'pato': 'Pato', 'elefante': 'Elefante', 'polvo': 'Polvo', 'calopsita': 'Calopsita',
-         'cachorro': 'Caramelo', 'gato': 'Gato', 'et': 'ET', 'sapinho': 'Sapinho', 'naufrago': 'Naufrago'}
+         'cachorro': 'Caramelo', 'gato': 'Gato', 'et': 'ET', 'sapinho': 'Sapinho'}
 _FUNCS = {'capi': capi, 'pato': pato, 'elefante': elefante, 'polvo': polvo, 'calopsita': calopsita,
-          'cachorro': cachorro, 'gato': gato, 'et': et, 'sapinho': sapinho, 'naufrago': naufrago}
+          'cachorro': cachorro, 'gato': gato, 'et': et, 'sapinho': sapinho}
 
 
 FASES_VIDA = ('ovo', 'filhote', 'adulto', 'idoso', 'estrela')
@@ -869,7 +840,7 @@ def sombra(cx, ph, rx=20):
 # ------------------------------------------------------------ personagem vivo (movimentos e efeitos)
 olhos_ult = []
 HTOP = {'capi': 77, 'pato': 95, 'elefante': 75, 'polvo': 71, 'calopsita': 84, 'cachorro': 75,
-        'gato': 75, 'et': 81, 'sapinho': 65, 'naufrago': 79}
+        'gato': 75, 'et': 81, 'sapinho': 65}
 AZUL_L = (110, 180, 250)
 
 

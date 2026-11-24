@@ -39,7 +39,7 @@ open an **X-ray** of its brain on your phone.
 
 <p align="center"><img src="docs/img/elenco.png" alt="The characters: Capi, Elephant, Duck, Octopus, Cockatiel, Caramelo, Cat, ET and Froggy"></p>
 
-- **10 characters:** Capi, Elephant, Duck, Octopus, Cockatiel, Caramelo, Cat, ET, Froggy and Castaway.
+- **9 characters in the legacy firmware:** Capi, Elephant, Duck, Octopus, Cockatiel, Caramelo, Cat, ET and Froggy.
   The original nine were drawn by João, age 9, and his lines were kept, not "fixed".
 - **It is alive:** it breathes, picks one of 21 moves depending on the time of day (dance, somersault,
   smell a flower, hide in a hole, sneeze…) and talks in a minion voice.

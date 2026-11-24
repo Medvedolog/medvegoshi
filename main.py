@@ -14,6 +14,23 @@
 # Direcao visual: design_handoff_capigoshi_1c (desenho.py).
 
 import time, math, json, random, gc
+
+# O firmware antigo tem um unico capi.json/brain.bin, sem ID do dono.
+def carregar(nome, padrao):
+    try:
+        with open(nome) as f:
+            padrao.update(json.load(f))
+    except Exception:
+        pass
+    return padrao
+
+
+cfg = carregar('config.json', {'modo': 'pet', 'som': True, 'personagem': 'capi',
+                               'hora': 'real', 'vel': 2, 'casa': 'pet'})
+if cfg['personagem'] == 'naufrago':
+    raise RuntimeError('Naufrago removido. Preserve config.json, capi.json e brain.bin; '
+                       'volte ao firmware anterior sem apagar a flash para recuperar o pet.')
+
 from machine import I2C, Pin
 import hw
 import desenho as d
@@ -65,15 +82,6 @@ gc.collect()
 
 
 # ------------------------------------------------------------ arquivos
-def carregar(nome, padrao):
-    try:
-        with open(nome) as f:
-            padrao.update(json.load(f))
-    except Exception:
-        pass
-    return padrao
-
-
 def salvar(nome, dados):
     try:
         with open(nome, 'w') as f:
@@ -82,8 +90,6 @@ def salvar(nome, dados):
         print('Erro ao salvar', nome, e)
 
 
-cfg = carregar('config.json', {'modo': 'pet', 'som': True, 'personagem': 'capi',
-                               'hora': 'real', 'vel': 2, 'casa': 'pet'})
 if cfg['personagem'] not in d.ELENCO:
     cfg['personagem'] = 'capi'
 if cfg['modo'] not in ('pet', 'companion', 'explore'):
