@@ -1796,7 +1796,7 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
     if not pendente and fase == 'ovo':
         ovo(120, o + 146, contorno=False, grama=TRAY, s=0.75)
     elif pendente or fase != 'estrela':
-        personagem(mostra, 120, o + 144, 'normal' if mostra in ('gato', 'ryska') else 'feliz', contorno=False,
+        personagem(mostra, 120, o + 144, 'normal' if mostra in ('gato', 'ryska', 'fennec') else 'feliz', contorno=False,
                    s=0.4 if mostra in ('pato', 'calopsita') else 0.45, cru=True)
     poly(14, o + 119, (0, 0, 8, -7, 8, 7), CREME); poly(226, o + 119, (0, 0, -8, -7, -8, 7), CREME)
     if pendente:

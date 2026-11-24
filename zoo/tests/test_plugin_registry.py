@@ -81,6 +81,7 @@ assert "pip" not in art.ELENCO
 assert "girafa" not in art.ELENCO
 assert "bjorni" not in art.ELENCO
 assert "ryska" not in art.ELENCO
+assert "fennec" not in art.ELENCO
 fb = FB()
 art.usar(fb)
 head, top, half = art.personagem("testfox", 110, 205)
@@ -102,19 +103,21 @@ class PluginRegistryTests(unittest.TestCase):
         (self.fox / "__init__.py").write_text("", encoding="utf-8")
         (self.fox / "face.py").write_text(FACE, encoding="utf-8")
 
-    def test_nine_builtin_ids_and_four_bundled_plugins(self):
+    def test_nine_builtin_ids_and_five_bundled_plugins(self):
         original = ("capi", "elefante", "pato", "polvo", "calopsita",
                     "cachorro", "gato", "et", "sapinho")
         self.assertEqual(original, tuple(row[0] for row in registry.BUILTINS))
-        self.assertEqual(original + ("pip", "girafa", "bjorni", "ryska"), registry.ELENCO)
+        self.assertEqual(original + ("pip", "girafa", "bjorni", "ryska", "fennec"), registry.ELENCO)
         found = dict(registry.ANIMALS)
         found["aardvark"] = dict(FOX, id="aardvark")
         cast, _, _, _ = registry.make_catalogue(found)
-        self.assertEqual(("pip", "girafa", "bjorni", "ryska", "aardvark"), cast[9:])
+        self.assertEqual(("pip", "girafa", "bjorni", "ryska", "fennec", "aardvark"), cast[9:])
         self.assertEqual("Жирафик", registry.NOMES["girafa"])
         self.assertEqual("Пип", registry.NOMES["pip"])
         self.assertEqual("Рыська", registry.NOMES["ryska"])
         self.assertTrue(registry.ANIMALS["ryska"]["animated"])
+        self.assertEqual("Фенек", registry.NOMES["fennec"])
+        self.assertTrue(registry.ANIMALS["fennec"]["animated"])
         self.assertEqual(125, registry.HTOP["girafa"])
         self.assertEqual(86, registry.HTOP["pip"])
 
@@ -183,7 +186,7 @@ class PluginRegistryTests(unittest.TestCase):
             registry.validate_manifest(reserved, "capi")
 
     def test_bundled_manifests_are_valid(self):
-        for pet in ("pip", "girafa", "bjorni", "ryska"):
+        for pet in ("pip", "girafa", "bjorni", "ryska", "fennec"):
             folder = ROOT / "zoo" / "animals" / pet
             with (folder / "manifest.json").open("r", encoding="utf-8") as fd:
                 data = json.load(fd)

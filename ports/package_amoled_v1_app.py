@@ -35,6 +35,8 @@ UNCHANGED_PATHS = (
     'zoo/animals/pip/manifest.json',
     'zoo/animals/ryska/__init__.py', 'zoo/animals/ryska/face.py',
     'zoo/animals/ryska/manifest.json',
+    'zoo/animals/fennec/__init__.py', 'zoo/animals/fennec/face.py',
+    'zoo/animals/fennec/manifest.json',
     'zoo/giraffe/__init__.py', 'zoo/giraffe/face.py',
     'zoo/pip/__init__.py', 'zoo/pip/eyes.py', 'zoo/pip/face.py', 'zoo/pip/game.py',
 )
@@ -59,6 +61,7 @@ SAFE_PART = re.compile(r'[a-zA-Z0-9_][a-zA-Z0-9_.-]*\Z')
 TEXT_SUFFIXES = ('.py', '.html', '.json', '.txt')
 MANIFEST_DIRS = {
     'zoo/animals/bjorni', 'zoo/animals/girafa', 'zoo/animals/pip', 'zoo/animals/ryska',
+    'zoo/animals/fennec',
 }
 
 

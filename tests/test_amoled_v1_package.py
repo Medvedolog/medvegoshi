@@ -35,6 +35,7 @@ class PackageAppTest(unittest.TestCase):
             'zoo/pip/host_save.py', 'zoo/animals/new/manifest.json',
             'zoo/animals/bjorni/source.png', 'zoo/animals/bjorni/extra.json',
             'zoo/animals/ryska/reference.png', 'zoo/animals/ryska/extra.json',
+            'zoo/animals/fennec/reference.png', 'zoo/animals/fennec/extra.json',
         ):
             self.write(name, b'not for the artifact')
         actual_hash = bundle.package_app(self.source, self.output)
@@ -59,6 +60,10 @@ class PackageAppTest(unittest.TestCase):
                 'zoo/animals/ryska/__init__.py', 'zoo/animals/ryska/face.py',
                 'zoo/animals/ryska/manifest.json',
             }, {name for name in names if name.startswith('zoo/animals/ryska/')})
+            self.assertEqual({
+                'zoo/animals/fennec/__init__.py', 'zoo/animals/fennec/face.py',
+                'zoo/animals/fennec/manifest.json',
+            }, {name for name in names if name.startswith('zoo/animals/fennec/')})
             self.assertNotIn('companion/raiox.html', names)
             for origin, name in bundle.APP_FILES:
                 self.assertEqual(archive.read(name), (self.source / origin).read_bytes())

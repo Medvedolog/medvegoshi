@@ -79,8 +79,8 @@ class SpriteCohesionTests(unittest.TestCase):
                     self.assertEqual(len(pose['eyes']), 2)
                     self.assertIsNone(self.art._T)
 
-    def test_full_turn_returns_all_thirteen_pets_to_exact_resting_pixels(self):
-        self.assertEqual(len(self.art.ELENCO), 13)
+    def test_full_turn_returns_all_fourteen_pets_to_exact_resting_pixels(self):
+        self.assertEqual(len(self.art.ELENCO), 14)
         for pet in self.art.ELENCO:
             with self.subTest(pet=pet):
                 upright, start = paint(self.art, pet, 0)
@@ -136,8 +136,8 @@ class NativeSpriteTests(unittest.TestCase):
         return {(i % self.canvas.width, i // self.canvas.width)
                 for i, color in enumerate(image_pixels(self.canvas.fb.image)) if color != GREEN}
 
-    def test_all_thirteen_can_turn_and_land_exactly_on_native_canvas(self):
-        self.assertEqual(len(self.art.ELENCO), 13)
+    def test_all_fourteen_can_turn_and_land_exactly_on_native_canvas(self):
+        self.assertEqual(len(self.art.ELENCO), 14)
         for pet in self.art.ELENCO:
             with self.subTest(pet=pet):
                 p = self.draw(pet, 0)
@@ -150,6 +150,50 @@ class NativeSpriteTests(unittest.TestCase):
                 self.assertEqual(start, self.canvas.fb.image.tobytes())
         self.assertLess(len(self.art._roll_native.buf), 76 * 1024)
         self.assertIsNone(self.art._roll_buf)
+
+    def test_fennec_ear_points_and_brush_survive_native_turns(self):
+        from zoo.animals.fennec import face
+
+        c = self.canvas
+        self.draw('fennec', 0)
+        upright = c.fb.image.copy()
+        scale = self.art.CHAR_SCALE
+        # Sample the extremities rather than counting only overall coverage:
+        # loss of a small ear tip can hide in thousands of intact body pixels.
+        regions = ((-45, -125), (45, -125), (49, -36),
+                   (-12.8, -78), (12.8, -78))
+        landmarks = []
+        for dx, dy in regions:
+            cx, cy = c.map_x(120 + scale * dx), c.map_y(196 + scale * dy)
+            points = [(x, y, upright.getpixel((x, y)))
+                      for y in range(cy - 4, cy + 5)
+                      for x in range(cx - 4, cx + 5)
+                      if upright.getpixel((x, y)) != GREEN]
+            self.assertGreaterEqual(len(points), 30)
+            landmarks.append(points)
+        gold = c.fb.color(wire_color(*face.GOLD_EYE))
+        pupil = c.fb.color(wire_color(*face.PUPIL))
+        for eye in landmarks[-2:]:
+            self.assertIn(gold, {color for _, _, color in eye})
+            self.assertIn(pupil, {color for _, _, color in eye})
+
+        pivot = 196 - self.art.HTOP['fennec'] * 0.45
+        for angle in (-0.4, 0.46, 1.13, -1.4):
+            self.draw('fennec', angle)
+            image = c.fb.image
+            cs, sn = math.cos(angle), math.sin(angle)
+            for index, points in enumerate(landmarks):
+                with self.subTest(angle=angle, landmark=index):
+                    matched = 0
+                    for x, y, color in points:
+                        lx, ly = x / c.sx - 120, y / c.sy - pivot
+                        xx = round((120 + lx * cs - ly * sn) * c.sx)
+                        yy = round((pivot + lx * sn + ly * cs) * c.sy)
+                        # Pixel centers differ by at most a couple of samples
+                        # across native axes and nearest-neighbour whole turns.
+                        matched += any(image.getpixel((xx + i, yy + j)) == color
+                                       for j in range(-2, 3) for i in range(-2, 3))
+                    self.assertGreaterEqual(matched, 0.90 * len(points))
 
     def test_caramel_puppy_rotates_as_single_layer_and_terrain_can_cover_it(self):
         for a in (-math.pi / 3, math.pi / 2, math.pi):

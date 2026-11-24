@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "id": "fennec",
+  "name_ru": "Фенек",
+  "htop": 95,
+  "head": -74,
+  "top": -128,
+  "half": 43,
+  "eyes": [
+    [
+      -12,
+      -78
+    ],
+    [
+      12,
+      -78
+    ]
+  ],
+  "thermometer": [
+    31,
+    -50
+  ],
+  "ring": [
+    100,
+    51,
+    42
+  ],
+  "animated": true,
+  "license": "MIT",
+  "author": "MedveGoshi contributors, original AI-assisted artwork",
+  "source_url": "https://github.com/Medvedolog/medvegoshi",
+  "phrases": {
+    "ocioso": [
+      "Слышу шорох!",
+      "Поймаю ветер!",
+      "Тёплый песок!",
+      "Где мой хвост?"
+    ],
+    "carinho": [
+      "Ушки щекочет!",
+      "Рад тебя|видеть!",
+      "Спасибо, друг!"
+    ]
+  }
+}

@@ -37,6 +37,7 @@ SCENES = {
     "girafa": ("Взрослый на прогулке", "explore", 76, {}, DAY + 7 * 3600, LEFT, 12, None),
     "bjorni": ("Вечерние гуляшки", "explore", 59, {}, DAY + 8 * 3600, RIGHT, 12, None),
     "ryska": ("Забота о Рыське", "pet", 54, {}, DAY, None, 4, None),
+    "fennec": ("Знакомство с Фенеком", "pet", 56, {}, DAY, None, 4, None),
 }
 _HOLDS = ("polvo", "bjorni")
 
