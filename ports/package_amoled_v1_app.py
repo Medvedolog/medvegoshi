@@ -26,6 +26,8 @@ UNCHANGED_PATHS = (
     'zoo/__init__.py', 'zoo/pet_slots.py', 'zoo/recovery.py', 'zoo/registry.py',
     'zoo/sprites.py', 'zoo/switch_pet.py',
     'zoo/animals/__init__.py',
+    'zoo/animals/bjorni/__init__.py', 'zoo/animals/bjorni/face.py',
+    'zoo/animals/bjorni/manifest.json',
     'zoo/animals/girafa/__init__.py', 'zoo/animals/girafa/face.py',
     'zoo/animals/girafa/manifest.json',
     'zoo/animals/pip/__init__.py', 'zoo/animals/pip/face.py',
@@ -52,7 +54,7 @@ MAX_FILE_BYTES = 512 * 1024
 MAX_PAYLOAD_BYTES = 4 * 1024 * 1024
 SAFE_PART = re.compile(r'[a-zA-Z0-9_][a-zA-Z0-9_.-]*\Z')
 TEXT_SUFFIXES = ('.py', '.html', '.json', '.txt')
-MANIFEST_DIRS = {'zoo/animals/girafa', 'zoo/animals/pip'}
+MANIFEST_DIRS = {'zoo/animals/bjorni', 'zoo/animals/girafa', 'zoo/animals/pip'}
 
 
 class PackageError(ValueError):

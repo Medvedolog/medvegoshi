@@ -67,9 +67,10 @@ class PipFaceTests(unittest.TestCase):
 class CatalogueCompatibilityTests(unittest.TestCase):
     def test_pip_is_opt_in_and_original_cast_is_kept(self):
         cast = registry.ELENCO
-        self.assertEqual(12, len(cast))
-        self.assertEqual("pip", cast[-2])
-        self.assertEqual("girafa", cast[-1])
+        self.assertEqual(13, len(cast))
+        self.assertEqual("pip", cast[10])
+        self.assertEqual("girafa", cast[11])
+        self.assertEqual("bjorni", cast[12])
         for original in ("capi", "pato", "elefante", "polvo", "calopsita",
                          "cachorro", "gato", "et", "sapinho", "naufrago"):
             self.assertIn(original, cast)

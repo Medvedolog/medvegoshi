@@ -29,4 +29,32 @@ printf '%s\n' "$output" | grep -q '/dev/ttyACM0' || failed "serial port not forw
 
 sh install.sh --help | grep -q -- 'amoled-v1' || failed "board profiles missing from help"
 
-echo "PASS: IPS profile available; AMOLED blocked; update mode preserves old flags"
+# The files-only path discovers bundled plugins and publishes manifests last.
+# Intercept every device command; the apparent serial port is only a temp file.
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+: > "$scratch/port"
+cat > "$scratch/mpremote" <<'EOF'
+#!/bin/sh
+[ "$1" = connect ] && [ "$2" = "$TEST_PORT" ] || exit 1
+if [ "$3" = cp ]; then
+    case "$5" in
+        :zoo/animals/bjorni/*)
+            [ -f "$4" ] || exit 1
+            printf '%s\n' "${5##*/}" >> "$TEST_LOG" ;;
+    esac
+fi
+EOF
+cat > "$scratch/esptool.py" <<'EOF'
+#!/bin/sh
+echo "Unexpected flash command" >&2
+exit 1
+EOF
+cp "$scratch/esptool.py" "$scratch/curl"
+chmod +x "$scratch/mpremote" "$scratch/esptool.py" "$scratch/curl"
+PATH="$scratch:$PATH" TEST_PORT="$scratch/port" TEST_LOG="$scratch/log" \
+    sh install.sh --board ips --files-only --port "$scratch/port" >/dev/null
+printf '%s\n' __init__.py face.py manifest.json > "$scratch/expected"
+cmp -s "$scratch/expected" "$scratch/log" || failed "Bjorni runtime deploy order or file set is wrong"
+
+echo "PASS: IPS profile and Bjorni deployment available; AMOLED installer remains blocked"

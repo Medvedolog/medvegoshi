@@ -1,4 +1,4 @@
-"""Proof that a thirteenth animal can be installed without core edits.
+"""Proof that another animal can be installed without core edits.
 
 Constructs a synthetic third-party plugin in a temporary directory. No
 MedveGoshi engine file is rewritten, no third-party art is used, and hardware
@@ -79,6 +79,7 @@ assert life.FRASES_CHAR["testfox"]["ocioso"][0] == "Привет!"
 assert art.HTOP["testfox"] == life.HTOP["testfox"] == 65
 assert "pip" not in art.ELENCO
 assert "girafa" not in art.ELENCO
+assert "bjorni" not in art.ELENCO
 fb = FB()
 art.usar(fb)
 head, top, half = art.personagem("testfox", 110, 205)
@@ -100,10 +101,14 @@ class PluginRegistryTests(unittest.TestCase):
         (self.fox / "__init__.py").write_text("", encoding="utf-8")
         (self.fox / "face.py").write_text(FACE, encoding="utf-8")
 
-    def test_original_ten_ids_and_two_bundled_plugins(self):
+    def test_original_ten_ids_and_three_bundled_plugins(self):
         self.assertEqual(10, len(registry.BUILTINS))
-        self.assertEqual(12, len(registry.ELENCO))
-        self.assertEqual(("pip", "girafa"), registry.ELENCO[-2:])
+        self.assertEqual(13, len(registry.ELENCO))
+        self.assertEqual(("pip", "girafa", "bjorni"), registry.ELENCO[10:])
+        found = dict(registry.ANIMALS)
+        found["aardvark"] = dict(FOX, id="aardvark")
+        cast, _, _, _ = registry.make_catalogue(found)
+        self.assertEqual(("pip", "girafa", "bjorni", "aardvark"), cast[10:])
         self.assertEqual("Жирафик", registry.NOMES["girafa"])
         self.assertEqual("Пип", registry.NOMES["pip"])
         self.assertEqual(125, registry.HTOP["girafa"])
@@ -165,8 +170,8 @@ class PluginRegistryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "reserved"):
             registry.validate_manifest(reserved, "capi")
 
-    def test_bundled_manifests_are_both_valid(self):
-        for pet in ("pip", "girafa"):
+    def test_bundled_manifests_are_valid(self):
+        for pet in ("pip", "girafa", "bjorni"):
             folder = ROOT / "zoo" / "animals" / pet
             with (folder / "manifest.json").open("r", encoding="utf-8") as fd:
                 data = json.load(fd)

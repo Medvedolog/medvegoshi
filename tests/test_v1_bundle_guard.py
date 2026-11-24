@@ -26,10 +26,10 @@ class BundleGuardTest(unittest.TestCase):
             with zipfile.ZipFile(path) as z:
                 self.assertEqual(sha(z.read(guard.INDEX)), verify_archive(path))
                 changed = {name: z.read(name) for name in z.namelist()}
-            changed['v1_game_app.py'] += b'\n# different checkout\n'
+            changed['zoo/animals/bjorni/face.py'] += b'\n# different checkout\n'
             path.unlink()
             path.write_bytes(pack._archive(changed))
-            with self.assertRaisesRegex(guard.BundleMismatch, 'differs'):
+            with self.assertRaisesRegex(guard.BundleMismatch, 'differs.*bjorni/face.py'):
                 verify_archive(path)
             changed.pop('v1_game_app.py')
             path.write_bytes(pack._archive(changed))

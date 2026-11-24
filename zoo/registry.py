@@ -112,6 +112,8 @@ def validate_manifest(info, folder_id):
         raise ValueError("phrases must define ocioso and carinho")
     if not all(_lines(phrases[k]) for k in ("ocioso", "carinho")):
         raise ValueError("speech must fit 2 x 14 characters")
+    if "animated" in info and type(info["animated"]) is not bool:
+        raise ValueError("animated must be boolean")
     if info.get("license") not in APPROVED_LICENSES:
         raise ValueError("unknown or unsuitable license")
     if (not isinstance(info.get("author"), str)
@@ -167,10 +169,11 @@ def make_catalogue(found):
     names = {x[0]: x[1] for x in BUILTINS}
     heights = {x[0]: x[2] for x in BUILTINS}
     phrases = {}
-    # Keep the first two Zoo additions in their established menu positions.
-    # Later IDs are sorted for reproducible menu order.
-    ordered = [x for x in ("pip", "girafa") if x in found]
-    ordered += [x for x in sorted(found) if x not in ("pip", "girafa")]
+    # Preserve bundled menu positions when external Zoo animals are added.
+    # Other IDs are sorted for reproducible menu order.
+    bundled = ("pip", "girafa", "bjorni")
+    ordered = [x for x in bundled if x in found]
+    ordered += [x for x in sorted(found) if x not in bundled]
     for key in ordered:
         if key in names:
             continue

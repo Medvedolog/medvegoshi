@@ -1292,8 +1292,20 @@ def desenhar_passeio(agora, ph):
             pe -= int(math.sin(math.pi * f) * 40)
         elif andando:
             pe -= int(abs(math.sin(agora / 90)) * 6)
+    motion = None
+    if d.uses_pose_animation(cfg['personagem']):
+        if dorme:
+            motion = ('asleep', agora)
+        elif 0 <= f < 1:
+            motion = ('jump', int(f * 600))
+        elif andando:
+            held = tocando and menu_borda < 1 and time.ticks_diff(agora, toque_ini[2]) > 200
+            step = (1 if toque_ult[0] >= W // 2 else -1) if held else ex_auto
+            motion = ('walk-right' if step > 0 else 'walk-left', agora)
+        else:
+            motion = ('idle', agora)
     d.passeio(ph, ex_off, agora, cfg['personagem'], pe, ex_moedas, ex_off // (W * 4) + 1, ex_mundo,
-              olhos, boca, ex_auto, fase_vida())
+              olhos, boca, ex_auto, fase_vida(), motion=motion)
     if dorme:
         z = (agora // 450) % 3
         d.texto('z', 136 + z * 4, pe - 76 - z * 7, d.CREME, 2)
@@ -1427,8 +1439,25 @@ def desenhar_jogo(agora):
             cx += int(math.sin(da / 40) * 3)
     elif not na_agua:
         d.sombra(cx, ph, 12 if vida == 'filhote' else 20)
+    motion = None
+    if d.uses_pose_animation(cfg['personagem']):
+        action, tick = 'idle', agora
+        if comendo:
+            action = 'eating'
+        elif anim in ('festa', 'pular'):
+            action, tick = 'jump', da
+        elif anim == 'carinho':
+            action = 'greeting'
+        elif correndo or andando:
+            action = 'walk-right' if alvo_x > capi_x else 'walk-left'
+        elif modo == 'pet' and pet['fome'] < 25:
+            action = 'hungry'
+        elif modo == 'companion' and not dorme and not viz:
+            action = 'typing'
+        motion = (action, tick)
     cab_y, topo, meia = d.personagem(cfg['personagem'], cx, pe, olhos, boca, doente, fase=vida,
-                                     racha=pet['idade_min'] >= DIA_MIN * DIAS_OVO / 2, grama=ph['grama'])
+                                     racha=pet['idade_min'] >= DIA_MIN * DIAS_OVO / 2, grama=ph['grama'],
+                                     motion=motion)
     if anim == 'aquece' and da < 900:
         for i in range(2):
             d.coracao(cx - 14 + i * 28, topo - 4 - (da // 30) % 30, d.STAT['fome'])
@@ -1519,8 +1548,25 @@ def desenhar_vivo(agora, ph, hora, modo):
         if pip_reaction and 0 <= time.ticks_diff(agora, pip_reaction_at) < 1500:
             mood = pip_reaction
         pip_state = (mood, agora)
+    motion = None
+    if d.uses_pose_animation(cfg['personagem']):
+        move = vida_out.get('move')
+        action, tick = 'idle', agora
+        if not dorme and move == 'andar':
+            action = 'walk-left' if lp.get('flip', 1) < 0 else 'walk-right'
+        elif move in ('pular', 'comemorar'):
+            action, tick = 'jump', lp.get('ms', 0) % 820
+        elif move in ('chegarPerto', 'rir'):
+            action = 'greeting'
+        elif move == 'olhar':
+            action = 'thinking'
+        elif modo == 'pet' and pet['fome'] < 25:
+            action = 'hungry'
+        elif modo == 'companion' and not dorme and not move:
+            action = 'typing'
+        motion = (action, tick)
     r = d.personagem_vivo(cfg['personagem'], L['x'], pe, lp, ph, agora, olhos, boca, doente,
-                        fase_vida(), pip_state=pip_state)
+                        fase_vida(), pip_state=pip_state, motion=motion)
     cx, topo, meia = r['cx'], r['top'], r['half']
     if dorme:
         z = (agora // 450) % 3

@@ -732,7 +732,12 @@ def cachorro(cx, pe, olhos, boca, doente, s, ol):
     return pe - 74 * s, pe - 101 * s, 30 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-12, -78, 7), (12, -78, 7))]
 
 
-def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol, pip_state=None):
+def uses_pose_animation(id):
+    info = zoo_registry.ANIMALS.get(id)
+    return bool(info and info.get('animated') is True)
+
+
+def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol, pip_state=None, motion=None):
     """Universal Zoo renderer, used for ALL future /zoo/animals/<id> packs."""
     info = zoo_registry.ANIMALS.get(id)
     fn = zoo_registry.renderer(id) if info else None
@@ -752,7 +757,28 @@ def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol, pip_state=None):
             except (ImportError, OSError, ValueError, MemoryError):
                 pass
         if tile is None:
-            points = fn(E, R, P, A, olhos, boca, doente)
+            if info.get('animated') is True:
+                # Snap both edges together so fractional scales don't leave
+                # sky-coloured gaps between adjacent source rectangles.
+                def sprite_rect(dx, dy, w, h, color):
+                    x0, y0 = cx + dx * s, pe + dy * s
+                    x1, y1 = x0 + w * s, y0 + h * s
+                    if _T and _T[4]:
+                        rect(x0, y0, x1 - x0, y1 - y0, color)
+                        return
+                    if _T:
+                        x0, y0 = _p(x0, y0)
+                        x1, y1 = _p(x1, y1)
+                    x0, x1, y0, y1 = ri(x0), ri(x1), ri(y0), ri(y1)
+                    if x1 < x0:
+                        x0, x1 = x1, x0
+                    if y1 < y0:
+                        y0, y1 = y1, y0
+                    if x1 > x0 and y1 > y0:
+                        _fb.fill_rect(x0, y0, x1 - x0, y1 - y0, C(color))
+                points = fn(E, sprite_rect, P, A, olhos, boca, doente, motion=motion)
+            else:
+                points = fn(E, R, P, A, olhos, boca, doente)
         else:
             try:
                 points = fn(E, R, P, A, olhos, boca, doente, draw_eyes=False)
@@ -875,7 +901,7 @@ FASES_VIDA = ('ovo', 'filhote', 'adulto', 'idoso', 'estrela')
 
 
 def personagem(id, cx, pe, olhos='normal', boca='sorriso', doente=False, contorno=True, s=1.0, cru=False,
-               fase='adulto', racha=False, grama=(46, 176, 96), pip_state=None):
+               fase='adulto', racha=False, grama=(46, 176, 96), pip_state=None, motion=None):
     """Desenha e devolve (centro da cabeca, topo, meia largura)."""
     if fase == 'ovo':
         return ovo(cx, pe, racha, grama, contorno)
@@ -895,7 +921,7 @@ def personagem(id, cx, pe, olhos='normal', boca='sorriso', doente=False, contorn
         artist = _FUNCS.get(id)
         if artist is None:
             cab, topo, meia, olhos_pts = _animal_plugin(
-                id, cx, pe, olhos, boca, doente, s, OL if contorno else None, pip_state)
+                id, cx, pe, olhos, boca, doente, s, OL if contorno else None, pip_state, motion)
         else:
             cab, topo, meia, olhos_pts = artist(
                 cx, pe, olhos, boca, doente, s, OL if contorno else None)
@@ -1081,7 +1107,7 @@ def recobrir_chao(ph, x0, x1, base, X, t):
             capim(x, 258, ph['grama'], 1.4)
 
 
-def personagem_vivo(id, cx, pe, lp, ph, t, olhos, boca, doente=False, fase='adulto', base=FEET, pip_state=None):
+def personagem_vivo(id, cx, pe, lp, ph, t, olhos, boca, doente=False, fase='adulto', base=FEET, pip_state=None, motion=None):
     """Desenha o personagem com a pose do movimento (lp) e os efeitos. Devolve dict com
     cx, top, head, half, eyes e flip, ja transformados."""
     sx, sy, fl = lp.get('sx', 1), lp.get('sy', 1), lp.get('flip', 1)
@@ -1097,8 +1123,11 @@ def personagem_vivo(id, cx, pe, lp, ph, t, olhos, boca, doente=False, fase='adul
         _fx_antes(f, X, base, cx)
     rot = lp.get('rot', 0) * fl
     cy = Y - alt * 0.45 * sy
-    transformar(X, Y, fl * sx, sy, rot, cy)
-    cab, topo, meia = personagem(id, X, Y, olhos, boca, doente, fase=fase, pip_state=pip_state)
+    # A directional animation already faces the walking direction.
+    draw_flip = 1 if motion and motion[0] in ('walk-right', 'walk-left') else fl
+    transformar(X, Y, draw_flip * sx, sy, rot, cy)
+    cab, topo, meia = personagem(id, X, Y, olhos, boca, doente, fase=fase,
+                                 pip_state=pip_state, motion=motion)
     if _T:
         topo = _p(X, topo)[1]
         cab = _p(X, cab)[1]
@@ -1500,7 +1529,7 @@ def _volta(x, per):
     return ((x % per) + per) % per
 
 
-def passeio(ph, off, t, id, pe, moedas, campo, mundo, olhos='feliz', boca='sorriso', auto=0, fase='adulto'):
+def passeio(ph, off, t, id, pe, moedas, campo, mundo, olhos='feliz', boca='sorriso', auto=0, fase='adulto', motion=None):
     """off = deslocamento do mundo em px; mundo = lista de x das moedas ainda no chao;
     auto = direcao do andar sozinho (a seta desse lado fica laranja)."""
     for i in range(6):
@@ -1523,8 +1552,8 @@ def passeio(ph, off, t, id, pe, moedas, campo, mundo, olhos='feliz', boca='sorri
             ell(mx, my, 4, 4, OL(AMARELO)); ell(mx, my, 3, 3, AMARELO)
     if fase != 'estrela':
         ell(110, FEET + 1, 12 if fase == 'filhote' else 26, 4, ph['grama_e'])
-        personagem(id, 110, pe, olhos, boca, fase=fase, grama=ph['grama'])
-    etiqueta('campo %d' % campo, 8, x=30)
+        personagem(id, 110, pe, olhos, boca, fase=fase, grama=ph['grama'], motion=motion)
+    etiqueta('Поле %d' % campo, 8, x=30)
     s = 'x%d' % moedas
     x0 = W - 30 - (len(s) * 8 + 24)
     etiqueta('  ' + s, 8, x=x0)

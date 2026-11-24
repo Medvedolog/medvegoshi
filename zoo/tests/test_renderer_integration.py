@@ -53,7 +53,7 @@ for hero in d.ELENCO:
         assert fb.draws > 0, (hero, "did not draw")
         assert half > 0 and top < head, (hero, head, top, half)
     print("ok", hero)
-assert len(d.ELENCO) == 12
+assert len(d.ELENCO) == 13
 '''
 
 
@@ -63,7 +63,7 @@ class FullRendererIntegration(unittest.TestCase):
             [sys.executable, "-c", PROBE],
             cwd=str(ROOT), capture_output=True, text=True, timeout=25)
         self.assertEqual(proc.returncode, 0, proc.stdout + "\n" + proc.stderr)
-        self.assertEqual(proc.stdout.count("ok "), 12)
+        self.assertEqual(proc.stdout.count("ok "), 13)
 
     def test_existing_dispatcher_uses_sprite_then_falls_back(self):
         code = PROBE + r'''

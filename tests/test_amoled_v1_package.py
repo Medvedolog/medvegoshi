@@ -33,6 +33,7 @@ class PackageAppTest(unittest.TestCase):
             'zoo/animals/pip/secrets.txt', 'companion/testes/test_fake.py',
             'ports/pip_native/mod_pip_native.c', 'ports/amoled_v1_smoke.py',
             'zoo/pip/host_save.py', 'zoo/animals/new/manifest.json',
+            'zoo/animals/bjorni/source.png', 'zoo/animals/bjorni/extra.json',
         ):
             self.write(name, b'not for the artifact')
         actual_hash = bundle.package_app(self.source, self.output)
@@ -49,6 +50,10 @@ class PackageAppTest(unittest.TestCase):
             self.assertIn('v1_game_app.py', names)
             self.assertIn('raiox.html', names)
             self.assertIn('LICENSE-Pip-KeyPet.txt', names)
+            self.assertEqual({
+                'zoo/animals/bjorni/__init__.py', 'zoo/animals/bjorni/face.py',
+                'zoo/animals/bjorni/manifest.json',
+            }, {name for name in names if name.startswith('zoo/animals/bjorni/')})
             self.assertNotIn('companion/raiox.html', names)
             for origin, name in bundle.APP_FILES:
                 self.assertEqual(archive.read(name), (self.source / origin).read_bytes())
