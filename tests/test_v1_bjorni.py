@@ -87,9 +87,9 @@ def _record_selection(face, selection):
 
 class BjorniV1Test(TestCase):
     def test_bjorni_is_added_after_existing_zoo_pets(self):
-        self.assertEqual(registry.ELENCO[-3:], ("pip", "girafa", "bjorni"))
+        self.assertEqual(registry.ELENCO[-4:], ("pip", "girafa", "bjorni", "ryska"))
         self.assertEqual(registry.NOMES["bjorni"], "Бйорни")
-        self.assertEqual(len(registry.ELENCO), 12)
+        self.assertEqual(len(registry.ELENCO), 13)
         self.assertIsNotNone(registry.renderer("bjorni"))
 
     def test_roster_boundary_skips_retired_slot_in_both_directions(self):

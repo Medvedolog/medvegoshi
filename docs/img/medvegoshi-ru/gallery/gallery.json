@@ -159,6 +159,17 @@
       "sha256": "7db987c395421c5b602f7f6947b597edd4167007441f450ae6a7d9ca0d1a5b91"
     },
     {
+      "file": "ryska-play.png",
+      "id": "ryska",
+      "name_ru": "Рыська",
+      "kind": "play",
+      "state_ru": "Забота о Рыське",
+      "visible_text": [],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "04693340e585190447017593ae5253b690e0cc0231fbadbe9d427debbc6109cf"
+    },
+    {
       "file": "capi-settings.png",
       "id": "capi",
       "name_ru": "Капи",
@@ -171,7 +182,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "fd0a7eba3c7a4248a155308b06f5833ac5a8c752110791466447d743ed205ad9"
+      "sha256": "f2b8993310fcf376e8d6fac697937980a92d761c1004a25688365ee05dc8d487"
     },
     {
       "file": "elefante-settings.png",
@@ -336,7 +347,22 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "c59801d752f49dd6c52c3d26cb194384242990c171759d7e0039e319ca5e9ab2"
+      "sha256": "39a19d0c9541a943a0d37045970f5e86e4d170baef32ba3ab3834bf414a9bbd9"
+    },
+    {
+      "file": "ryska-settings.png",
+      "id": "ryska",
+      "name_ru": "Рыська",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Рыська"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "f53d5b881f3d6d4f9da473b9c5cd247063243230bcb2f16078eb9f784b3f01f1"
     }
   ]
 }

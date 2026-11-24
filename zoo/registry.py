@@ -171,7 +171,7 @@ def make_catalogue(found):
     phrases = {}
     # Preserve bundled menu positions when external Zoo animals are added.
     # Other IDs are sorted for reproducible menu order.
-    bundled = ("pip", "girafa", "bjorni")
+    bundled = ("pip", "girafa", "bjorni", "ryska")
     ordered = [x for x in bundled if x in found]
     ordered += [x for x in sorted(found) if x not in bundled]
     for key in ordered:

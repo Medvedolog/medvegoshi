@@ -79,8 +79,8 @@ class SpriteCohesionTests(unittest.TestCase):
                     self.assertEqual(len(pose['eyes']), 2)
                     self.assertIsNone(self.art._T)
 
-    def test_full_turn_returns_all_twelve_pets_to_exact_resting_pixels(self):
-        self.assertEqual(len(self.art.ELENCO), 12)
+    def test_full_turn_returns_all_thirteen_pets_to_exact_resting_pixels(self):
+        self.assertEqual(len(self.art.ELENCO), 13)
         for pet in self.art.ELENCO:
             with self.subTest(pet=pet):
                 upright, start = paint(self.art, pet, 0)
@@ -136,8 +136,8 @@ class NativeSpriteTests(unittest.TestCase):
         return {(i % self.canvas.width, i // self.canvas.width)
                 for i, color in enumerate(image_pixels(self.canvas.fb.image)) if color != GREEN}
 
-    def test_all_twelve_can_turn_and_land_exactly_on_native_canvas(self):
-        self.assertEqual(len(self.art.ELENCO), 12)
+    def test_all_thirteen_can_turn_and_land_exactly_on_native_canvas(self):
+        self.assertEqual(len(self.art.ELENCO), 13)
         for pet in self.art.ELENCO:
             with self.subTest(pet=pet):
                 p = self.draw(pet, 0)
