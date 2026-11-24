@@ -26,7 +26,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "9735d6b6414e7409dfd9c01783ad02363248cd942939d0996175f65698aff693"
+      "sha256": "29f16767265c96541e3fae8d7140a7f220b65962c391c2fc2631e0e83d642198"
     },
     {
       "file": "pato-play.png",
@@ -91,7 +91,7 @@
       ],
       "life_stage": "filhote",
       "game_mode": "pet",
-      "sha256": "a2bf5b385a9c096d75a50f84385d8d011f5c7aec47f9c24179f1d4ee6b372b5a"
+      "sha256": "4f13350e2b7830a644b188e72a9900c1df52d482bf57e85ba8fd1395f699e62c"
     },
     {
       "file": "et-play.png",
@@ -171,7 +171,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "55d377b15cae2c59fb4be02397172120cd72d1826b79b74f233d0d89ad5cfbd9"
+      "sha256": "a88bd73092581994a233cab4ec498ebb67a64077b264729f997f1250a55db442"
     },
     {
       "file": "elefante-settings.png",
@@ -186,7 +186,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "9469ed434bd99e12fef6614f2a1d72435dbda814a483555153b074d43df5a8a9"
+      "sha256": "3a30018f33c62bc469f10fee465683d691902f4ac277fc52066c1761054ab8bf"
     },
     {
       "file": "pato-settings.png",
@@ -201,7 +201,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "734870da07c2d4b61ae15e7aceb830f5e9efa774742c91c6cbc1c20cabc64ee8"
+      "sha256": "8192525d2dc47cc8d21ada2304688d734af2d133af203a953510af1deadcffe5"
     },
     {
       "file": "polvo-settings.png",
@@ -246,7 +246,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "336ca2e71a75c044c245afdb79242c48858941df5b176553ddf6ba7e97c6e004"
+      "sha256": "f01ae4e0fc8cac644cb1bcef312d04486ae31b58a139672e596d04b746596fa0"
     },
     {
       "file": "gato-settings.png",
@@ -261,7 +261,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "7eac452da01600517d7b27484ba9c65d4ed26e89a39beafba7bee87da83f6d17"
+      "sha256": "1b62a751f28675574c07918c1b7f63e482ad20d14ec16fa714bcd3611e88ce29"
     },
     {
       "file": "et-settings.png",
@@ -276,7 +276,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "971ec47c6a9f2ef1985e5fe80a1281a26fe065ccbb88b67ccf5f01873b153b24"
+      "sha256": "e36586cb8e7a857910fa3de7f8c7a2831692b4964ddbf987305e55d7f60edddb"
     },
     {
       "file": "sapinho-settings.png",
@@ -336,7 +336,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "328da5ce2e57bb9e61660ebf1f65cd3f8cedf834fa8336985f3597487e3a55df"
+      "sha256": "8a1445b70d49e0f554eac3542d4e1471b8274eaaa34c5feaf0ed45c5b754c1fa"
     }
   ]
 }

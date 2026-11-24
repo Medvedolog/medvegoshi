@@ -105,7 +105,8 @@ _MASK = (15, 3, 12)                     # 0 inteira, 1 metade de cima, 2 metade 
 
 # Transformacao do personagem "vivo" (esticar, espelhar, girar). Na placa a escala multiplica
 # o raio e a posicao de cada primitiva, o espelho inverte o x e o giro (so na cambalhota)
-# gira o centro de cada primitiva em volta do meio do corpo. None = desenho normal.
+# turns one assembled character around its pivot (see personagem_vivo).
+# _T also maps effect and eye positions; None = ordinary drawing.
 _T = None
 
 
@@ -503,57 +504,40 @@ def _rel(cx, pe, s, ol, anel):
 
 
 def capi(cx, pe, olhos, boca, doente, s, ol):
-    K = 0.078 * s
-
-    def X(v): return cx + (v - 965) * K
-    def Y(v): return pe + (v - 1810) * K
-    def R(v): return max(1, v * K)
-
-    def E(x, y, rx, ry, c, fora=False):
-        if ol and fora:
-            ell(X(x), Y(y), R(rx) + 1, R(ry) + 1, ol(c))
-        ell(X(x), Y(y), R(rx), R(ry), c)
-    E(965, 1390, 495, 330, MARROM, 1); E(965, 1530, 330, 240, CREME_C)
-    E(760, 1330, 100, 75, MARROM, 1); E(1170, 1330, 100, 75, MARROM, 1)
-    E(750, 1760, 90, 52, ESCURO, 1); E(1180, 1760, 90, 52, ESCURO, 1)
-    E(678, 560, 90, 72, ESCURO, 1); E(678, 560, 45, 38, ROSA)
-    E(1253, 560, 90, 72, ESCURO, 1); E(1253, 560, 45, 38, ROSA)
-    E(965, 835, 432, 382, MARROM, 1); E(965, 940, 330, 250, MASCARA); E(965, 1050, 197, 145, CREME_C)
+    # Low round ears and a broad, blunt snout are Capi's silhouette cues.
+    E, P, R, A = _rel(cx, pe, s, ol, None)
+    fur, shade, muzzle = (180, 122, 73), (126, 81, 48), (213, 161, 109)
+    light, ear, pad = (238, 198, 144), (211, 145, 112), (58, 45, 40)
+    E(0, -34, 34, 28, fur, 1)
+    E(0, -28, 23, 18, light)
+    E(-19, -4, 11, 5, shade, 1); E(19, -4, 11, 5, shade, 1)
+    E(-22, -37, 8, 9, fur, 1); E(22, -37, 8, 9, fur, 1)
+    E(-21, -98, 7, 6, shade, 1); E(21, -98, 7, 6, shade, 1)
+    E(-21, -98, 4, 3, ear); E(21, -98, 4, 3, ear)
+    E(0, -77, 29, 25, fur, 1)
+    P(0, -63, (-23, -8, 23, -8, 26, -3, 25, 9, 19, 14, -19, 14,
+                -25, 9, -26, -3), shade)
+    P(0, -64, (-21, -7, 21, -7, 24, -2, 23, 8, 18, 11, -18, 11,
+                -23, 8, -24, -2), muzzle)
+    E(0, -59, 16, 5, light)
     bc = ENJOADA if doente else BOCHECHA
-    E(710, 1000, 57, 32, bc); E(1220, 1000, 57, 32, bc)
-    for ox in (808, 1122):
-        if olhos == 'fechados':
-            rect(X(ox - 48), Y(845), R(96), 2, OLHO)
-        elif olhos == 'feliz':
-            arco(X(ox), Y(880), R(52), R(48), OLHO, 1)
-        elif olhos == 'susto':
-            E(ox, 845, 80, 85, BRANCO); E(ox, 845, 30, 32, OLHO)
-        elif olhos == 'sono':
-            E(ox, 845, 57, 63, OLHO); rect(X(ox - 60), Y(780), R(120), R(70), MASCARA)
-        else:
-            E(ox, 845, 57, 63, OLHO); E(ox + 17, 818, 17, 17, BRANCO)
-    E(965, 1003, 45, 28, OLHO)
-    bx, by = X(965), Y(1092)
+    E(-18, -68, 4, 2.3, bc); E(18, -68, 4, 2.3, bc)
+    eyes = ((-12, -78, 6), (12, -78, 6))
+    _olhos(E, R, A, eyes, olhos, OLHO, fur)
+    P(0, -66, (-6, 0, 6, 0, 4, 3, -4, 3), OLHO)
+    _boca(E, A, boca, 0, -59, 1.05, OLHO)
     if boca == 'sorriso':
-        arco(bx, by, R(70), R(48), OLHO, 2)
-        rect(bx - 3, by + R(40), 2, 3, BRANCO); rect(bx + 1, by + R(40), 2, 3, BRANCO)
-    elif boca == 'triste':
-        arco(bx, Y(1150), R(60), R(40), OLHO, 1)
-    elif boca == 'aberta':
-        E(965, 1105, 45, 55, BOCA)
-    elif boca == 'meia':
-        E(965, 1105, 40, 18, BOCA)
-    elif boca == 'o':
-        E(965, 1110, 32, 40, BOCA)
-    else:
-        E(965, 1100, 16, 16, OLHO)
-    arco(X(965), Y(700), R(355), R(300), OLHO, 1, 3)
-    for x0 in (548, 1278):
-        rect(X(x0), Y(610), R(104), R(138), OLHO)
-        rect(X(x0 + 22), Y(632), R(60), R(94), AMARELO)
+        R(-2.5, -56, 2, 2.5, BRANCO); R(.5, -56, 2, 2.5, BRANCO)
+    # Gold headphone cups and raised band remain legible at carousel scale.
+    A(0, -79, 31, 26, pad, 1, 2)
+    for x in (-30, 30):
+        E(x, -80, 6, 9, pad)
+        E(x, -80, 3, 6, AMARELO)
+        R(x - 1, -84, 2, 2.5, light)
     if doente:
-        termometro(X(1300), Y(1040))
-    return Y(835), Y(480), R(495), ((X(808), Y(845)), (X(1122), Y(845)))
+        termometro(cx + 33 * s, pe - 59 * s)
+    return pe - 77 * s, pe - 105 * s, 36 * s, [
+        (cx + ox * s, pe + oy * s) for ox, oy, _ in eyes]
 
 
 def pato(cx, pe, olhos, boca, doente, s, ol):
@@ -630,12 +614,26 @@ def elefante(cx, pe, olhos, boca, doente, s, ol):
         E(mx, my + 1, 4, 2, BOCA)
     elif boca == 'o':
         E(mx, my + 1, 3, 3, BOCA)
-    if boca == 'aberta' or olhos == 'feliz':          # tromba levanta
-        segs = ((0, -58, 8, 9), (1, -48, 8, 9), (4, -39, 7, 8), (10, -33, 7, 6), (17, -38, 5, 5))
+    # Draw the trunk rim as a single overlapping silhouette FIRST.
+    # Previously every piece had its own dark rim, so the joins looked like
+    # cracks and the tip looked detached on the small menu portrait.
+    raised = boca == 'aberta' or olhos in ('feliz', 'alegre', 'susto')
+    if raised:
+        segs = ((0, -60, 9, 10), (2, -49, 8, 10), (6, -39, 8, 8),
+                (15, -35, 8, 7), (23, -39, 7, 8), (25, -46, 6, 7))
+        tip = (25, -49)
     else:
-        segs = ((0, -58, 8, 9), (1, -48, 8, 9), (3, -38, 7, 8), (9, -30, 7, 6), (16, -28, 5, 4))
+        segs = ((0, -60, 9, 10), (1, -49, 8, 10), (3, -38, 8, 9),
+                (9, -30, 8, 7), (18, -28, 7, 6), (23, -32, 6, 6))
+        tip = (24, -35)
+    trunk = (170, 180, 205)
+    rim = (79, 82, 112)
     for dx, dy, rx, ry in segs:
-        E(dx, dy, rx, ry, CINZA, 1)
+        E(dx, dy, rx + 1.6, ry + 1.6, rim)
+    for dx, dy, rx, ry in segs:
+        E(dx, dy, rx, ry, trunk)
+    E(0, -57, 4, 7, (203, 210, 228))  # soft highlight, not a line across the trunk
+    E(tip[0], tip[1], 2.6, 1.8, rim)
     if doente:
         termometro(cx + 30 * s, pe - 62 * s)
     return pe - 72 * s, pe - 102 * s, 34 * s, ((cx - 12 * s, pe - 74 * s), (cx + 12 * s, pe - 74 * s))
@@ -823,29 +821,49 @@ def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol, pip_state=None, motio
 
 
 def gato(cx, pe, olhos, boca, doente, s, ol):
-    if ol:
-        ol_g = lambda c: (110, 104, 128) if c == GATO else ol(c)   # contorno claro: nao some a noite
+    # Warm rim lighting separates the black coat from night and menu backgrounds.
+    fur, shade, rim = (32, 27, 33), (58, 47, 56), (149, 108, 100)
+    accent, cream = (212, 134, 128), (239, 210, 179)
+    gold, sun = (225, 160, 62), (250, 197, 86)
+    E, P, R, A = _rel(cx, pe, s, None, lambda c: rim if c == fur else None)
+    tail = ((25, -23, 8, 8), (33, -36, 6, 15), (32, -49, 7, 6), (29, -53, 5, 5))
+    for tx, ty, rx, ry in tail:
+        E(tx, ty, rx + 1.8, ry + 1.8, rim)
+    for tx, ty, rx, ry in tail:
+        E(tx, ty, rx, ry, fur)
+    E(0, -34, 24, 29, fur, 1)
+    E(0, -40, 11, 13, shade)
+    E(-10, -4, 9, 5, fur, 1); E(10, -4, 9, 5, fur, 1)
+    R(-14, -5, 5, 1, shade); R(9, -5, 5, 1, shade)
+    for flip in (-1, 1):
+        def ear_poly(coords, col):
+            P(0, -89, [v * flip if i % 2 == 0 else v
+                        for i, v in enumerate(coords)], col)
+        ear_poly((9, 11, 25, -15, 31, 9, 28, 15), rim)
+        ear_poly((11, 12, 24, -12, 29, 9, 27, 14), fur)
+        ear_poly((17, 4, 24, -6, 26, 6), accent)
+    E(0, -72, 28, 24, fur, 1)
+    A(0, -77, 22, 14, shade, 1, 1)
+    E(0, -61, 11, 6, shade)
+    cheek = ENJOADA if doente else accent
+    E(-17, -64, 3.5, 2.1, cheek); E(17, -64, 3.5, 2.1, cheek)
+    eyes = ((-12, -76, 7), (12, -76, 7))
+    if olhos == 'susto':
+        for ox, oy, k in eyes:
+            E(ox, oy, 7, 8, sun); E(ox, oy, 3.8, 5, PRETO)
+            E(ox + 2, oy - 3, 1.65, 1.65, BRANCO)
     else:
-        ol_g = None
-    E, P, R, A = _rel(cx, pe, s, ol_g, lambda c: (96, 90, 112) if c == GATO else None)
-    E(28, -42, 5, 14, GATO, 1); E(33, -58, 5, 5, GATO, 1)            # rabo
-    E(-10, -2, 8, 4, GATO, 1); E(10, -2, 8, 4, GATO, 1)
-    E(0, -32, 25, 32, GATO, 1); E(0, -34, 8, 10, GATO_CL)
-    anel = ol_g(GATO) if ol_g else (96, 90, 112)
-    P(-18, -88, (-12, 14, 10, 14, -6, -14), anel); P(18, -88, (12, 14, -10, 14, 6, -14), anel)
-    P(-18, -88, (-10, 13, 8, 13, -6, -12), GATO); P(18, -88, (10, 13, -8, 13, 6, -12), GATO)
-    P(-18, -86, (-5, 10, 4, 10, -4, -5), ROSA_N); P(18, -86, (5, 10, -4, 10, 4, -5), ROSA_N)
-    E(0, -72, 29, 25, GATO, 1)
-    bc = ENJOADA if doente else ROSA_N
-    E(-20, -63, 5, 3, bc); E(20, -63, 5, 3, bc)
-    _olhos(E, R, A, ((-12, -75, 8), (12, -75, 8)), olhos, GATO_CL, GATO, GATO_IRIS)
-    P(0, -67, (-3, 0, 3, 0, 0, 3), ROSA_N)
-    for dy in (-65, -61):                                              # bigodes
-        R(-33, dy, 9, 1, GATO_CL); R(24, dy, 9, 1, GATO_CL)
-    _boca(E, A, boca, 0, -61, 0.8, GATO_CL, True)
+        _olhos(E, R, A, eyes, olhos, cream, fur, gold)
+    P(0, -66, (-3.5, 0, 3.5, 0, 0, 3), accent)
+    for flip in (-1, 1):
+        for iy, vy in ((-66, -68), (-62, -61)):
+            linha(cx + flip * 15 * s, pe + iy * s,
+                  cx + flip * 32 * s, pe + vy * s, cream)
+    _boca(E, A, boca, 0, -59, 0.95, cream, True)
     if doente:
-        termometro(cx + 32 * s, pe - 60 * s)
-    return pe - 72 * s, pe - 102 * s, 29 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-12, -75, 8), (12, -75, 8))]
+        termometro(cx + 33 * s, pe - 59 * s)
+    return pe - 72 * s, pe - 104 * s, 32 * s, [
+        (cx + ox * s, pe + oy * s) for ox, oy, _ in eyes]
 
 
 def et(cx, pe, olhos, boca, doente, s, ol):
@@ -1110,6 +1128,99 @@ def recobrir_chao(ph, x0, x1, base, X, t):
             capim(x, 258, ph['grama'], 1.4)
 
 
+_ROLL_W, _ROLL_H = 120, 136
+_ROLL_CX, _ROLL_FEET = 60, 123
+_ROLL_KEY = 0x1FF8  # wire-order RGB565 magenta (not in the game palettes)
+_roll_buf = _roll_fb = None
+
+
+def _paint_roll(dst, src, x, y, kx, ky, cs, sn, pivot, sx0, sy0, sx1, sy1):
+    # Bound the work by the transformed sprite extent, not the full screen.
+    corners = []
+    for tx, ty in ((sx0, sy0), (sx0, sy1), (sx1, sy0), (sx1, sy1)):
+        u = (tx - _ROLL_CX) * kx
+        v = y + (ty - _ROLL_FEET) * ky - pivot
+        corners.append((x + u * cs - v * sn, pivot + u * sn + v * cs))
+    left = max(0, int(math.floor(min(c[0] for c in corners))) - 1)
+    right = min(W, int(math.ceil(max(c[0] for c in corners))) + 1)
+    top = max(0, int(math.floor(min(c[1] for c in corners))) - 1)
+    bottom = min(H, int(math.ceil(max(c[1] for c in corners))) + 1)
+    if left >= right or top >= bottom:
+        return
+    # Inverse nearest-neighbour. One source lookup gives color and coverage,
+    # so independently rounded parts can never create compositing gaps.
+    step_x, step_y = ri(cs / kx * 4096), ri(-sn / ky * 4096)
+    start_x = _ROLL_CX + cs * (left - x) / kx
+    start_y = _ROLL_FEET + (pivot - y - sn * (left - x)) / ky
+    get_pixel, fill = src.pixel, dst.fill_rect
+    # The host Pillow fixture returns RGB tuples, MicroPython returns words.
+    probe = get_pixel(0, 0)
+    native_words = type(probe) is int
+    for py in range(top, bottom):
+        a = ri((start_x + sn * (py - pivot) / kx) * 4096) + 2048
+        b = ri((start_y + cs * (py - pivot) / ky) * 4096) + 2048
+        run, run_x = _ROLL_KEY, left
+        for px in range(left, right):
+            tx, ty = a >> 12, b >> 12
+            color = _ROLL_KEY
+            if sx0 <= tx < sx1 and sy0 <= ty < sy1:
+                sample = get_pixel(tx, ty)
+                if native_words:
+                    color = sample
+                elif isinstance(sample, tuple):
+                    color = C(sample)
+            if color != run:
+                if run != _ROLL_KEY:
+                    fill(run_x, py, px - run_x, 1, run)
+                run, run_x = color, px
+            a += step_x
+            b += step_y
+        if run != _ROLL_KEY:
+            fill(run_x, py, right - run_x, 1, run)
+
+
+def _personagem_rolado(id, x, y, kx, ky, rot, pivot, olhos, boca, doente,
+                       fase, pip_state, motion):
+    global _roll_buf, _roll_fb, _fb, olhos_ult
+    if not 0.25 <= abs(kx) <= 2 or not 0.25 <= abs(ky) <= 2:
+        return None
+    if _roll_fb is None:
+        try:
+            buf = bytearray(_ROLL_W * _ROLL_H * 2)
+            fb = framebuf.FrameBuffer(buf, _ROLL_W, _ROLL_H, framebuf.RGB565)
+        except (MemoryError, AttributeError, ValueError):
+            return None
+        _roll_buf, _roll_fb = buf, fb
+    old_fb = _fb
+    try:
+        _roll_fb.fill(_ROLL_KEY)
+        _fb = _roll_fb
+        cab, topo, meia = personagem(id, _ROLL_CX, _ROLL_FEET, olhos, boca,
+                                     doente, fase=fase, pip_state=pip_state, motion=motion)
+    except (MemoryError, AttributeError, ValueError):
+        return None
+    finally:
+        _fb = old_fb
+    # Include visual details (ears, horns, whiskers, gear) outside the anchor
+    # box. If a third-party skin exceeds this tile, keep its ordinary pose.
+    sx0 = int(math.floor(_ROLL_CX - meia - 17))
+    sx1 = int(math.ceil(_ROLL_CX + meia + 17))
+    sy0 = int(math.floor(topo - 15))
+    sy1 = _ROLL_FEET + 11
+    if sx0 < 0 or sx1 > _ROLL_W or sy0 < 0 or sy1 > _ROLL_H:
+        return None
+    cs, sn = math.cos(rot), math.sin(rot)
+    _paint_roll(old_fb, _roll_fb, x, y, kx, ky, cs, sn, pivot, sx0, sy0, sx1, sy1)
+    transformar(x, y, kx, ky, rot, pivot)
+    try:
+        olhos_ult = [_p(x + ex - _ROLL_CX, y + ey - _ROLL_FEET) for ex, ey in olhos_ult]
+        cab = _p(x, y + cab - _ROLL_FEET)[1]
+        topo = _p(x, y + topo - _ROLL_FEET)[1]
+    finally:
+        sem_transformar()
+    return cab, topo, meia
+
+
 def personagem_vivo(id, cx, pe, lp, ph, t, olhos, boca, doente=False, fase='adulto', base=FEET, pip_state=None, motion=None):
     """Desenha o personagem com a pose do movimento (lp) e os efeitos. Devolve dict com
     cx, top, head, half, eyes e flip, ja transformados."""
@@ -1128,13 +1239,22 @@ def personagem_vivo(id, cx, pe, lp, ph, t, olhos, boca, doente=False, fase='adul
     cy = Y - alt * 0.45 * sy
     # A directional animation already faces the walking direction.
     draw_flip = 1 if motion and motion[0] in ('walk-right', 'walk-left') else fl
-    transformar(X, Y, draw_flip * sx, sy, rot, cy)
-    cab, topo, meia = personagem(id, X, Y, olhos, boca, doente, fase=fase,
-                                 pip_state=pip_state, motion=motion)
-    if _T:
-        topo = _p(X, topo)[1]
-        cab = _p(X, cab)[1]
-    sem_transformar()
+    rolled = (_personagem_rolado(id, X, Y, draw_flip * sx, sy, rot, cy, olhos,
+                                 boca, doente, fase, pip_state, motion) if rot else None)
+    if rolled is not None:
+        cab, topo, meia = rolled
+    else:
+        # A failed tile allocation degrades to a coherent upright pose,
+        # not the old approximation that split a rotating body into pieces.
+        transformar(X, Y, draw_flip * sx, sy)
+        try:
+            cab, topo, meia = personagem(id, X, Y, olhos, boca, doente, fase=fase,
+                                         pip_state=pip_state, motion=motion)
+            if _T:
+                topo = _p(X, topo)[1]
+                cab = _p(X, cab)[1]
+        finally:
+            sem_transformar()
     if hid > 0:
         recobrir_chao(ph, X - 48, X + 48, base, X, t)
     r = {'cx': X, 'top': topo, 'head': cab, 'half': meia * sx, 'eyes': olhos_ult, 'flip': fl, 'pe': Y}
@@ -1463,7 +1583,7 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
     if not pendente and fase == 'ovo':
         ovo(120, o + 146, contorno=False, grama=TRAY, s=0.75)
     elif pendente or fase != 'estrela':
-        personagem(mostra, 120, o + 144, 'feliz', contorno=False,
+        personagem(mostra, 120, o + 144, 'normal' if mostra == 'gato' else 'feliz', contorno=False,
                    s=0.4 if mostra in ('pato', 'calopsita') else 0.45, cru=True)
     poly(14, o + 119, (0, 0, 8, -7, 8, 7), CREME); poly(226, o + 119, (0, 0, -8, -7, -8, 7), CREME)
     if pendente:
