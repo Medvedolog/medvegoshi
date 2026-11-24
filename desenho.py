@@ -747,72 +747,149 @@ def calopsita(cx, pe, olhos, boca, doente, s, ol):
     return pe - 77 * s, pe - 114 * s, 28 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-9, -81, 5), (9, -81, 5))]
 
 
-def cachorro(cx, pe, olhos, boca, doente, s, ol):
-    """Карамелька: warm caramel teddy. The old save/peer id is intentional."""
+# Small linked poses: (tail tip x, tail tip y, ear bounce, front paw lift).
+# Each pose is drawn from the same anchors, including during a whole-body roll.
+_DOG_POSES = (
+    (42, -51, 0, 0), (46, -43, 1, 0), (46, -34, 2, 0),
+    (43, -40, 1, 0), (39, -49, 0, 0),
+)
+_DOG_WALK = (0, 3, 5, 3, 0, -3, -5, -3)
+
+
+def _dog_pose(motion, olhos, boca, doente):
+    action, now = motion if motion else ('still', 0)
+    facing = -1 if action == 'walk-left' else 1
+    if action == 'asleep' or boca == 'dormindo':
+        return 34, -12, 0, 0, 3, facing, False
+    if doente or action == 'hungry':
+        return 38, -22, 0, 0, 2, facing, False
+    fast = action in ('greeting', 'happy', 'jump')
+    frame = (now // (72 if fast else 155)) % len(_DOG_POSES)
+    tx, ty, ear, paw = _DOG_POSES[frame]
+    if action in ('walk-left', 'walk-right'):
+        paw = _DOG_WALK[(now // 83) % len(_DOG_WALK)]
+        ear = abs(paw) * 0.58
+    elif action == 'jump':
+        ear = -1 - frame * 0.7
+        paw = 2
+    elif fast:
+        paw = 2 if frame in (1, 2) else 0
+    chew = action == 'eating'
+    nod = (2 if (now // 150) % 2 else 0) if chew else (1 if action == 'thinking' else 0)
+    tongue = chew and (now // 150) % 2 == 0
+    tongue = tongue or (fast and boca == 'sorriso' and frame in (1, 2, 3))
+    return tx, ty, ear, paw, nod, facing, tongue
+
+
+def cachorro(cx, pe, olhos, boca, doente, s, ol, motion=None):
+    """Карамелька: puppy silhouette and caramel toy-style shading."""
+    tx, ty, ears, paw, nod, facing, tongue = _dog_pose(motion, olhos, boca, doente)
     E, P, R, A = _rel(cx, pe, s, ol, None)
-    ink, rim = (70, 38, 30), (104, 53, 35)
-    shade, mid, fur = (135, 71, 43), (171, 93, 50), (204, 127, 62)
-    glow, gold = (228, 156, 81), (249, 187, 107)
-    milk, cream = (237, 178, 117), (255, 216, 152)
-    rose, blush = (181, 93, 77), (231, 128, 108)
-    # Back paws, round ears and a low belly give the bear a toy-like silhouette.
-    E(-22, -98, 12, 13, rim, 1); E(22, -98, 12, 13, rim, 1)
-    for x in (-22, 22):
-        E(x - 0.8, -99.5, 10.2, 10.5, mid)
-        E(x - 1.4, -101, 7.8, 8, glow)
-        E(x + 0.5, -98, 6.3, 7.2, rose)
-        E(x - 0.3, -100.1, 4.4, 4.9, blush)
-    E(0, -28, 30, 29, rim, 1)
-    E(-1, -29, 28, 26, shade)
-    E(-2, -32, 26, 22.5, mid)
-    E(-2, -24, 17.5, 18, glow)
-    E(-3.5, -25.5, 15.2, 15.5, milk)
-    E(-6, -29, 9, 8, cream)
-    for x in (-24, 24):
-        E(x, -31, 8.5, 13.5, rim)
-        E(x - 1, -32, 6.7, 11.1, mid)
-        E(x - 2, -35, 4.2, 6.5, glow)
-    for x in (-16.5, 16.5):
-        E(x, -5.5, 11, 8.5, rim, 1)
-        E(x - 0.35, -6.7, 9.6, 6.1, mid)
-        E(x - 0.75, -6.8, 6.8, 4.8, milk)
-    # Layered, asymmetrical values rather than a blurred gradient.
-    E(0, -76, 31, 27, rim, 1)
-    E(0, -76, 29, 26, shade)
-    E(-1.2, -78.5, 27.4, 23.2, fur)
-    E(-5.2, -84, 21, 16, glow)
-    E(-11.5, -90.4, 11.7, 7, gold)
-    E(0, -63, 17, 13, mid)
-    E(0, -65, 16.2, 11.6, milk)
-    E(-1.2, -67, 14, 9.1, cream)
-    bc = ENJOADA if doente else blush
-    E(-23, -67, 4.7, 2.7, bc); E(23, -67, 4.7, 2.7, bc)
-    eyes = ((-12, -81, 5.5), (12, -81, 5.5))
-    _olhos(E, R, A, eyes, olhos, ink, glow)
-    P(0, -69, (-5.8, -1.6, -3.8, -3.6, 3.8, -3.6, 5.8, -1.6,
-                2.6, 2.1, 0, 3.7, -2.6, 2.1), ink)
-    _boca(E, A, boca, 0, -62, 1.2, ink, True)
-    # Fine highlights/stitching are drawn at the panel's physical pitch.
+    ink, rim = (62, 35, 29), (100, 50, 34)
+    shade, mid, fur = (135, 72, 45), (177, 98, 52), (213, 135, 72)
+    glow, gold = (236, 162, 86), (251, 194, 120)
+    milk, cream = (239, 184, 125), (255, 222, 168)
+    ear_brown, ear_glint = (140, 70, 42), (197, 114, 68)
+    red, scarf, scarflight = (140, 44, 44), (207, 70, 65), (252, 121, 98)
+
+    # Single tail silhouette attached to the hip in every wag/sleep pose.
+    # A contrasting tip makes the movement readable at tiny scale as well.
+    def tail_shape(color, inner=False):
+        sx = facing
+        mid_x, mid_y = (25 + tx) * 0.5 + 1, (-20 + ty) * 0.5
+        m = 2 if inner else 0
+        P(0, 0, (sx * (17 + m), -26 + m, sx * mid_x, mid_y - 8 + m,
+                 sx * (tx - 3), ty - 5 + m, sx * (tx + 4 - m), ty - 5 + m,
+                 sx * (tx + 5 - m), ty + 2, sx * (tx - 1), ty + 7 - m,
+                 sx * (mid_x + 1), mid_y + 3 - m, sx * (20 + m), -14 - m), color)
+    tail_shape(rim); tail_shape(mid, True)
+    E((tx - 1) * facing, ty + .5, 3.7, 3.1, gold)
+
+    # Low hindquarters and two front feet give it a sitting puppy posture.
+    E(-18, -17, 13.5, 15.5, rim, 1); E(18, -17, 13.5, 15.5, rim, 1)
+    E(-20, -18, 10, 10.5, mid); E(20, -17, 10, 10.5, shade)
+    E(0, -29, 24, 27, rim, 1)
+    E(0, -29, 22, 25, shade); E(-2, -32, 19, 21.5, fur)
+    E(-1, -25, 13.2, 17.5, milk); E(-3.5, -28, 9.5, 14, cream)
+    for sign in (-1, 1):
+        x = sign * 11.5
+        lift = max(0, sign * paw)
+        E(x, -16 - lift, 8.8, 17.2, rim)
+        E(x - 0.8, -16.3 - lift, 6.8, 15.3, fur if sign < 0 else mid)
+        E(x, -3.5 - lift, 10.1, 6.5, rim)
+        E(x - 0.6, -4.5 - lift, 8.6, 5.1, milk)
+        E(x - 1.3, -5.2 - lift, 6.5, 3.1, cream)
+
+    # A red bandana separates head/body and gives this dog its own identity.
+    P(0, -45, (-21, -7, 19, -6, 21, 4, 6, 8, -6, 20, -15, 8, -21, 3), red)
+    P(0, -45, (-18, -5, 17, -4, 19, 3, 5, 6, -6, 17, -13, 7, -19, 1), scarf)
+    P(0, -42, (-13, 0, 0, 3, -5, 12), scarflight)
+
+    # The entire face follows the same small nod. Ear folds alone sway,
+    # and their roots remain inside the skull, even on a jump.
+    head = pe + nod * s
+    E, P, R, A = _rel(cx, head, s, ol, None)
+    for sign in (-1, 1):
+        drop = ears * (0.88 if sign < 0 else 1.12)
+        dx = sign * (32 + 0.7 * ears)
+        P(0, -75, (sign * 20, -19, sign * 30, -20, dx + sign * 6, -11,
+                    dx + sign * 7, 11 + drop, dx, 21 + drop,
+                    sign * 25, 17 + drop, sign * 21, -4), rim)
+        E(dx, -66 + drop, 8.5, 15.5, rim)
+        E(dx - sign * 0.4, -67 + drop, 6.6, 13.5, ear_brown)
+        E(dx - 1.5, -71 + drop, 4.1, 9.3, ear_glint)
+        if sign < 0:
+            E(dx - 0.8, -77 + drop, 4.5, 6, mid)
+    E(0, -76, 29.4, 25.5, rim, 1)
+    E(0, -76, 27.5, 24, shade)
+    E(-1.4, -78, 26, 22, fur)
+    E(-4.5, -82, 22, 17.1, glow)
+    E(-10.5, -89.4, 11.7, 7, gold)
+    E(12, -82, 13.5, 11.8, fur)
+    look = -2.5 if facing < 0 else (2 if motion and motion[0] == 'walk-right' else 0)
+    # Two cheeks under the nose form a distinct, forward-projecting muzzle.
+    E(look, -61, 19, 11.5, mid)
+    E(look - 6.5, -63, 12, 9.7, milk); E(look + 6.5, -63, 12, 9.5, milk)
+    E(look - 6.9, -65, 10.8, 7.5, cream); E(look + 5.7, -65, 10.7, 7.5, cream)
+    bc = ENJOADA if doente else (228, 126, 101)
+    E(-23, -68, 4.4, 2.6, bc); E(23, -68, 4.4, 2.6, bc)
+
+    eyes = ((look - 12.2, -80, 6.6), (look + 12.2, -80, 6.6))
+    for ex, ey, rad in eyes:
+        if olhos in ('normal', 'sono'):
+            E(ex, ey, 6.4, rad + 0.5, shade)
+            E(ex, ey + .5, 5.2, rad - 0.1, ink)
+            E(ex + .9, ey + 2, 3.7, 3.9, (120, 65, 41))
+            E(ex - 1.2, ey - 1.8, 2.05, 2.0, BRANCO)
+            if olhos == 'sono':
+                R(ex - 6.5, ey - 7, 13, 6.8, glow)
+        else:
+            _olhos(E, R, A, ((ex, ey, rad),), olhos, ink, glow)
+    P(look, -66, (-7.5, -2.3, -5, -4.4, 4.9, -4.4, 7.1, -2.2,
+                   6, 1.1, 2.5, 3.8, -2, 3.8, -6.2, 1.5), ink)
+    R(look - .7, -63, 1.4, 3, ink)
+    if tongue:
+        E(look, -59, 5.6, 4.8, ink)
+        E(look, -57, 3.7, 3.25, (237, 121, 125))
+        R(look - 0.65, -58, 1.2, 2.1, (181, 71, 86))
+    else:
+        _boca(E, A, boca, look, -60, 1.27, ink, True)
+
     if getattr(_fb, 'native_art', False) and s >= 0.43:
-        E(-1.6, -70.9, 1.6, 0.7, (255, 226, 169))
-        for x in (-16.5, 16.5):
-            for off, dy in ((-4.7, -9.8), (0, -11.2), (4.7, -9.8)):
-                E(x + off, dy, 1, 0.75, cream)
-        for x, y in ((-17.8, -95.1), (-14, -97), (-9.7, -97.5), (12.4, -97.2),
-                     (-23.7, -70.3), (-20.6, -69.8), (21.8, -69.9)):
-            E(x, y, 0.95, 0.76, cream if y < -90 else rose)
-        if olhos == 'normal':
-            E(-10.7, -84.2, 0.85, 0.9, cream)
-            E(13.3, -84.2, 0.85, 0.9, cream)
+        E(look - 2, -68.1, 1.7, 0.8, (255, 226, 169))
+        for x, y in ((-10.6, -65), (-14, -63), (-9.2, -62), (9.8, -65), (13.1, -63), (8.8, -62)):
+            E(look + x, y, 0.81, 0.75, ear_glint)
+        for x in (-13, 10):
+            E(x, -6 - max(0, (-1 if x < 0 else 1) * paw), 1.4, 0.75, BRANCO)
     if doente:
-        termometro(cx + 34 * s, pe - 60 * s)
-    return pe - 76 * s, pe - 112 * s, 34 * s, [
-        (cx + x * s, pe + y * s) for x, y, _ in eyes]
+        termometro(cx + 37 * s, pe - 57 * s)
+    return head - 76 * s, head - 103 * s, 38 * s, [
+        (cx + x * s, head + y * s) for x, y, _ in eyes]
 
 
 def uses_pose_animation(id):
     info = zoo_registry.ANIMALS.get(id)
-    return bool(info and info.get('animated') is True)
+    return id == 'cachorro' or bool(info and info.get('animated') is True)
 
 
 def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol, pip_state=None, motion=None):
@@ -1009,6 +1086,9 @@ def personagem(id, cx, pe, olhos='normal', boca='sorriso', doente=False, contorn
         if artist is None:
             cab, topo, meia, olhos_pts = _animal_plugin(
                 id, cx, pe, olhos, boca, doente, s, OL if contorno else None, pip_state, motion)
+        elif id == 'cachorro':
+            cab, topo, meia, olhos_pts = artist(
+                cx, pe, olhos, boca, doente, s, OL if contorno else None, motion)
         else:
             cab, topo, meia, olhos_pts = artist(
                 cx, pe, olhos, boca, doente, s, OL if contorno else None)

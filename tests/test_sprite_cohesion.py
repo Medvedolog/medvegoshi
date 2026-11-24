@@ -151,7 +151,7 @@ class NativeSpriteTests(unittest.TestCase):
         self.assertLess(len(self.art._roll_native.buf), 76 * 1024)
         self.assertIsNone(self.art._roll_buf)
 
-    def test_caramel_bear_rotates_as_single_layer_and_terrain_can_cover_it(self):
+    def test_caramel_puppy_rotates_as_single_layer_and_terrain_can_cover_it(self):
         for a in (-math.pi / 3, math.pi / 2, math.pi):
             with self.subTest(angle=a):
                 self.draw('cachorro', a)
