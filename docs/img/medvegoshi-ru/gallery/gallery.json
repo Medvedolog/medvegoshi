@@ -78,7 +78,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "219162b682f5805a1291c870d8e6f16c7bf435947ebca8ea9e6214896e9e1e1a"
+      "sha256": "59aaa7af7d9ab1501b6c9ee5d9b76432a33eee0a4ab78aad3f0a233797e52d94"
     },
     {
       "file": "gato-play.png",
@@ -231,7 +231,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "9264e2be8c84c14f5ff8baea7cd7701b2d9407c287ab94292d08b9adee40500a"
+      "sha256": "de1422c2434fa7361b5df2e33a75324b60f45cdca7339ecb945c46434da30675"
     },
     {
       "file": "cachorro-settings.png",
@@ -246,7 +246,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "71ff1b227d16fbef58da72b447ae5d9aa71f06b8fcffc60d3a0b7b0c958bbf0e"
+      "sha256": "499e5f4b1a668914a93c489f202446efe737c17d34746f49ba205e987ab7b786"
     },
     {
       "file": "gato-settings.png",
@@ -261,7 +261,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "48143cdde2c96c833c6dd9d66bb535269ee3b5f1f0a97afb5b485d2a01593fcb"
+      "sha256": "77fb20ef9697df293802966eb0cb71838d9cd035fa355c3e6c3ac7b845499f95"
     },
     {
       "file": "et-settings.png",
