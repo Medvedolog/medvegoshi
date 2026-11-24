@@ -37,7 +37,7 @@
       "visible_text": [],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "780155d4705e433aabc0dccef8c882d19bfe449878d7ae5c5738000aa043c8e6"
+      "sha256": "50e5aaf4fc8339db3ede3f5cb96e29c9a90d6110785148b55df63d0d1f590919"
     },
     {
       "file": "polvo-play.png",
@@ -206,7 +206,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "4b5eae4beb1706183d454070b262c76c545e1d559645eff2d9dd3e90317de9f9"
+      "sha256": "89f18a8b3cf1d8f0f8f395edb1391f50f78fdf3e6fd90e795c4f279adaf7bc40"
     },
     {
       "file": "pato-settings.png",
@@ -221,7 +221,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "812de6750daaaf512c4d0333eb6bdba1d32a9d34a349b342c3e6db1de1278ef8"
+      "sha256": "07b6a29cf19e6303b553a51f6f61ffe3456b1fac7eb3e718aae2dd082d9b27f0"
     },
     {
       "file": "polvo-settings.png",
@@ -236,7 +236,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "012d9e6e13009fffa323ad987a89763555b2dc4c41ae5386d60f465f351cd815"
+      "sha256": "de5cec78cdf4a4217a6967d1a1032f7a2866439e4550bcebf4f71bf7fde9abf3"
     },
     {
       "file": "calopsita-settings.png",

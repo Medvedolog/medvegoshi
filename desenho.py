@@ -615,30 +615,46 @@ def pato(cx, pe, olhos, boca, doente, s, ol):
     P(0,-70,(-6,-2,-4,-5,4,-5,6,-2,3,4,0,6,-3,4),rim)
     P(0,-70,(-4.55,-2,-2.7,-3.95,2.6,-3.95,4.6,-2,2,3.2,0,4.4,-2,3.2),gold)
     R(-1.75,-73.1,3,1.2,cream)
-    if boca in ('aberta','o'):
-        E(0,-62.6,3.4,2.65,ink)
-        E(0,-61.7,1.65,1.15,(227,117,111))
-    elif boca == 'triste':
-        A(0,-59.4,3.7,2.9,ink,1,2)
-    elif boca == 'sorriso':
-        A(0,-64,3.9,2.4,ink,2,2)
+    # The beak is her only mouth. The eyes carry the expressions.
+    # The little beret tips to one side around its brim, including the pom-pom.
+    HE, HP, _, _ = _rel(cx - 3.5*s, pe - 24*s, 0.74*s, ol, None)
 
-    # Small tilted beret. Scale around its brim, not around the feet.
-    HE, HP, HR, _ = _rel(cx - 0.7*s, pe - 24*s, 0.74*s, ol, None)
-    HP(0,-99,(-29,1,-27,-6,-20,-12,-11,-15,3,-16,16,-13,
-              26,-9,32,-3,32,3,26,7,10,8,-10,7,-23,7),plum_dark)
-    HE(-0.5,-101.5,29.0,10.0,plum)
-    HE(-4.7,-104.45,23.75,7.05,berry)
-    HE(-10.1,-106.7,15.0,3.3,berry_light)
-    HP(0,-95.2,(-25,-2,-15,0,3,1,25,-1,25,2,18,5,2,6,-15,5,-23,3),plum_dark)
-    HR(-17.5,-94.8,35.0,1.6,berry)
-    HE(-7.5,-117.0,7.85,7.4,plum_dark)
-    HE(-7.7,-117.9,6.45,6.15,berry)
-    HE(-9.3,-119.25,4.15,3.65,berry_light)
-    HE(-10.4,-120.15,1.75,1.65,pom_light)
+    def tilt(x, y):
+        y += 96
+        return 0.982*x - 0.187*y, 0.187*x + 0.982*y - 96
+
+    def hat_poly(x, y, coords, color):
+        points = []
+        for i in range(0, len(coords), 2):
+            points.extend(tilt(x + coords[i], y + coords[i+1]))
+        HP(0, 0, points, color)
+
+    def hat_oval(x, y, rx, ry, color):
+        unit = ((1,0),(.924,.383),(.707,.707),(.383,.924),(0,1),
+                (-.383,.924),(-.707,.707),(-.924,.383),(-1,0),
+                (-.924,-.383),(-.707,-.707),(-.383,-.924),(0,-1),
+                (.383,-.924),(.707,-.707),(.924,-.383))
+        points = []
+        for a, b in unit:
+            points.extend(tilt(x + a*rx, y + b*ry))
+        HP(0, 0, points, color)
+
+    hat_poly(0,-99,(-29,1,-27,-6,-20,-12,-11,-15,3,-16,16,-13,
+                     26,-9,32,-3,32,3,26,7,10,8,-10,7,-23,7),plum_dark)
+    hat_oval(-0.5,-101.5,29.0,10.0,plum)
+    hat_oval(-4.7,-104.45,23.75,7.05,berry)
+    hat_oval(-10.1,-106.7,15.0,3.3,berry_light)
+    hat_poly(0,-95.2,(-25,-2,-15,0,3,1,25,-1,25,2,18,5,2,6,-15,5,-23,3),plum_dark)
+    hat_poly(-17.5,-94.8,(0,0,35,0,35,1.6,0,1.6),berry)
+    for x,y,rx,ry,col in ((-7.5,-117.0,7.85,7.4,plum_dark),
+                         (-7.7,-117.9,6.45,6.15,berry),
+                         (-9.3,-119.25,4.15,3.65,berry_light),
+                         (-10.4,-120.15,1.75,1.65,pom_light)):
+        tx,ty = tilt(x,y)
+        HE(tx,ty,rx,ry,col)
     if doente:
         termometro(cx+32*s, pe-56*s)
-    return pe-74*s, pe-117*s, 35*s, [(cx+ox*s, pe+oy*s) for ox,oy in eyes]
+    return pe-74*s, pe-119*s, 35*s, [(cx+ox*s, pe+oy*s) for ox,oy in eyes]
 
 
 def elefante(cx, pe, olhos, boca, doente, s, ol):
