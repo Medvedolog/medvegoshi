@@ -1308,7 +1308,7 @@ def desenhar_passeio(agora, ph):
               olhos, boca, ex_auto, fase_vida(), motion=motion)
     if dorme:
         z = (agora // 450) % 3
-        d.texto('z', 136 + z * 4, pe - 76 - z * 7, d.CREME, 2)
+        d.texto_jogo('z', 136 + z * 4, pe - 76 - z * 7, d.CREME, 2)
     atual = baloes.get('p')
     if atual and time.ticks_diff(atual[2], agora) > 0 and atual[0] in ('fala', 'grito'):
         topo = pe - 75
@@ -1480,10 +1480,10 @@ def desenhar_jogo(agora):
     if anim == 'remedio' and da < 800:
         d.pilula(cx + 20, cab_y + 15 - da // 60)
     if anim == 'susto':
-        d.texto('!', cx + 30, topo - 6, d.VERMELHO, 2)
+        d.texto_jogo('!', cx + 30, topo - 6, d.VERMELHO, 2)
     if dorme and anim != 'susto':
         z = (agora // 450) % 3
-        d.texto('z', cx + meia + z * 4, topo - 4 - z * 7, d.CREME, 2)
+        d.texto_jogo('z', cx + meia + z * 4, topo - 4 - z * 7, d.CREME, 2)
 
     vtopo = None
     if viz:
@@ -1570,7 +1570,7 @@ def desenhar_vivo(agora, ph, hora, modo):
     cx, topo, meia = r['cx'], r['top'], r['half']
     if dorme:
         z = (agora // 450) % 3
-        d.texto('z', cx + meia + z * 4, topo - 4 - z * 7, d.CREME, 2)
+        d.texto_jogo('z', cx + meia + z * 4, topo - 4 - z * 7, d.CREME, 2)
     if modo == 'companion' and visita:
         desenhar_visita(agora, int(cx), topo, ph, False)
     desenhar_tempo_e_presentes(agora, modo)
@@ -1865,7 +1865,16 @@ def passo(agora, dt):
             pet['epoch'] = epoch
         pip_salvar()
         salvar(arquivo_pet(cfg['personagem']), pet)
-    desenhar_jogo(agora)
+    put = getattr(tela, 'scene_text', None)
+    if put is None:
+        desenhar_jogo(agora)  # IPS and V1 diagnostic 1:1 retain the original font
+    else:
+        d.usar_texto_jogo(put, tela.scene_metrics)
+        try:
+            desenhar_jogo(agora)
+        finally:
+            d.usar_texto_jogo()
+        tela.scene_cover(int(menu_borda) if menu_borda >= 1 else 0)
     desenhar_sobreposicoes(agora)
 
 

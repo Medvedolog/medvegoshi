@@ -13,11 +13,20 @@ GROUND, FEET = 196, 205
 CHAR_SCALE = 0.74
 
 _fb = None
+_put_game_text = _measure_game_text = None
 
 
 def usar(fb):
     global _fb
     _fb = fb
+
+
+def usar_texto_jogo(put=None, metrics=None):
+    """Set native text hooks for one gameplay pass; no hooks on IPS/1:1."""
+    global _put_game_text, _measure_game_text
+    _put_game_text, _measure_game_text = put, metrics
+    if put is None or metrics is None:
+        _put_game_text = _measure_game_text = None
 
 
 # ------------------------------------------------------------ cores
@@ -233,12 +242,31 @@ def texto(s, x, y, c, esc=1):
                         _fb.fill_rect(xx + px * esc, y + py * esc, esc, esc, k)
 
 
+def _medir_texto_jogo(s, esc=1):
+    return _measure_game_text(s, esc) if _measure_game_text is not None else None
+
+
+def texto_jogo(s, x, y, c, esc=1, box=None):
+    """Queue only deliberate gameplay typography, never global drawing text."""
+    if _put_game_text is None or not _put_game_text(s, ri(x), ri(y), C(c), esc, box):
+        texto(s, x, y, c, esc)
+
+
 def centro(s, y, c, esc=1):
     texto(s, (W - len(s) * 8 * esc) / 2, y, c, esc)
 
 
 def etiqueta(s, y, esc=1, x=None):
-    """Texto creme com sombra de 1 px (tag do estilo 1c)."""
+    """Readable native HUD badge, or original shadowed bitmap text."""
+    size = _medir_texto_jogo(s, esc)
+    if size is not None:
+        tw, th = size
+        w, h = tw + 12, th + 6
+        if x is None:
+            x = (W - w) // 2
+        rrect(x, y, w, h, 6, TRAY)
+        texto_jogo(s, x + 6, y + 3, CREME, esc, (x, y, w, h))
+        return w
     w = len(s) * 8 * esc + 12
     if x is None:
         x = ri((W - w) / 2)
@@ -958,7 +986,10 @@ def estrela_nome(nome):
     """Despedida: o bichinho vira estrela com o nome no ceu."""
     poly(120, 66, (0, -9, 2, -2, 9, 0, 2, 2, 0, 9, -2, 2, -9, 0, -2, -2), AMARELO)
     px(112, 58, BRANCO); px(129, 75, BRANCO)
-    texto(nome, 120 - len(nome) * 4, 82, CREME)
+    if _medir_texto_jogo(nome) is not None:
+        texto_jogo(nome, 120 - len(nome) * 4, 82, CREME, 1, (0, 80, W, 0))
+    else:
+        texto(nome, 120 - len(nome) * 4, 82, CREME)
 
 
 def estrelas_antigas(n, t):
@@ -1268,15 +1299,33 @@ def icone_balao(k, x, y):
 def fala(s, cx, top):
     """Balao de fala. '|' quebra linha (max. 2 linhas x 14 letras)."""
     L = s.split('|')
-    w = max(len(l) for l in L) * 8 + 12
-    h = len(L) * 10 + 6
+    # Use measured proportional cells for all lines, or keep the legacy
+    # bubble intact when any line is unsupported (including 1:1 and IPS).
+    sizes = [_medir_texto_jogo(l) for l in L] if _measure_game_text is not None else ()
+    native = sizes and all(sizes)
+    if native:
+        w = max(a[0] for a in sizes) + 14
+        line_h = max(a[1] for a in sizes) + 1
+        h = len(L) * line_h + 6
+        native = w <= W - 16
+    if not native:
+        w = max(len(l) for l in L) * 8 + 12
+        line_h = 10
+        h = len(L) * line_h + 6
     x = ri(max(8, min(W - 8 - w, cx - w / 2)))
     y = ri(top - h - 8)
+    if native:
+        y = max(2, y)
     tx = ri(max(x + 8, min(x + w - 8, cx)))
     rrect(x - 1, y - 1, w + 2, h + 2, 4, BOL_OL); poly(tx, y + h, (-5, 0, 5, 0, 0, 7), BOL_OL)
     rrect(x, y, w, h, 3, CREME); poly(tx, y + h - 1, (-4, 0, 4, 0, 0, 6), CREME)
     for i, l in enumerate(L):
-        texto(l, x + 6 + (w - 12 - len(l) * 8) // 2, y + 4 + i * 10, TEXTO)
+        lx = x + (w - len(l) * 8) // 2
+        if native:
+            ly = y + 3 + i * line_h
+            texto_jogo(l, lx, ly, TEXTO, 1, (x, ly, w, line_h))
+        else:
+            texto(l, lx, y + 4 + i * line_h, TEXTO)
 
 
 def pensamento(k, cx, top, t):
@@ -1289,7 +1338,11 @@ def pensamento(k, cx, top, t):
 
 
 def grito(s, cx, top, t):
-    w, h = len(s) * 16 + 22, 30
+    size = _medir_texto_jogo(s, 2)
+    # Leave room for the spiked outline and never center a clipped label.
+    if size is not None and size[0] > W - 44:
+        size = None
+    w, h = (size[0] + 24, size[1] + 12) if size else (len(s) * 16 + 22, 30)
     x = ri(max(10 + w / 2, min(W - 10 - w / 2, cx)))
     y = ri(top - 18)
     j = (t // 140) % 2
@@ -1300,7 +1353,11 @@ def grito(s, cx, top, t):
         px_, py_ = math.cos(a) * w / 2 * r * 0.82, math.sin(a) * h / 2 * r
         pts += (px_, py_); pts_ol += (px_ * 1.08, py_ * 1.08)
     poly(x, y, pts_ol, BOL_OL); poly(x, y, pts, AMARELO)
-    texto(s, x - len(s) * 8, y - 7, TEXTO, 2)
+    if size is not None:
+        texto_jogo(s, x - size[0] // 2, y - size[1] // 2, TEXTO, 2,
+                   (x - w // 2, y - h // 2, w, h))
+    else:
+        texto(s, x - len(s) * 8, y - 7, TEXTO, 2)
 
 
 def chamado(k, cx, top, meia, t, urgente=False):
@@ -1555,8 +1612,18 @@ def passeio(ph, off, t, id, pe, moedas, campo, mundo, olhos='feliz', boca='sorri
         personagem(id, 110, pe, olhos, boca, fase=fase, grama=ph['grama'], motion=motion)
     etiqueta('Поле %d' % campo, 8, x=30)
     s = 'x%d' % moedas
-    x0 = W - 30 - (len(s) * 8 + 24)
-    etiqueta('  ' + s, 8, x=x0)
-    ell(x0 + 12, 16, 4, 4, OL(AMARELO)); ell(x0 + 12, 16, 3, 3, AMARELO)
+    size = _medir_texto_jogo(s)
+    cy = 16
+    if size is not None:
+        tw, th = size
+        h = th + 6
+        cy = 8 + h // 2
+        x0 = W - 30 - tw - 26
+        rrect(x0, 8, tw + 26, h, 6, TRAY)
+        texto_jogo(s, x0 + 20, 11, CREME, 1, (x0 + 20, 8, tw, h))
+    else:
+        x0 = W - 30 - (len(s) * 8 + 24)
+        etiqueta('  ' + s, 8, x=x0)
+    ell(x0 + 12, cy, 4, 4, OL(AMARELO)); ell(x0 + 12, cy, 3, 3, AMARELO)
     poly(10, 140, (0, 0, 8, -6, 8, 6), ACC if auto < 0 else CREME)
     poly(230, 140, (0, 0, -8, -6, -8, 6), ACC if auto > 0 else CREME)

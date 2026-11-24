@@ -153,8 +153,10 @@ class Tela:
         self._columns = _address_window(viewport.x, viewport.width)
         self._rows = _address_window(viewport.y, viewport.height)
         self.menu_text = self.menu_notice = None
+        self.scene_text = self.scene_metrics = self.scene_cover = None
         self._notice = None
-        self._scaler = self._menu = self._native_fb = None
+        self._scene_top = 0
+        self._scaler = self._menu = self._scene = self._native_fb = None
         self.wire_buf = self.buf
         if viewport is VIEWPORT_LARGE:
             from ports import v1_menu_font
@@ -164,11 +166,33 @@ class Tela:
             self._native_fb = framebuffer_module.FrameBuffer(
                 self.wire_buf, viewport.width, viewport.height, framebuffer_module.RGB565)
             self._menu = []
+            self._scene = []
             self.menu_text = self._queue_text
             self.menu_notice = self._queue_notice
+            self.scene_text = self._queue_scene_text
+            self.scene_metrics = self._scene_metrics
+            self.scene_cover = self._scene_cover
 
     def _queue_text(self, text, x, y, color, esc=1, box=None):
-        if esc not in (1, 2) or len(self._menu) >= 32 or not self._font.supports(text):
+        return self._queue_label(self._menu, text, x, y, color, esc, box)
+
+    def _queue_scene_text(self, text, x, y, color, esc=1, box=None):
+        return self._queue_label(self._scene, text, x, y, color, esc, box)
+
+    def _scene_metrics(self, text, esc=1):
+        if esc not in (1, 2) or not self._font.supports(text):
+            return None
+        w, h = self._font.measure(text, esc), self._font.height(esc)
+        vw, vh = self.viewport.width, self.viewport.height
+        return ((w * LOGICAL_W + vw - 1) // vw, (h * LOGICAL_H + vh - 1) // vh)
+
+    def _scene_cover(self, logical_y):
+        # Logical RGB565 already contains the sliding panel. Never paint
+        # delayed scene letters over it; suppress labels intersecting its edge.
+        self._scene_top = self.viewport.pixel_origin(0, max(0, int(logical_y)))[1]
+
+    def _queue_label(self, queue, text, x, y, color, esc, box):
+        if esc not in (1, 2) or len(queue) >= 32 or not self._font.supports(text):
             return False
         origin = self.viewport.pixel_origin
         x, y = origin(x, y)
@@ -181,7 +205,7 @@ class Tela:
             if bh:
                 y = (top + bottom - self._font.height(esc)) // 2
         if y + self._font.height(esc) > 0 and y < self.viewport.height:
-            self._menu.append((text, x, y, color, esc))
+            queue.append((text, x, y, color, esc))
         return True
 
     def _queue_notice(self, text, bg, fg):
@@ -219,6 +243,10 @@ class Tela:
         try:
             if self._scaler is not None:
                 self._scaler.copy(self.buf, self.wire_buf)
+                if self._scene:
+                    for label in self._scene:
+                        if not self._scene_top or label[2] >= self._scene_top:
+                            self._font.draw(self._native_fb, *label)
                 if self._menu:
                     for label in self._menu:
                         self._font.draw(self._native_fb, *label)
@@ -230,6 +258,9 @@ class Tela:
         finally:
             if self._menu:
                 self._menu.clear()
+            if self._scene:
+                self._scene.clear()
+            self._scene_top = 0
             self._notice = None
 
 
