@@ -31,6 +31,12 @@
 | <a href="img/medvegoshi-ru/bjorni-gulyashki.png"><img src="img/medvegoshi-ru/bjorni-gulyashki.png" width="194" alt="Бйорни — Гуляшки"></a> | <a href="img/medvegoshi-ru/bjorni-switch-confirm.png"><img src="img/medvegoshi-ru/bjorni-switch-confirm.png" width="194" alt="Бйорни — Смена друга"></a> |
 | «Поле 1»: ходьба вправо | «Сменить друга? Прогресс сохранится» |
 
+## Как питомцы кувыркаются
+
+Кот, Капи и Слон теперь хорошо различаются даже в меню. Серия из эмулятора показывает, как поворачивается весь спрайт: глаза, лапы, уши, хвост и хобот остаются на месте относительно тела.
+
+[![Пять фаз кувырка у Кота, Капи и Слона](img/medvegoshi-ru/pets-turn.png)](img/medvegoshi-ru/pets-turn.png)
+
 ### Как переснять
 
 В ветке [русской версии](https://github.com/Medvedolog/medvegoshi/tree/feature/russian-game-ui) запусти <code>python -m ports.render_zoo_gallery --out build/zoo-gallery</code>. Эмулятор использует временные сохранения и не обращается к физической плате. [Описание сцен и контрольные суммы](img/medvegoshi-ru/gallery/gallery.json).
