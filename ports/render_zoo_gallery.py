@@ -26,7 +26,7 @@ LEFT = _touch(40, 160)
 SCENES = {
     "capi": ("Яйцо", "pet", 50, {"idade_min": 0}, DAY, FEED, 4, "Я в яйце!|Согрей меня!"),
     "elefante": ("Купание", "pet", 52, {"cocos": 1}, DAY, BATH, 8, "Как приятно!"),
-    "pato": ("Ночь и сон", "pet", 68, {"dormindo": True}, NIGHT, FEED, 4, "Тс-с... хр-р"),
+    "pato": ("Вечер в берете", "pet", 68, {}, DAY + 8 * 3600, None, 4, None),
     "polvo": ("Утренняя прогулка", "explore", 50, {}, DAY - 5 * 3600, RIGHT, 10, None),
     "calopsita": ("Осмотр", "pet", 62, {}, DAY, MEDICINE, 4, "Я не болею!"),
     "cachorro": ("Кормление после обеда", "pet", 100, {}, DAY, FEED, 4, "Я уже сыт!"),

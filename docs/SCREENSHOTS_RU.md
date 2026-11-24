@@ -1,6 +1,6 @@
 # Скриншоты MedveGoshi
 
-[← На главную](../README.md) · [Карамелька в движении](#карамелька-в-движении) · [Рыська крупным планом](#рыська-крупным-планом) · [Фенек крупным планом](#фенек-крупным-планом) · [Бйорни крупным планом](#бйорни-крупным-планом)
+[← На главную](../README.md) · [Совёнка крупным планом](#совёнка-крупным-планом) · [Карамелька в движении](#карамелька-в-движении) · [Рыська крупным планом](#рыська-крупным-планом) · [Фенек крупным планом](#фенек-крупным-планом) · [Бйорни крупным планом](#бйорни-крупным-планом)
 
 Все кадры сняты в эмуляторе **AMOLED V1, 368×448** из русской сборки [PR #2](https://github.com/Medvedolog/medvegoshi/pull/2). Реплики, часы и метки полей набраны пропорциональным Noto Sans Bold в родном разрешении, как и меню. В крупном режиме сцена рисуется прямо в 368×435 внутри панели, без растягивания кадра 240×284. Карамелька получила новый облик щенка: длинные ушки, светлая мордочка, карамельные тени и мелкие блики на AMOLED. Слева игровой момент, справа тот же питомец в меню «Настройки». Подписи поясняют сцену; реплики в кавычках взяты с экрана. Нажми на кадр, чтобы увеличить.
 
@@ -8,7 +8,7 @@
 |---|:---:|:---:|
 | **1. Капи**<br>Яйцо<br>«Я в яйце!» · «Согрей меня!» | <a href="img/medvegoshi-ru/gallery/capi-play.png"><img src="img/medvegoshi-ru/gallery/capi-play.png" width="174" alt="Капи — Яйцо"></a> | <a href="img/medvegoshi-ru/gallery/capi-settings.png"><img src="img/medvegoshi-ru/gallery/capi-settings.png" width="174" alt="Капи в меню Настройки"></a> |
 | **2. Слон**<br>Купание<br>«Как приятно!» | <a href="img/medvegoshi-ru/gallery/elefante-play.png"><img src="img/medvegoshi-ru/gallery/elefante-play.png" width="174" alt="Слон — Купание"></a> | <a href="img/medvegoshi-ru/gallery/elefante-settings.png"><img src="img/medvegoshi-ru/gallery/elefante-settings.png" width="174" alt="Слон в меню Настройки"></a> |
-| **3. Утка**<br>Ночь и сон<br>«Пойду спать...» | <a href="img/medvegoshi-ru/gallery/pato-play.png"><img src="img/medvegoshi-ru/gallery/pato-play.png" width="174" alt="Утка — Ночь и сон"></a> | <a href="img/medvegoshi-ru/gallery/pato-settings.png"><img src="img/medvegoshi-ru/gallery/pato-settings.png" width="174" alt="Утка в меню Настройки"></a> |
+| **3. Совёнка**<br>Вечер в берете | <a href="img/medvegoshi-ru/gallery/pato-play.png"><img src="img/medvegoshi-ru/gallery/pato-play.png" width="174" alt="Совёнка в берете на закате"></a> | <a href="img/medvegoshi-ru/gallery/pato-settings.png"><img src="img/medvegoshi-ru/gallery/pato-settings.png" width="174" alt="Совёнка в меню Настройки"></a> |
 | **4. Осьминог**<br>Утренняя прогулка<br>«Поле 1» | <a href="img/medvegoshi-ru/gallery/polvo-play.png"><img src="img/medvegoshi-ru/gallery/polvo-play.png" width="174" alt="Осьминог — Утренняя прогулка"></a> | <a href="img/medvegoshi-ru/gallery/polvo-settings.png"><img src="img/medvegoshi-ru/gallery/polvo-settings.png" width="174" alt="Осьминог в меню Настройки"></a> |
 | **5. Попугай**<br>Осмотр<br>«Я не болею!» | <a href="img/medvegoshi-ru/gallery/calopsita-play.png"><img src="img/medvegoshi-ru/gallery/calopsita-play.png" width="174" alt="Попугай — Осмотр"></a> | <a href="img/medvegoshi-ru/gallery/calopsita-settings.png"><img src="img/medvegoshi-ru/gallery/calopsita-settings.png" width="174" alt="Попугай в меню Настройки"></a> |
 | **6. Карамелька**<br>Кормление после обеда<br>«Я уже сыт!» | <a href="img/medvegoshi-ru/gallery/cachorro-play.png"><img src="img/medvegoshi-ru/gallery/cachorro-play.png" width="174" alt="Карамелька — Кормление после обеда"></a> | <a href="img/medvegoshi-ru/gallery/cachorro-settings.png"><img src="img/medvegoshi-ru/gallery/cachorro-settings.png" width="174" alt="Карамелька в меню Настройки"></a> |
@@ -20,6 +20,13 @@
 | **12. Бйорни**<br>Вечерние гуляшки<br>«Поле 1» | <a href="img/medvegoshi-ru/gallery/bjorni-play.png"><img src="img/medvegoshi-ru/gallery/bjorni-play.png" width="174" alt="Бйорни — Вечерние гуляшки"></a> | <a href="img/medvegoshi-ru/gallery/bjorni-settings.png"><img src="img/medvegoshi-ru/gallery/bjorni-settings.png" width="174" alt="Бйорни в меню Настройки"></a> |
 | **13. Рыська**<br>Дневной уход | <a href="img/medvegoshi-ru/gallery/ryska-play.png"><img src="img/medvegoshi-ru/gallery/ryska-play.png" width="174" alt="Рыська в игре"></a> | <a href="img/medvegoshi-ru/gallery/ryska-settings.png"><img src="img/medvegoshi-ru/gallery/ryska-settings.png" width="174" alt="Рыська в меню Настройки"></a> |
 | **14. Фенек**<br>Знакомство | <a href="img/medvegoshi-ru/gallery/fennec-play.png"><img src="img/medvegoshi-ru/gallery/fennec-play.png" width="174" alt="Фенек в игре"></a> | <a href="img/medvegoshi-ru/gallery/fennec-settings.png"><img src="img/medvegoshi-ru/gallery/fennec-settings.png" width="174" alt="Фенек в меню Настройки"></a> |
+
+## Совёнка крупным планом
+
+Совёнка сменила Утку на третьем месте в меню. У неё маленький клюв, круглые совиные глаза и сливовый берет с помпоном. Прогресс из прежнего слота сохраняется.
+
+[![Совёнка знакомится, радуется и дремлет](img/medvegoshi-ru/sovenka-preview.png)](img/medvegoshi-ru/sovenka-preview.png)
+
 
 ## Рыська крупным планом
 

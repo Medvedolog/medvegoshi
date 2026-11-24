@@ -551,45 +551,94 @@ def capi(cx, pe, olhos, boca, doente, s, ol):
 
 
 def pato(cx, pe, olhos, boca, doente, s, ol):
-    E, P, R, A = _rel(cx, pe, s, ol, lambda c: PATO_ESC if c == PATO else None)
-    E(0, -44, 35, 46, PATO, 1)
-    E(-30, -38, 8, 15, PATO_ESC); E(30, -38, 8, 15, PATO_ESC)
-    E(-12, -2, 10, 4, LARANJA, 1); E(12, -2, 10, 4, LARANJA, 1)
-    E(-36, -70, 9, 16, ROXO, 1); E(36, -70, 9, 16, ROXO, 1)
-    bc = ENJOADA if doente else LARANJA_CL
-    E(-23, -50, 5, 3, bc); E(23, -50, 5, 3, bc)
-    for ox in (-13, 13):
-        oy = -62
-        if olhos == 'fechados':
-            R(ox - 7, oy, 14, 2, OLHO_PATO)
+    """Совёнка, using the original stable pato save and peer ID."""
+    E, P, R, A = _rel(cx, pe, s, ol, None)
+    ink, rim = (55, 36, 45), (113, 70, 58)
+    shade, brown, caramel = (138, 84, 65), (174, 110, 73), (200, 140, 92)
+    honey, buff, cream = (226, 165, 108), (246, 202, 141), (255, 223, 171)
+    plum_dark, plum, berry = (91, 40, 71), (143, 66, 105), (182, 88, 127)
+    berry_light, pom_light = (219, 124, 153), (244, 167, 180)
+    amber, gold = (174, 106, 49), (236, 177, 82)
+
+    # Oval fluffy body and layered wings with clearly separated feather tips.
+    E(0, -31, 28, 31, brown, 1)
+    E(0, -30, 26, 28.5, shade)
+    E(-1.8, -34, 24, 25.3, brown)
+    E(-2, -27, 19.5, 21.5, honey)
+    E(-3.6, -28.3, 17.0, 19.1, buff)
+    for y, xs in ((-38,(-6,6)),(-30,(-10,0,10)),(-21,(-6,6))):
+        for x in xs:
+            A(x,y,2.6,1.9,caramel,2,2)
+    for side in (-1, 1):
+        x = side * 22
+        P(x,-28,(-7*side,-15,1*side,-19,8*side,-12,10*side,-2,8*side,9,
+                  4*side,14,1*side,11,-1*side,13,-4*side,7,-7*side,2), rim)
+        E(x - 1.4 * side,-31,7.2,13.5,caramel if side<0 else brown)
+        E(x - 3.2 * side,-34,3.6,8.6,honey if side<0 else caramel)
+        for dx, dy in ((4,3),(0,5)):
+            A(x + side*dx,-26+dy,2.3,3.0,shade,2,2)
+        E(12*side,-3.2,9.0,5.0,amber,1)
+        E(12*side-.6,-4.1,7.2,3.1,gold)
+        R(12*side-2.4,-3.0,1.15,2.0,amber)
+        R(12*side+1.55,-3.0,1.15,2.0,amber)
+
+    # Two light facial discs make the front silhouette unmistakably owlish.
+    E(0,-74,32,26.5,brown,1)
+    E(0,-73,30.5,24.7,shade)
+    E(-1.2,-76,29.5,23.3,caramel)
+    E(-4.0,-82,25.5,16.5,honey)
+    E(0,-66.8,24.25,15.4,buff)
+    for ox in (-13.4,13.4):
+        E(ox,-74,16.3,17.25,amber)
+        E(ox-.35,-75,15.1,16.3,buff)
+        E(ox-.6,-75.7,13.8,14.4,cream)
+        bc = ENJOADA if doente else (224,136,115)
+        E(ox*1.49,-65.2,5.1,2.7,bc)
+    eyes = ((-13.0,-76.4),(13.0,-76.4))
+    for x,y in eyes:
+        if olhos == 'fechados' or boca == 'dormindo':
+            A(x,y+.85,7.25,4.0,ink,2,2)
         elif olhos == 'feliz':
-            A(ox, oy + 4, 7, 6, OLHO_PATO, 1)
-        elif olhos == 'susto':
-            E(ox, oy, 10, 10, BRANCO, 1); E(ox, oy, 4, 4, OLHO_PATO)
-        elif olhos == 'sono':
-            E(ox, oy, 8, 8, OLHO_PATO); R(ox - 9, oy - 9, 18, 9, PATO)
+            A(x,y+2.9,7.35,5.75,ink,1,3)
         else:
-            E(ox, oy, 8, 8, OLHO_PATO); E(ox - 3, oy - 3, 2, 2, BRANCO)
-    by = -50
-    if boca == 'aberta':
-        P(0, by, (-8, -3, 8, -3, 0, 11), BOCA); P(0, by, (-8, -3, 8, -3, 0, 3), LARANJA)
-    elif boca == 'meia':
-        P(0, by, (-8, -3, 8, -3, 0, 8), BOCA); P(0, by, (-8, -3, 8, -3, 0, 4), LARANJA)
-    elif boca == 'o':
-        P(0, by, (-8, -3, 8, -3, 0, 7), LARANJA); E(0, by + 9, 3, 3, BOCA)
+            startled = olhos == 'susto'
+            E(x,y,9.15,9.8 if startled else 8.75,ink)
+            E(x,y+.7,7.6,7.9 if startled else 7.25,amber)
+            E(x,y+1.65,6.35,5.65,gold)
+            E(x+.3,y-.35,3.8 if startled else 4.6,5.75,ink)
+            if olhos == 'sono':
+                R(x-9,y-9,18,8.45,buff)
+            else:
+                R(x-2.25,y-3.05,2.0,2.0,(255,229,182))
+                R(x+1.95,y+.5,1.05,1.05,(255,215,157))
+    # The short hook is a beak, not the broad duck bill.
+    P(0,-70,(-6,-2,-4,-5,4,-5,6,-2,3,4,0,6,-3,4),rim)
+    P(0,-70,(-4.55,-2,-2.7,-3.95,2.6,-3.95,4.6,-2,2,3.2,0,4.4,-2,3.2),gold)
+    R(-1.75,-73.1,3,1.2,cream)
+    if boca in ('aberta','o'):
+        E(0,-62.6,3.4,2.65,ink)
+        E(0,-61.7,1.65,1.15,(227,117,111))
     elif boca == 'triste':
-        P(0, by, (-8, -3, 8, -3, 0, 7), LARANJA); A(0, by + 14, 6, 4, OLHO_PATO, 1)
-    elif boca == 'dormindo':
-        P(0, by, (-6, -2, 6, -2, 0, 5), LARANJA)
-    else:
-        P(0, by, (-8, -3, 8, -3, 0, 7), LARANJA); A(0, by + 8, 7, 4, OLHO_PATO, 2)
-    E(0, -82, 42, 12, ROXO, 1); R(-24, -91, 48, 7, LILAS)
-    if ol:
-        P(0, -85, (-26, 1, 26, 1, 7, -44), ol(ROXO))
-    P(0, -85, (-24, 0, 24, 0, 6, -42), ROXO)
+        A(0,-59.4,3.7,2.9,ink,1,2)
+    elif boca == 'sorriso':
+        A(0,-64,3.9,2.4,ink,2,2)
+
+    # Small tilted beret. Scale around its brim, not around the feet.
+    HE, HP, HR, _ = _rel(cx - 0.7*s, pe - 24*s, 0.74*s, ol, None)
+    HP(0,-99,(-29,1,-27,-6,-20,-12,-11,-15,3,-16,16,-13,
+              26,-9,32,-3,32,3,26,7,10,8,-10,7,-23,7),plum_dark)
+    HE(-0.5,-101.5,29.0,10.0,plum)
+    HE(-4.7,-104.45,23.75,7.05,berry)
+    HE(-10.1,-106.7,15.0,3.3,berry_light)
+    HP(0,-95.2,(-25,-2,-15,0,3,1,25,-1,25,2,18,5,2,6,-15,5,-23,3),plum_dark)
+    HR(-17.5,-94.8,35.0,1.6,berry)
+    HE(-7.5,-117.0,7.85,7.4,plum_dark)
+    HE(-7.7,-117.9,6.45,6.15,berry)
+    HE(-9.3,-119.25,4.15,3.65,berry_light)
+    HE(-10.4,-120.15,1.75,1.65,pom_light)
     if doente:
-        termometro(cx + 30 * s, pe - 58 * s)
-    return pe - 62 * s, pe - 128 * s, 35 * s, ((cx - 13 * s, pe - 62 * s), (cx + 13 * s, pe - 62 * s))
+        termometro(cx+32*s, pe-56*s)
+    return pe-74*s, pe-117*s, 35*s, [(cx+ox*s, pe+oy*s) for ox,oy in eyes]
 
 
 def elefante(cx, pe, olhos, boca, doente, s, ol):
@@ -1796,7 +1845,7 @@ def menu(borda, modo, id, hora_modo, vel, relogio, som_ligado, pendente=None, co
     if not pendente and fase == 'ovo':
         ovo(120, o + 146, contorno=False, grama=TRAY, s=0.75)
     elif pendente or fase != 'estrela':
-        personagem(mostra, 120, o + 144, 'normal' if mostra in ('gato', 'ryska', 'fennec') else 'feliz', contorno=False,
+        personagem(mostra, 120, o + 144, 'normal' if mostra in ('gato', 'ryska', 'fennec', 'pato') else 'feliz', contorno=False,
                    s=0.4 if mostra in ('pato', 'calopsita') else 0.45, cru=True)
     poly(14, o + 119, (0, 0, 8, -7, 8, 7), CREME); poly(226, o + 119, (0, 0, -8, -7, -8, 7), CREME)
     if pendente:
