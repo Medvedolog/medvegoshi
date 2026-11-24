@@ -1,6 +1,6 @@
 # Скриншоты MedveGoshi
 
-[← На главную](../README.md) · [Карамелька в движении](#карамелька-в-движении) · [Рыська крупным планом](#рыська-крупным-планом) · [Бйорни крупным планом](#бйорни-крупным-планом)
+[← На главную](../README.md) · [Карамелька в движении](#карамелька-в-движении) · [Рыська крупным планом](#рыська-крупным-планом) · [Фенек крупным планом](#фенек-крупным-планом) · [Бйорни крупным планом](#бйорни-крупным-планом)
 
 Все кадры сняты в эмуляторе **AMOLED V1, 368×448** из русской сборки [PR #2](https://github.com/Medvedolog/medvegoshi/pull/2). Реплики, часы и метки полей набраны пропорциональным Noto Sans Bold в родном разрешении, как и меню. В крупном режиме сцена рисуется прямо в 368×435 внутри панели, без растягивания кадра 240×284. Карамелька получила новый облик щенка: длинные ушки, светлая мордочка, карамельные тени и мелкие блики на AMOLED. Слева игровой момент, справа тот же питомец в меню «Настройки». Подписи поясняют сцену; реплики в кавычках взяты с экрана. Нажми на кадр, чтобы увеличить.
 
@@ -19,12 +19,20 @@
 | **11. Жирафик**<br>Взрослый на прогулке<br>«Поле 1» | <a href="img/medvegoshi-ru/gallery/girafa-play.png"><img src="img/medvegoshi-ru/gallery/girafa-play.png" width="174" alt="Жирафик — Взрослый на прогулке"></a> | <a href="img/medvegoshi-ru/gallery/girafa-settings.png"><img src="img/medvegoshi-ru/gallery/girafa-settings.png" width="174" alt="Жирафик в меню Настройки"></a> |
 | **12. Бйорни**<br>Вечерние гуляшки<br>«Поле 1» | <a href="img/medvegoshi-ru/gallery/bjorni-play.png"><img src="img/medvegoshi-ru/gallery/bjorni-play.png" width="174" alt="Бйорни — Вечерние гуляшки"></a> | <a href="img/medvegoshi-ru/gallery/bjorni-settings.png"><img src="img/medvegoshi-ru/gallery/bjorni-settings.png" width="174" alt="Бйорни в меню Настройки"></a> |
 | **13. Рыська**<br>Дневной уход | <a href="img/medvegoshi-ru/gallery/ryska-play.png"><img src="img/medvegoshi-ru/gallery/ryska-play.png" width="174" alt="Рыська в игре"></a> | <a href="img/medvegoshi-ru/gallery/ryska-settings.png"><img src="img/medvegoshi-ru/gallery/ryska-settings.png" width="174" alt="Рыська в меню Настройки"></a> |
+| **14. Фенек**<br>Знакомство | <a href="img/medvegoshi-ru/gallery/fennec-play.png"><img src="img/medvegoshi-ru/gallery/fennec-play.png" width="174" alt="Фенек в игре"></a> | <a href="img/medvegoshi-ru/gallery/fennec-settings.png"><img src="img/medvegoshi-ru/gallery/fennec-settings.png" width="174" alt="Фенек в меню Настройки"></a> |
 
 ## Рыська крупным планом
 
 Круглая мордочка, сердечки на щёчках и большое сердце на груди перенесены из детского рисунка. Песочная шерсть, пятнышки, тёмные кисточки на ушах и короткий хвост отличают Рыську от обычного котёнка. На картинке три позы настоящего игрового спрайта.
 
 [![Рыська знакомится, радуется и дремлет](img/medvegoshi-ru/ryska-preview.png)](img/medvegoshi-ru/ryska-preview.png)
+
+
+## Фенек крупным планом
+
+По детскому рисунку сохранили сложенные перед собой лапки и кавайное выражение. По фотографии фенека уточнили силуэт: уши широко расходятся, мордочка сужается книзу, а жёлтые миндалевидные глаза смотрят из-под тёмного ободка. Шерсть осталась рыжей, хвост пушистым.
+
+[![Фенек знакомится, радуется и дремлет](img/medvegoshi-ru/fennec-preview.png)](img/medvegoshi-ru/fennec-preview.png)
 
 
 ## Карамелька в движении
