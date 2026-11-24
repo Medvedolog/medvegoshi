@@ -1,0 +1,370 @@
+{
+  "scope": "HOST_ONLY",
+  "images": [
+    {
+      "file": "capi-play.png",
+      "id": "capi",
+      "name_ru": "Капи",
+      "kind": "play",
+      "state_ru": "Яйцо",
+      "visible_text": [
+        "Я в яйце!",
+        "Согрей меня!"
+      ],
+      "life_stage": "ovo",
+      "game_mode": "pet",
+      "sha256": "f7cd8ee071472e57494eb1cc7ad1d5bc224702df81b7648458fd82d309ac881f"
+    },
+    {
+      "file": "elefante-play.png",
+      "id": "elefante",
+      "name_ru": "Слон",
+      "kind": "play",
+      "state_ru": "Купание",
+      "visible_text": [
+        "Как приятно!"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "722e854850028b2d9215521f2d9d33c0816e4eeba5f8f99a1376e14696c9a8fc"
+    },
+    {
+      "file": "pato-play.png",
+      "id": "pato",
+      "name_ru": "Утка",
+      "kind": "play",
+      "state_ru": "Ночь и сон",
+      "visible_text": [
+        "Пойду спать..."
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "09f19bc78f31ad783320e542f4fe0fbad4004e6db1b30ab508e7fa2616fc6215"
+    },
+    {
+      "file": "polvo-play.png",
+      "id": "polvo",
+      "name_ru": "Осьминог",
+      "kind": "play",
+      "state_ru": "Утренняя прогулка",
+      "visible_text": [
+        "Поле 1"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "explore",
+      "sha256": "3b4542fb6fe98cef00ef99590fb8fdd0a1ef3431927d384f4605790e90c9f326"
+    },
+    {
+      "file": "calopsita-play.png",
+      "id": "calopsita",
+      "name_ru": "Попугай",
+      "kind": "play",
+      "state_ru": "Осмотр",
+      "visible_text": [
+        "Я не болею!"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "66191464eeeeeaceda150a2e2873fd66c4939e2ef9fdb62f9fefad5cf688bc34"
+    },
+    {
+      "file": "cachorro-play.png",
+      "id": "cachorro",
+      "name_ru": "Карамелька",
+      "kind": "play",
+      "state_ru": "Кормление после обеда",
+      "visible_text": [
+        "Я уже сыт!"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "4ec92ba40827a52006532d10101e63cca7a852a3519a0312c2d915de5e6146b3"
+    },
+    {
+      "file": "gato-play.png",
+      "id": "gato",
+      "name_ru": "Кот",
+      "kind": "play",
+      "state_ru": "Котёнок",
+      "visible_text": [
+        "Я не болею!"
+      ],
+      "life_stage": "filhote",
+      "game_mode": "pet",
+      "sha256": "9be7ce8c61a7a3fcc0721727b73eb36cabd001ee02fb7adb9118efd4709754fb"
+    },
+    {
+      "file": "et-play.png",
+      "id": "et",
+      "name_ru": "Пришелец",
+      "kind": "play",
+      "state_ru": "Прыжок на прогулке",
+      "visible_text": [
+        "Поле 1"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "explore",
+      "sha256": "c1908a2b2f18f115065f3a1f4c5d2e07b8474c374ff296422699cf085cf7787f"
+    },
+    {
+      "file": "sapinho-play.png",
+      "id": "sapinho",
+      "name_ru": "Лягушонок",
+      "kind": "play",
+      "state_ru": "Лекарство",
+      "visible_text": [
+        "Мне лучше!"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "4a14aee587d0a8d3465634f95ca29d0a047bec5b433a7f0cdab5618abb864cc8"
+    },
+    {
+      "file": "naufrago-play.png",
+      "id": "naufrago",
+      "name_ru": "Робинзон",
+      "kind": "play",
+      "state_ru": "Устал после игр",
+      "visible_text": [
+        "Я устал..."
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "e298573ca948ce8c8e89f2c93d3d64f60424f539b104c40aa8085c9f41ecb001"
+    },
+    {
+      "file": "pip-play.png",
+      "id": "pip",
+      "name_ru": "Пип",
+      "kind": "play",
+      "state_ru": "Самостоятельный режим",
+      "visible_text": [
+        "17:00"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "companion",
+      "sha256": "2729173a1a4a85d4cb0c46d96692637c976d74abd7c137394897ef59a4522e5d"
+    },
+    {
+      "file": "girafa-play.png",
+      "id": "girafa",
+      "name_ru": "Жирафик",
+      "kind": "play",
+      "state_ru": "Взрослый на прогулке",
+      "visible_text": [
+        "Поле 1"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "explore",
+      "sha256": "ae4ea36f58cdd8f5ed0a8cc5327b34388525aac1986d4ebed07b28158ce8aca3"
+    },
+    {
+      "file": "bjorni-play.png",
+      "id": "bjorni",
+      "name_ru": "Бйорни",
+      "kind": "play",
+      "state_ru": "Вечерние гуляшки",
+      "visible_text": [
+        "Поле 1"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "explore",
+      "sha256": "0b9fd088c4c7ad9d038516c086925ae42a3be2f825bc4beac677abdd3a49271f"
+    },
+    {
+      "file": "capi-settings.png",
+      "id": "capi",
+      "name_ru": "Капи",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Капи"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "a7622f5c3be38da42a51aa843039f88bf306eb733fadde385db7f66fa847dcc2"
+    },
+    {
+      "file": "elefante-settings.png",
+      "id": "elefante",
+      "name_ru": "Слон",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Слон"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "9469ed434bd99e12fef6614f2a1d72435dbda814a483555153b074d43df5a8a9"
+    },
+    {
+      "file": "pato-settings.png",
+      "id": "pato",
+      "name_ru": "Утка",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Утка"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "734870da07c2d4b61ae15e7aceb830f5e9efa774742c91c6cbc1c20cabc64ee8"
+    },
+    {
+      "file": "polvo-settings.png",
+      "id": "polvo",
+      "name_ru": "Осьминог",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Осьминог"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "359f0517df70496ce534162c60c699499a74015c8a10d427b33ed8c262e3dcf3"
+    },
+    {
+      "file": "calopsita-settings.png",
+      "id": "calopsita",
+      "name_ru": "Попугай",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Попугай"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "afbfeca7adbd11fbde86158d76db4721a88a248c6a0ba96b29945d4716cd18c9"
+    },
+    {
+      "file": "cachorro-settings.png",
+      "id": "cachorro",
+      "name_ru": "Карамелька",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Карамелька"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "336ca2e71a75c044c245afdb79242c48858941df5b176553ddf6ba7e97c6e004"
+    },
+    {
+      "file": "gato-settings.png",
+      "id": "gato",
+      "name_ru": "Кот",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Кот"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "7eac452da01600517d7b27484ba9c65d4ed26e89a39beafba7bee87da83f6d17"
+    },
+    {
+      "file": "et-settings.png",
+      "id": "et",
+      "name_ru": "Пришелец",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Пришелец"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "971ec47c6a9f2ef1985e5fe80a1281a26fe065ccbb88b67ccf5f01873b153b24"
+    },
+    {
+      "file": "sapinho-settings.png",
+      "id": "sapinho",
+      "name_ru": "Лягушонок",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Лягушонок"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "f3f21b655c7da4fe4e0bf8411428f01a6ef8160ac803187c94fc708248b7d0db"
+    },
+    {
+      "file": "naufrago-settings.png",
+      "id": "naufrago",
+      "name_ru": "Робинзон",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Робинзон"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "2796cb8c15bde539a55c956f9f1132359def3a2a15d30af68bc76d0bb0b53b62"
+    },
+    {
+      "file": "pip-settings.png",
+      "id": "pip",
+      "name_ru": "Пип",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Пип"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "346250c8da36bccc286f9e10df5fdc472463fbedd1572c23c612807d87715892"
+    },
+    {
+      "file": "girafa-settings.png",
+      "id": "girafa",
+      "name_ru": "Жирафик",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Жирафик"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "5577ab7535cbf9ed4c2ea4606e361bb0f5ede04c801131668e3b08b6c2477847"
+    },
+    {
+      "file": "bjorni-settings.png",
+      "id": "bjorni",
+      "name_ru": "Бйорни",
+      "kind": "settings",
+      "state_ru": "Выбор питомца",
+      "visible_text": [
+        "Настройки",
+        "Питомец",
+        "Бйорни"
+      ],
+      "life_stage": "adulto",
+      "game_mode": "pet",
+      "sha256": "38cf31dfe6f39f8b9db2b86d71c17012a9fd5beef17cc522ab5d080b0947e592"
+    }
+  ]
+}

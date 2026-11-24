@@ -219,7 +219,8 @@ class _HostPipModule:
 
 def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
             native_pip=False, app_path=None, screen_mode="1:1",
-            physical_touches=False):
+            physical_touches=False, initial_pet="girafa", initial_mode="pet",
+            fixture_state=None, fixture_epoch=None):
     """Run real principal() with scripted touch/BOOT and no live saves.
 
     app_path may name a trusted v1_game_app.py in an extracted bundle. Run
@@ -229,12 +230,20 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
     By default, scripted touch samples use the legacy 1:1 panel coordinates,
     translated through the selected viewport. Pass physical_touches=True
     for raw samples already expressed in the active physical panel space.
+    An alternate initial pet, mode, and fixture_state set a scenario's
+    temporary save before the unmodified game loop consumes it.
     """
     if not inputs or len(inputs) > 96:
         raise ValueError("1..96 frames required")
-    fixtures = {"girafa": 50} if fixtures is None else dict(fixtures)
-    if "girafa" not in fixtures:
-        raise ValueError("adult Little Giraffe is the initial fixture")
+    fixtures = {initial_pet: 50} if fixtures is None else dict(fixtures)
+    if initial_pet not in fixtures:
+        raise ValueError("initial pet must have a fixture")
+    if initial_mode not in ("pet", "companion", "explore"):
+        raise ValueError("unsupported initial game mode")
+    state_overrides = {} if fixture_state is None else dict(fixture_state)
+    if set(state_overrides) - {"alegria", "energia", "saude", "cocos", "doente",
+                               "dormindo", "cochilo", "idade_min", "vida_adulto", "morto"}:
+        raise ValueError("unsupported temporary pet fixture fields")
     if native_pip and "pip" not in fixtures:
         raise ValueError("native Pip scenario requires a Pip slot")
     entry = ROOT / "main.py" if app_path is None else Path(app_path).resolve(strict=True)
@@ -245,6 +254,10 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
         from zoo.pip import game as pip_game
         host_pip = _HostPipModule()
     rig = _GameRig(_remap_inputs(inputs, screen_mode, physical_touches))
+    if fixture_epoch is not None:
+        if type(fixture_epoch) is not int:
+            raise ValueError("fixture_epoch must be an integer second")
+        rig.epoch_start = fixture_epoch
     machine = rig.machine()
     machine.I2C = lambda *_args, **_kw: rig
     if app_path is not None:
@@ -336,20 +349,26 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
                 sys.path.insert(0, directory)
             # Isolated adult slots; never migrate or open an owner's save.
             Path("config.json").write_text(json.dumps({
-                "personagem": "girafa", "modo": "pet", "hora": "real",
-                "vel": 2, "offline": False, "som": False, "casa": "pet",
+                "personagem": initial_pet, "modo": initial_mode, "hora": "real",
+                "vel": 2, "offline": False, "som": False,
+                "casa": "companion" if initial_mode == "companion" else "pet",
                 "pip_native": native_pip,
             }), encoding="utf-8")
             for pet_id, food in fixtures.items():
-                if registry.renderer(pet_id) is None:
+                if pet_id not in registry.ELENCO or (
+                    pet_id in registry.ANIMALS and registry.renderer(pet_id) is None
+                ):
                     raise RuntimeError("Zoo renderer required for: " + pet_id)
                 slot = Path(pet_slots.pet_path(pet_id))
                 slot.parent.mkdir(parents=True)
-                slot.write_text(json.dumps({
+                state = {
                     "fome": food, "alegria": 80, "energia": 80, "saude": 100,
                     "cocos": 0, "doente": False, "dormindo": False, "cochilo": False,
                     "epoch": rig.epoch_start, "idade_min": 7200, "vida_adulto": 15, "morto": False,
-                }), encoding="utf-8")
+                }
+                if pet_id == initial_pet:
+                    state.update(state_overrides)
+                slot.write_text(json.dumps(state), encoding="utf-8")
             for key in ("hw", "desenho", "vida"):
                 sys.modules.pop(key, None)
             sys.modules.update(shims)
@@ -407,6 +426,11 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
                     raise AssertionError("launcher did not execute the staged application")
             if game_state["runtime_profile_id"] != profile.profile_id:
                 raise AssertionError("main did not enter the staged V1 profile")
+            bubble = game_state["baloes"].get("p")
+            speech = bubble[1] if bubble and bubble[0] == "fala" else None
+            active_pose = game_state.get("vida_out") or {}
+            if game_state["vida_ativa"]() and active_pose.get("say"):
+                speech = active_pose["say"]
             report = {"scope": "HOST_ONLY", "frames": rig.frame,
                       "pet": game_state["cfg"]["personagem"],
                       "life_stage": game_state["fase_vida"](),
@@ -418,7 +442,8 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
                       "packaged_entry": app_path is not None,
                       "last_system_notice": game_state["sis_txt"],
                       "mode": game_state["cfg"]["modo"],
-                      "food_before": fixtures["girafa"], "food_after": game_state["pet"]["fome"],
+                      "food_before": fixtures[initial_pet], "food_after": game_state["pet"]["fome"],
+                      "speech": speech,
                       "pet_trace": pet_trace,
                       "saved_food": {
                           pet_id: json.loads(Path(pet_slots.pet_path(pet_id)).read_text())["fome"]
