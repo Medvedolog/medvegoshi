@@ -854,24 +854,29 @@ def cachorro(cx, pe, olhos, boca, doente, s, ol, motion=None):
     bc = ENJOADA if doente else (228, 126, 101)
     E(-23, -68, 4.4, 2.6, bc); E(23, -68, 4.4, 2.6, bc)
 
-    eyes = ((look - 12.2, -80, 6.6), (look + 12.2, -80, 6.6))
+    eyes = ((look - 12.5, -80.4, 7.6), (look + 12.5, -80.4, 7.6))
+    iris_rim, ice, pupil = (57, 112, 150), (115, 188, 215), (26, 29, 36)
+    catchlight = (207, 232, 241)
     for ex, ey, rad in eyes:
         if olhos == 'feliz':
-            A(ex, ey + 3.1, 5.9, 5.1, ink, 1, 3)
+            A(ex, ey + 3.1, 6.6, 5.6, ink, 1, 3)
         elif olhos == 'fechados':
-            A(ex, ey - 0.3, 5.5, 2.8, ink, 2, 2)
+            A(ex, ey - 0.3, 6.0, 2.8, ink, 2, 2)
         else:
             wide = olhos == 'susto'
-            E(ex, ey, 5.7 if wide else 5, rad if wide else 5.5, ink)
-            if wide:
-                E(ex, ey + 1.4, 3.9, 3.6, (117, 63, 41))
-                E(ex, ey + 1, 2.4, 3.1, ink)
-            elif olhos == 'sono':
-                R(ex - 5.6, ey - 5.7, 11.2, 5.6, glow)
+            ry = rad + (0.5 if wide else -0.2)
+            E(ex, ey, 7.35, ry, ink)
+            E(ex, ey + 0.2, 5.8, ry - 1.4, iris_rim)
+            E(ex, ey + 1.35, 5.25, ry - 2.65, ice)
+            gx = ex + (0.65 * facing if look else 0)
+            gy = ey - 0.55
+            E(gx, gy, 2.7 if wide else 3.65, 3.85 if wide else 4.85, pupil)
+            if olhos == 'sono':
+                R(ex - 7.5, ey - ry - 0.5, 15, ry - 0.15, glow)
             else:
-                # Warm lifted cheeks round off the lower eye edge. No whites
-                # or highlights: keep the friendly, dark bead-eye silhouette.
-                E(ex, ey + 5.9, 4.3, 1.9, glow)
+                # At most a single logical pixel per eye. It must not read
+                # as a sclera or compete with the visible blue iris.
+                px(cx + (gx - 1.15) * s, head + (gy - 1.55) * s, catchlight)
     P(look, -66, (-7.5, -2.3, -5, -4.4, 4.9, -4.4, 7.1, -2.2,
                    6, 1.1, 2.5, 3.8, -2, 3.8, -6.2, 1.5), ink)
     R(look - .7, -63, 1.4, 3, ink)

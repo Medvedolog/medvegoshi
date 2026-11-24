@@ -175,8 +175,9 @@ class NativeSpriteTests(unittest.TestCase):
         up = low.resize(dst.size, resample=0)
         self.assertGreater(sum(a != b for a, b in zip(image_pixels(dst), image_pixels(up))), 1000)
 
-    def test_caramel_eyes_keep_expressions_without_white_pixels(self):
+    def test_caramel_eyes_keep_blue_irises_dark_pupils_and_tiny_catchlights(self):
         images = []
+        color = lambda rgb: self.canvas.fb.color(wire_color(*rgb))
         for mood in ('normal', 'feliz', 'susto', 'sono', 'fechados'):
             self.canvas.fill(wire_color(*GREEN))
             self.art.usar(self.canvas)
@@ -184,9 +185,17 @@ class NativeSpriteTests(unittest.TestCase):
             eyes = []
             for x, y in self.art.olhos_ult:
                 cx, cy = self.canvas.map_x(x), self.canvas.map_y(y)
-                eye = self.canvas.fb.image.crop((cx - 6, cy - 6, cx + 7, cy + 7))
-                self.assertNotIn((255, 255, 255), image_pixels(eye))
-                self.assertIn(self.canvas.fb.color(wire_color(62, 35, 29)), image_pixels(eye))
+                eye = self.canvas.fb.image.crop((cx - 8, cy - 8, cx + 9, cy + 9))
+                pixels = list(image_pixels(eye))
+                self.assertNotIn((255, 255, 255), pixels)
+                self.assertIn(color((62, 35, 29)), pixels)
+                blink = pixels.count(color((207, 232, 241)))
+                if mood in ('normal', 'susto'):
+                    self.assertGreaterEqual(pixels.count(color((26, 29, 36))), 12)
+                    self.assertGreaterEqual(pixels.count(color((115, 188, 215))), 12)
+                    self.assertIn(blink, range(1, 5))
+                else:
+                    self.assertEqual(blink, 0)
                 eyes.append(eye.tobytes())
             images.append(tuple(eyes))
         self.assertEqual(len(set(images)), 5)
