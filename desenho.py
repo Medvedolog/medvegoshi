@@ -856,15 +856,22 @@ def cachorro(cx, pe, olhos, boca, doente, s, ol, motion=None):
 
     eyes = ((look - 12.2, -80, 6.6), (look + 12.2, -80, 6.6))
     for ex, ey, rad in eyes:
-        if olhos in ('normal', 'sono'):
-            E(ex, ey, 6.4, rad + 0.5, shade)
-            E(ex, ey + .5, 5.2, rad - 0.1, ink)
-            E(ex + .9, ey + 2, 3.7, 3.9, (120, 65, 41))
-            E(ex - 1.2, ey - 1.8, 2.05, 2.0, BRANCO)
-            if olhos == 'sono':
-                R(ex - 6.5, ey - 7, 13, 6.8, glow)
+        if olhos == 'feliz':
+            A(ex, ey + 3.1, 5.9, 5.1, ink, 1, 3)
+        elif olhos == 'fechados':
+            A(ex, ey - 0.3, 5.5, 2.8, ink, 2, 2)
         else:
-            _olhos(E, R, A, ((ex, ey, rad),), olhos, ink, glow)
+            wide = olhos == 'susto'
+            E(ex, ey, 5.7 if wide else 5, rad if wide else 5.5, ink)
+            if wide:
+                E(ex, ey + 1.4, 3.9, 3.6, (117, 63, 41))
+                E(ex, ey + 1, 2.4, 3.1, ink)
+            elif olhos == 'sono':
+                R(ex - 5.6, ey - 5.7, 11.2, 5.6, glow)
+            else:
+                # Warm lifted cheeks round off the lower eye edge. No whites
+                # or highlights: keep the friendly, dark bead-eye silhouette.
+                E(ex, ey + 5.9, 4.3, 1.9, glow)
     P(look, -66, (-7.5, -2.3, -5, -4.4, 4.9, -4.4, 7.1, -2.2,
                    6, 1.1, 2.5, 3.8, -2, 3.8, -6.2, 1.5), ink)
     R(look - .7, -63, 1.4, 3, ink)

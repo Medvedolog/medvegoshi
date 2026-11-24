@@ -174,3 +174,19 @@ class NativeSpriteTests(unittest.TestCase):
         self.assertNotIn(glint, set(image_pixels(low)))
         up = low.resize(dst.size, resample=0)
         self.assertGreater(sum(a != b for a, b in zip(image_pixels(dst), image_pixels(up))), 1000)
+
+    def test_caramel_eyes_keep_expressions_without_white_pixels(self):
+        images = []
+        for mood in ('normal', 'feliz', 'susto', 'sono', 'fechados'):
+            self.canvas.fill(wire_color(*GREEN))
+            self.art.usar(self.canvas)
+            self.art.personagem('cachorro', 120, 196, mood)
+            eyes = []
+            for x, y in self.art.olhos_ult:
+                cx, cy = self.canvas.map_x(x), self.canvas.map_y(y)
+                eye = self.canvas.fb.image.crop((cx - 6, cy - 6, cx + 7, cy + 7))
+                self.assertNotIn((255, 255, 255), image_pixels(eye))
+                self.assertIn(self.canvas.fb.color(wire_color(62, 35, 29)), image_pixels(eye))
+                eyes.append(eye.tobytes())
+            images.append(tuple(eyes))
+        self.assertEqual(len(set(images)), 5)
