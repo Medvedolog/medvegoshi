@@ -18,7 +18,7 @@ from machine import I2C, Pin
 import hw
 import desenho as d
 import vida as V
-from zoo import recovery as zoo_recovery, pet_slots, switch_pet
+from zoo import recovery as zoo_recovery, pet_slots, switch_pet, registry
 import rede
 from hw import W, H
 
@@ -119,7 +119,7 @@ def salvar(nome, dados):
 cfg = zoo_recovery.require_config(
     'config.json', {'modo': 'pet', 'som': True, 'personagem': 'capi',
                     'hora': 'real', 'vel': 2, 'casa': 'pet'},
-    d.ELENCO, tela, d)
+    d.ELENCO, tela, d, retired=registry.RETIRED)
 if cfg['modo'] not in ('pet', 'companion', 'explore'):
     cfg['modo'] = 'pet'
 if cfg['vel'] not in (1, 2, 3):
@@ -147,8 +147,7 @@ def arquivo_pet(id):
 # A legacy save is copied exactly once, to the recorded active pet only.
 # Boot must stop if its owner or the active slot cannot be verified.
 try:
-    pet_slots.prepare(cfg['personagem'])
-    pet = pet_slots.load_pet(cfg['personagem'], PET_PADRAO)
+    pet = pet_slots.load_selection(cfg, PET_PADRAO, retired=registry.RETIRED)
 except zoo_recovery.RecoveryRequired as exc:
     try:
         zoo_recovery.show_recovery(tela, d, exc)

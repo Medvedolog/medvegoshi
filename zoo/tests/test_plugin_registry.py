@@ -71,7 +71,7 @@ registry.refresh(sys.argv[1])
 import desenho as art
 import vida as life
 
-assert len(art.ELENCO) == 11, art.ELENCO  # ten original + testfox
+assert len(art.ELENCO) == 10, art.ELENCO  # nine built-ins + testfox
 assert art.ELENCO[-1] == "testfox"
 assert "testfox" in art.NOMES and "testfox" in life.NOMES
 assert life.NOMES["testfox"] == "Лисёнок"
@@ -101,24 +101,33 @@ class PluginRegistryTests(unittest.TestCase):
         (self.fox / "__init__.py").write_text("", encoding="utf-8")
         (self.fox / "face.py").write_text(FACE, encoding="utf-8")
 
-    def test_original_ten_ids_and_three_bundled_plugins(self):
-        self.assertEqual(10, len(registry.BUILTINS))
-        self.assertEqual(13, len(registry.ELENCO))
-        self.assertEqual(("pip", "girafa", "bjorni"), registry.ELENCO[10:])
+    def test_nine_builtin_ids_and_three_bundled_plugins(self):
+        original = ("capi", "elefante", "pato", "polvo", "calopsita",
+                    "cachorro", "gato", "et", "sapinho")
+        self.assertEqual(original, tuple(row[0] for row in registry.BUILTINS))
+        self.assertEqual(original + ("pip", "girafa", "bjorni"), registry.ELENCO)
         found = dict(registry.ANIMALS)
         found["aardvark"] = dict(FOX, id="aardvark")
         cast, _, _, _ = registry.make_catalogue(found)
-        self.assertEqual(("pip", "girafa", "bjorni", "aardvark"), cast[10:])
+        self.assertEqual(("pip", "girafa", "bjorni", "aardvark"), cast[9:])
         self.assertEqual("Жирафик", registry.NOMES["girafa"])
         self.assertEqual("Пип", registry.NOMES["pip"])
         self.assertEqual(125, registry.HTOP["girafa"])
         self.assertEqual(86, registry.HTOP["pip"])
 
+    def test_retired_id_cannot_be_reused_by_an_optional_plugin(self):
+        retired = self.fox.rename(self.root / "naufrago")
+        (retired / "manifest.json").write_text(json.dumps(dict(FOX, id="naufrago")),
+                                               encoding="utf-8")
+        self.assertNotIn("naufrago", registry.discover(str(self.root)))
+        with self.assertRaises(ValueError):
+            check_source(retired)
+
     def test_metadata_discovery_and_shared_catalogue(self):
         data = registry.discover(str(self.root))
         self.assertEqual(["testfox"], sorted(data))
         cast, names, heights, phrases = registry.make_catalogue(data)
-        self.assertEqual(11, len(cast))
+        self.assertEqual(10, len(cast))
         self.assertEqual("testfox", cast[-1])
         self.assertEqual("Лисёнок", names["testfox"])
         self.assertEqual(65, heights["testfox"])

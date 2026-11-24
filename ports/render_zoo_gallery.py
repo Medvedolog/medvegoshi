@@ -16,7 +16,6 @@ from zoo import registry
 DAY = 1795345200  # 2026-11-22 11:00 UTC
 NIGHT = DAY + 12 * 3600
 FEED = _touch(48, 259)
-PLAY = _touch(96, 259)
 BATH = _touch(140, 259)
 MEDICINE = _touch(187, 259)
 RIGHT = _touch(205, 160)
@@ -34,7 +33,6 @@ SCENES = {
     "gato": ("Котёнок", "pet", 70, {"idade_min": 3 * 1440}, DAY, MEDICINE, 4, "Я не болею!"),
     "et": ("Прыжок на прогулке", "explore", 48, {}, DAY, RIGHT, 17, None),
     "sapinho": ("Лекарство", "pet", 60, {"doente": True, "saude": 55}, DAY, MEDICINE, 9, "Мне лучше!"),
-    "naufrago": ("Устал после игр", "pet", 55, {"energia": 12}, DAY, PLAY, 4, "Я устал..."),
     "pip": ("Самостоятельный режим", "companion", 66, {}, DAY + 6 * 3600, None, 12, None),
     "girafa": ("Взрослый на прогулке", "explore", 76, {}, DAY + 7 * 3600, LEFT, 12, None),
     "bjorni": ("Вечерние гуляшки", "explore", 59, {}, DAY + 8 * 3600, RIGHT, 12, None),

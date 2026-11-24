@@ -120,19 +120,6 @@
       "sha256": "815d48dbb72a3e3425ee66f7d4386e54fa20c80a7c1eead279a42a82407f82dd"
     },
     {
-      "file": "naufrago-play.png",
-      "id": "naufrago",
-      "name_ru": "Робинзон",
-      "kind": "play",
-      "state_ru": "Устал после игр",
-      "visible_text": [
-        "Я устал..."
-      ],
-      "life_stage": "adulto",
-      "game_mode": "pet",
-      "sha256": "b0b45daef930737aef16d132e24fede5e4f467c98ee445d84c98b716e528fdb7"
-    },
-    {
       "file": "pip-play.png",
       "id": "pip",
       "name_ru": "Пип",
@@ -304,22 +291,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "f3f21b655c7da4fe4e0bf8411428f01a6ef8160ac803187c94fc708248b7d0db"
-    },
-    {
-      "file": "naufrago-settings.png",
-      "id": "naufrago",
-      "name_ru": "Робинзон",
-      "kind": "settings",
-      "state_ru": "Выбор питомца",
-      "visible_text": [
-        "Настройки",
-        "Питомец",
-        "Робинзон"
-      ],
-      "life_stage": "adulto",
-      "game_mode": "pet",
-      "sha256": "2796cb8c15bde539a55c956f9f1132359def3a2a15d30af68bc76d0bb0b53b62"
+      "sha256": "4a6deabbb8927a8d6b22314e6d4e8066d5c3506c9ade1fc6de8d0e759fadbe4c"
     },
     {
       "file": "pip-settings.png",
@@ -334,7 +306,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "346250c8da36bccc286f9e10df5fdc472463fbedd1572c23c612807d87715892"
+      "sha256": "0c08cf3961413b21fae4740ec4c1da9bcee44b610d9390dd166e420ea1f1918d"
     },
     {
       "file": "girafa-settings.png",

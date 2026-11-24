@@ -344,8 +344,6 @@ FRASES_CHAR = {
            'carinho': ('Бип! Ура!', 'Космо-|щекотка!')},
     'sapinho': {'ocioso': ('Прыгай|со мной!', 'Ква-ква!', 'Где муха?', 'Озеро моё!', 'Прыг-прыг!'),
                 'carinho': ('Ква!', 'Скачу от|радости!')},
-    'naufrago': {'ocioso': ('Вижу корабль!', 'Где мой плот?', 'Опять кокос!', 'Бутылка|в море!', 'Вижу землю!', 'Скучаю|по острову'),
-                 'carinho': ('Как хорошо|вместе!', 'Я не один!')},
 }
 # Optional speech comes from each Zoo plugin's manifest, not this game file.
 FRASES_CHAR.update(zoo_registry.EXTRA_PHRASES)

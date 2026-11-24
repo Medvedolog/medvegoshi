@@ -33,11 +33,12 @@ _SLOT_MESSAGES = {
 }
 
 
-def load_config(path, defaults, available):
+def load_config(path, defaults, available, retired=()):
     """Load config without silently discarding an existing active pet.
 
     A truly absent config is a normal first boot. A corrupt existing config
-    or a saved ID missing from the available cast MUST stop before any save.
+    or a saved ID missing from the cast MUST stop before any save, unless
+    explicitly retired for a copy-only migration.
     """
     try:
         os.stat(path)
@@ -63,7 +64,7 @@ def load_config(path, defaults, available):
     result.update(data)
     saved_id = result.get("personagem")
     if (not isinstance(saved_id, str) or not saved_id
-            or saved_id not in available):
+            or (saved_id not in available and saved_id not in retired)):
         raise RecoveryRequired("pet_missing", str(saved_id)[:40])
     return result
 
@@ -150,10 +151,10 @@ def show_recovery(tela, desenho, error):
     tela.mostrar()
 
 
-def require_config(path, defaults, available, tela, desenho):
+def require_config(path, defaults, available, tela, desenho, retired=()):
     """Enforce no-write boot lock and show recovery if needed."""
     try:
-        return load_config(path, defaults, available)
+        return load_config(path, defaults, available, retired)
     except RecoveryRequired as exc:
         try:
             show_recovery(tela, desenho, exc)

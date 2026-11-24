@@ -59,6 +59,45 @@ class PetSlotTests(unittest.TestCase):
         self.assertEqual(slots.load_pet("girafa", DEFAULTS, self.root_s)["fome"], 65)
         self.assertEqual(slots.load_pet("girafa", DEFAULTS, self.root_s)["pet_id"], "girafa")
 
+    def test_retired_selection_copies_legacy_as_original_owner_before_switch(self):
+        retired = "naufrago"
+        originals = self._legacy(identity=retired, config=False)
+        config = {"personagem": retired, "modo": "companion", "som": False}
+        self._json("config.json", config)
+        self.assertEqual(slots.load_selection(config, DEFAULTS, (retired,), root=self.root_s),
+                         DEFAULTS)
+        self.assertEqual(config["personagem"], "capi")
+        self.assertEqual(json.loads((self.root / "config.json").read_text()), config)
+        self.assertFalse(slots.has_pet("capi", self.root_s))
+        self.assertEqual(config["modo"], "companion")
+        self._assert_originals(originals)
+        for name in slots.LEGACY_FILES:
+            self.assertEqual((self.saves / retired / name).read_bytes(), originals[name])
+
+    def test_retired_slot_stays_archived_and_fallback_keeps_own_progress(self):
+        retired = "naufrago"
+        slots.prepare(retired, self.root_s)
+        slots.save_pet(retired, dict(DEFAULTS, fome=31), self.root_s)
+        before = (self.saves / retired / slots.PET_FILE).read_bytes()
+        slots.save_pet("capi", dict(DEFAULTS, fome=66), self.root_s)
+        config = {"personagem": retired}
+        self._json("config.json", config)
+        self.assertEqual(slots.load_selection(config, DEFAULTS, (retired,), root=self.root_s)["fome"], 66)
+        self.assertEqual((self.saves / retired / slots.PET_FILE).read_bytes(), before)
+
+    def test_retired_selection_does_not_commit_if_fallback_cannot_load(self):
+        retired = "naufrago"
+        slots.prepare(retired, self.root_s)
+        config = {"personagem": retired}
+        self._json("config.json", config)
+        before = (self.root / "config.json").read_bytes()
+        slots.prepare("capi", self.root_s)
+        (self.saves / "capi" / slots.PET_FILE).write_text("truncated", encoding="utf-8")
+        with self.assertRaises(recovery.RecoveryRequired):
+            slots.load_selection(config, DEFAULTS, (retired,), root=self.root_s)
+        self.assertEqual(config["personagem"], retired)
+        self.assertEqual((self.root / "config.json").read_bytes(), before)
+
     def test_exact_copy_capi_brain_and_backup_once(self):
         originals = self._legacy(identity="girafa")
         folder = Path(slots.prepare("girafa", self.root_s))

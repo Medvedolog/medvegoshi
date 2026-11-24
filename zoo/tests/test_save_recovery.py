@@ -74,6 +74,15 @@ class ZooRecoveryTests(unittest.TestCase):
         self.assertEqual("girafa", got["personagem"])
         self.assertEqual(original, self.config.read_bytes())
 
+    def test_only_known_retired_id_is_read_for_archive_migration(self):
+        self.config.write_text(json.dumps(dict(CFG, personagem="naufrago")), encoding="utf-8")
+        before = self.config.read_bytes()
+        loaded = recovery.load_config(str(self.config), CFG, ("capi",), retired=("naufrago",))
+        self.assertEqual(loaded["personagem"], "naufrago")
+        self.assertEqual(self.config.read_bytes(), before)
+        with self.assertRaises(recovery.RecoveryRequired):
+            recovery.load_config(str(self.config), CFG, ("capi",))
+
     def test_missing_plugin_is_not_silently_replaced_by_capi(self):
         saved = dict(CFG, personagem="girafa")
         self.config.write_text(json.dumps(saved), encoding="utf-8")
@@ -152,15 +161,11 @@ class ZooRecoveryTests(unittest.TestCase):
     def test_main_checks_config_before_loading_pet(self):
         src = (ROOT / "main.py").read_text(encoding="utf-8")
         self.assertIn("zoo_recovery.require_config", src)
-        self.assertIn("pet_slots.prepare", src)
-        self.assertIn("pet_slots.load_pet", src)
+        self.assertIn("pet_slots.load_selection", src)
         self.assertNotIn("cfg['personagem'] = 'capi'", src)
         self.assertLess(src.index("zoo_recovery.require_config"),
-                        src.index("pet_slots.prepare"))
-        self.assertLess(src.index("pet_slots.prepare"),
-                        src.index("pet_slots.load_pet"))
-        self.assertLess(src.index("pet_slots.load_pet"),
-                        src.index("vt = 0"))
+                        src.index("pet_slots.load_selection"))
+        self.assertLess(src.index("pet_slots.load_selection"), src.index("vt = 0"))
 
     def test_software_update_copies_main_last(self):
         script = (ROOT / "deploy.sh").read_text(encoding="utf-8")

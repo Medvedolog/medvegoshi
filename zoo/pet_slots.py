@@ -367,6 +367,28 @@ def prepare(active_id, root=""):
         raise SlotError("slot_io", active_id)
 
 
+def load_selection(config, defaults, retired=(), fallback="capi", root=""):
+    """Resolve a retired selection without relabeling or deleting its data.
+
+    Finish the copy-only legacy migration with the old on-disk owner first.
+    Only after loading the independent fallback slot publish the new setting.
+    """
+    selected = config["personagem"]
+    prepare(selected, root)
+    if selected not in retired:
+        return load_pet(selected, defaults, root)
+    prepare(fallback, root)
+    pet = load_pet(fallback, defaults, root)
+    updated = dict(config)
+    updated["personagem"] = fallback
+    for key in ("pet_id", "_pet_id", "animal_id"):
+        if updated.get(key) == selected:
+            updated[key] = fallback
+    save_json(_join(root, "config.json"), updated)
+    config.update(updated)
+    return pet
+
+
 def _require_prepared(root, pet_id):
     try:
         if (not _is_dir(_join(root, SAVE_ROOT)) or

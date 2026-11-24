@@ -1,6 +1,6 @@
 """MedveGoshi Zoo: one boot-time registry for optional animal plugins.
 
-The original 10 Capigoshi animals stay built in, in their original order.
+The nine retained Capigoshi animals stay in their original order.
 An additional animal is a self-contained directory:
   /zoo/animals/<id>/__init__.py
   /zoo/animals/<id>/manifest.json
@@ -28,8 +28,8 @@ BUILTINS = (
     ("gato", "Кот", 75),
     ("et", "Пришелец", 81),
     ("sapinho", "Лягушонок", 65),
-    ("naufrago", "Робинзон", 79),
 )
+RETIRED = ("naufrago",)  # keep the legacy save ID reserved, not playable
 ROOT = __file__.rsplit("/", 1)[0] + "/animals"
 MANIFEST_LIMIT = 4096
 MAX_PLUGINS = 12
@@ -81,7 +81,7 @@ def validate_manifest(info, folder_id):
         raise ValueError("invalid plugin directory / manifest")
     if info.get("schema") != 1 or info.get("id") != folder_id:
         raise ValueError("plugin manifest schema/id mismatch")
-    if folder_id in (x[0] for x in BUILTINS):
+    if folder_id in RETIRED or folder_id in (x[0] for x in BUILTINS):
         raise ValueError("built-in character id is reserved")
     name = info.get("name_ru")
     if not isinstance(name, str) or not 1 <= len(name) <= 14:
@@ -175,7 +175,7 @@ def make_catalogue(found):
     ordered = [x for x in bundled if x in found]
     ordered += [x for x in sorted(found) if x not in bundled]
     for key in ordered:
-        if key in names:
+        if key in names or key in RETIRED:
             continue
         data = found[key]
         ids.append(key)
