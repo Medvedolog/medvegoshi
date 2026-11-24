@@ -2,7 +2,7 @@
 
 [← На главную](../README.md) · [Бйорни крупным планом](#бйорни-крупным-планом)
 
-Все кадры сняты в эмуляторе **AMOLED V1, 368×448** из русской сборки [PR #2](https://github.com/Medvedolog/medvegoshi/pull/2). Реплики, часы и метки полей набраны пропорциональным Noto Sans Bold в родном разрешении, как и меню. Слева игровой момент, справа тот же питомец в меню «Настройки». Подписи поясняют сцену; реплики в кавычках взяты с экрана. Нажми на кадр, чтобы увеличить.
+Все кадры сняты в эмуляторе **AMOLED V1, 368×448** из русской сборки [PR #2](https://github.com/Medvedolog/medvegoshi/pull/2). Реплики, часы и метки полей набраны пропорциональным Noto Sans Bold в родном разрешении, как и меню. В крупном режиме сцена рисуется прямо в 368×435 внутри панели, без растягивания кадра 240×284. Карамелька получила новый облик медвежонка с несколькими тонами шерсти и мелкими бликами на AMOLED. Слева игровой момент, справа тот же питомец в меню «Настройки». Подписи поясняют сцену; реплики в кавычках взяты с экрана. Нажми на кадр, чтобы увеличить.
 
 | Питомец и сцена | В игре | В настройках |
 |---|:---:|:---:|
@@ -16,8 +16,8 @@
 | **8. Пришелец**<br>Прыжок на прогулке<br>«Поле 1» | <a href="img/medvegoshi-ru/gallery/et-play.png"><img src="img/medvegoshi-ru/gallery/et-play.png" width="174" alt="Пришелец — Прыжок на прогулке"></a> | <a href="img/medvegoshi-ru/gallery/et-settings.png"><img src="img/medvegoshi-ru/gallery/et-settings.png" width="174" alt="Пришелец в меню Настройки"></a> |
 | **9. Лягушонок**<br>Лекарство<br>«Мне лучше!» | <a href="img/medvegoshi-ru/gallery/sapinho-play.png"><img src="img/medvegoshi-ru/gallery/sapinho-play.png" width="174" alt="Лягушонок — Лекарство"></a> | <a href="img/medvegoshi-ru/gallery/sapinho-settings.png"><img src="img/medvegoshi-ru/gallery/sapinho-settings.png" width="174" alt="Лягушонок в меню Настройки"></a> |
 | **10. Пип**<br>Самостоятельный режим<br>«17:00» | <a href="img/medvegoshi-ru/gallery/pip-play.png"><img src="img/medvegoshi-ru/gallery/pip-play.png" width="174" alt="Пип — Самостоятельный режим"></a> | <a href="img/medvegoshi-ru/gallery/pip-settings.png"><img src="img/medvegoshi-ru/gallery/pip-settings.png" width="174" alt="Пип в меню Настройки"></a> |
-| **10. Жирафик**<br>Взрослый на прогулке<br>«Поле 1» | <a href="img/medvegoshi-ru/gallery/girafa-play.png"><img src="img/medvegoshi-ru/gallery/girafa-play.png" width="174" alt="Жирафик — Взрослый на прогулке"></a> | <a href="img/medvegoshi-ru/gallery/girafa-settings.png"><img src="img/medvegoshi-ru/gallery/girafa-settings.png" width="174" alt="Жирафик в меню Настройки"></a> |
-| **11. Бйорни**<br>Вечерние гуляшки<br>«Поле 1» | <a href="img/medvegoshi-ru/gallery/bjorni-play.png"><img src="img/medvegoshi-ru/gallery/bjorni-play.png" width="174" alt="Бйорни — Вечерние гуляшки"></a> | <a href="img/medvegoshi-ru/gallery/bjorni-settings.png"><img src="img/medvegoshi-ru/gallery/bjorni-settings.png" width="174" alt="Бйорни в меню Настройки"></a> |
+| **11. Жирафик**<br>Взрослый на прогулке<br>«Поле 1» | <a href="img/medvegoshi-ru/gallery/girafa-play.png"><img src="img/medvegoshi-ru/gallery/girafa-play.png" width="174" alt="Жирафик — Взрослый на прогулке"></a> | <a href="img/medvegoshi-ru/gallery/girafa-settings.png"><img src="img/medvegoshi-ru/gallery/girafa-settings.png" width="174" alt="Жирафик в меню Настройки"></a> |
+| **12. Бйорни**<br>Вечерние гуляшки<br>«Поле 1» | <a href="img/medvegoshi-ru/gallery/bjorni-play.png"><img src="img/medvegoshi-ru/gallery/bjorni-play.png" width="174" alt="Бйорни — Вечерние гуляшки"></a> | <a href="img/medvegoshi-ru/gallery/bjorni-settings.png"><img src="img/medvegoshi-ru/gallery/bjorni-settings.png" width="174" alt="Бйорни в меню Настройки"></a> |
 
 ## Бйорни крупным планом
 
@@ -33,9 +33,9 @@
 
 ## Как питомцы кувыркаются
 
-Кот, Капи и Слон теперь хорошо различаются даже в меню. Серия из эмулятора показывает, как поворачивается весь спрайт: глаза, лапы, уши, хвост и хобот остаются на месте относительно тела.
+Карамелька, Кот, Капи и Слон в пяти фазах кувырка. Весь спрайт поворачивается одним слоем: глаза, лапы, уши, хвост и хобот остаются на месте относительно тела.
 
-[![Пять фаз кувырка у Кота, Капи и Слона](img/medvegoshi-ru/pets-turn.png)](img/medvegoshi-ru/pets-turn.png)
+[![Пять фаз кувырка у Карамельки, Кота, Капи и Слона](img/medvegoshi-ru/pets-turn.png)](img/medvegoshi-ru/pets-turn.png)
 
 ### Как переснять
 

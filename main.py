@@ -1866,15 +1866,27 @@ def passo(agora, dt):
         salvar(arquivo_pet(cfg['personagem']), pet)
     put = getattr(tela, 'scene_text', None)
     if put is None:
-        desenhar_jogo(agora)  # IPS and V1 diagnostic 1:1 retain the original font
-    else:
+        desenhar_jogo(agora)  # IPS and V1 diagnostic 1:1 retain original geometry
+        desenhar_sobreposicoes(agora)
+        return
+    begin = getattr(tela, 'begin_native_frame', None)
+    canvas = begin() if begin is not None else None
+    complete = False
+    if canvas is not None:
+        d.usar(canvas)
+    try:
         d.usar_texto_jogo(put, tela.scene_metrics)
         try:
             desenhar_jogo(agora)
         finally:
             d.usar_texto_jogo()
         tela.scene_cover(int(menu_borda) if menu_borda >= 1 else 0)
-    desenhar_sobreposicoes(agora)
+        desenhar_sobreposicoes(agora)
+        complete = True
+    finally:
+        if canvas is not None:
+            d.usar(tela.fb)
+            tela.end_native_frame(complete)
 
 
 def principal():

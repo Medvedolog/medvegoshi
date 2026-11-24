@@ -110,3 +110,67 @@ class SpriteCohesionTests(unittest.TestCase):
             on, _ = paint(self.art, 'gato', math.pi / 2, zoom=(0.9, 1.1))
         off, _ = paint(self.art, 'gato', 0, zoom=(0.9, 1.1))
         self.assertEqual(on.tobytes(), off.tobytes())
+
+
+def image_pixels(im):
+    return getattr(im, 'get_flattened_data', im.getdata)()
+
+
+class NativeSpriteTests(unittest.TestCase):
+    def setUp(self):
+        from ports.v1_native_canvas import NativeCanvas
+        from ports.v1_scale import VIEWPORT_LARGE
+        self.art = load_art()
+        self.canvas = NativeCanvas(
+            bytearray(VIEWPORT_LARGE.width * VIEWPORT_LARGE.height * 2),
+            SimpleNamespace(FrameBuffer=FrameBuffer, RGB565=RGB565, MONO_HLSB=MONO_HLSB),
+            VIEWPORT_LARGE)
+
+    def draw(self, pet, angle, x=120, flip=1):
+        self.canvas.fill(wire_color(*GREEN))
+        self.art.usar(self.canvas)
+        return self.art.personagem_vivo(pet, x, 196,
+            {'rot': angle, 'flip': flip}, {'grama_e': GREEN}, 310, 'normal', 'sorriso')
+
+    def mask(self):
+        return {(i % self.canvas.width, i // self.canvas.width)
+                for i, color in enumerate(image_pixels(self.canvas.fb.image)) if color != GREEN}
+
+    def test_all_twelve_can_turn_and_land_exactly_on_native_canvas(self):
+        self.assertEqual(len(self.art.ELENCO), 12)
+        for pet in self.art.ELENCO:
+            with self.subTest(pet=pet):
+                p = self.draw(pet, 0)
+                start = self.canvas.fb.image.tobytes()
+                self.draw(pet, -math.pi / 3)
+                self.assertGreater(len(self.mask()), 3000)
+                self.assertNotEqual(start, self.canvas.fb.image.tobytes())
+                q = self.draw(pet, -math.tau)
+                self.assertEqual(p['eyes'], q['eyes'])
+                self.assertEqual(start, self.canvas.fb.image.tobytes())
+        self.assertLess(len(self.art._roll_native.buf), 76 * 1024)
+        self.assertIsNone(self.art._roll_buf)
+
+    def test_caramel_bear_rotates_as_single_layer_and_terrain_can_cover_it(self):
+        for a in (-math.pi / 3, math.pi / 2, math.pi):
+            with self.subTest(angle=a):
+                self.draw('cachorro', a)
+                points = self.mask()
+                self.assertGreater(largest_component(points), 0.99 * len(points))
+        self.draw('cachorro', math.pi / 4, x=7, flip=-1)
+        self.assertGreater(len(self.mask()), 300)
+        self.draw('cachorro', math.pi / 3)
+        self.canvas.fill_rect(0, 0, W, H, wire_color(*GREEN))
+        self.assertFalse(self.mask())
+
+    def test_native_fine_detail_is_not_a_scaled_legacy_frame(self):
+        self.draw('cachorro', 0)
+        dst = self.canvas.fb.image
+        low, _ = paint(self.art, 'cachorro', 0, y=196)
+        # More native color transitions and independently positioned edges
+        # persist even after dropping the native-only palette highlights.
+        glint = self.canvas.fb.color(wire_color(255, 226, 169))
+        self.assertIn(glint, set(image_pixels(dst)))
+        self.assertNotIn(glint, set(image_pixels(low)))
+        up = low.resize(dst.size, resample=0)
+        self.assertGreater(sum(a != b for a, b in zip(image_pixels(dst), image_pixels(up))), 1000)

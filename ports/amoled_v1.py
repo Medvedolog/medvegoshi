@@ -157,14 +157,17 @@ class Tela:
         self._notice = None
         self._scene_top = 0
         self._scaler = self._menu = self._scene = self._native_fb = None
+        self._canvas = None
+        self._native_pending = False
         self.wire_buf = self.buf
         if viewport is VIEWPORT_LARGE:
             from ports import v1_menu_font
+            from ports.v1_native_canvas import NativeCanvas
             self._font = v1_menu_font
             self._scaler = Scaler(viewport)
             self.wire_buf = bytearray(self._scaler.output_bytes)
-            self._native_fb = framebuffer_module.FrameBuffer(
-                self.wire_buf, viewport.width, viewport.height, framebuffer_module.RGB565)
+            self._canvas = NativeCanvas(self.wire_buf, framebuffer_module, viewport)
+            self._native_fb = self._canvas.fb
             self._menu = []
             self._scene = []
             self.menu_text = self._queue_text
@@ -172,6 +175,13 @@ class Tela:
             self.scene_text = self._queue_scene_text
             self.scene_metrics = self._scene_metrics
             self.scene_cover = self._scene_cover
+
+    def begin_native_frame(self):
+        """Draw a complete game frame directly into the existing QSPI buffer."""
+        return self._canvas
+
+    def end_native_frame(self, complete):
+        self._native_pending = bool(self._canvas is not None and complete)
 
     def _queue_text(self, text, x, y, color, esc=1, box=None):
         return self._queue_label(self._menu, text, x, y, color, esc, box)
@@ -242,7 +252,14 @@ class Tela:
         # native tx_color issues RAMWR and uses the actual buffer length.
         try:
             if self._scaler is not None:
-                self._scaler.copy(self.buf, self.wire_buf)
+                load_wire = None
+                if not self._native_pending:
+                    self._scaler.copy(self.buf, self.wire_buf)
+                    # Only image-backed host fixtures need to import the
+                    # scaled bytes before painting directly over them.
+                    load_wire = getattr(self._native_fb, 'load_wire', None)
+                    if load_wire is not None:
+                        load_wire()
                 if self._scene:
                     for label in self._scene:
                         if not self._scene_top or label[2] >= self._scene_top:
@@ -252,6 +269,8 @@ class Tela:
                         self._font.draw(self._native_fb, *label)
                 if self._notice is not None:
                     self._draw_notice()
+                if self._native_pending or load_wire is not None:
+                    self._canvas.flush()
             self.panel.tx_param(_LCD_CASET, self._columns)
             self.panel.tx_param(_LCD_RASET, self._rows)
             self.panel.tx_color(0, self.wire_buf)
@@ -262,6 +281,7 @@ class Tela:
                 self._scene.clear()
             self._scene_top = 0
             self._notice = None
+            self._native_pending = False
 
 
 def prepare_v1(i2c, machine_module=None, amoled_module=None,

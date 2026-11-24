@@ -60,38 +60,24 @@ def _remap_inputs(inputs, screen_mode, physical_touches):
     return tuple(mapped)
 
 
-class _WireOverlayFrameBuffer:
-    """Physical RGB565 fixture: native menu glyphs modify the scaled bytes."""
-    def __init__(self, buf, width, height):
-        self.buf, self.width, self.height = buf, width, height
+class _WireGameFrameBuffer(FrameBuffer):
+    def load_wire(self):
+        from ports.emulate_v1 import image_from_wire
+        self.image.paste(image_from_wire(self.buf, self.image.size))
 
     def pixel(self, x, y, color=None):
-        if not (0 <= x < self.width and 0 <= y < self.height):
+        rgb = super().pixel(x, y, color)
+        if rgb is None or color is not None:
             return None
-        at = 2 * (y * self.width + x)
-        if color is None:
-            return self.buf[at] | (self.buf[at + 1] << 8)
-        self.buf[at] = color & 0xFF
-        self.buf[at + 1] = (color >> 8) & 0xFF
-
-    def fill_rect(self, x, y, width, height, color):
-        left, top = max(0, x), max(0, y)
-        right, bottom = min(self.width, x + width), min(self.height, y + height)
-        if left >= right or top >= bottom:
-            return
-        # MicroPython RGB565 stores each 16-bit word little-endian.
-        # The game's byte-swapped palette is already prepared for the wire.
-        row = struct.pack("<H", color & 0xFFFF) * (right - left)
-        for yy in range(top, bottom):
-            start = 2 * (yy * self.width + left)
-            self.buf[start:start + len(row)] = row
+        r, g, b = rgb
+        word = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
+        return ((word & 255) << 8) | (word >> 8)
 
 
 def _framebuffer(buf, width, height, fmt):
-    viewport = v1.VIEWPORT_LARGE
-    if fmt == RGB565 and (width, height) == (viewport.width, viewport.height):
-        return _WireOverlayFrameBuffer(buf, width, height)
-    return FrameBuffer(buf, width, height, fmt)
+    # Native text blends with the underlying RGB565 word, like MicroPython.
+    cls = _WireGameFrameBuffer if fmt == RGB565 else FrameBuffer
+    return cls(buf, width, height, fmt)
 
 
 # Each touch moves through the real FT3168 register/data path; in particular
@@ -294,7 +280,8 @@ def emulate(inputs=SCRIPT, *, fixtures=None, pet_images=None, rtc_valid=True,
             nonlocal game_state
             if not game_state and app_path is not None:
                 game_state = vars(sys.modules["v1_game_app"])
-            tela.fb.flush()
+            if not tela._native_pending:
+                tela.fb.flush()
             draw_to_panel()
             menu_history.append(game_state["menu_alvo"])
             active = game_state["cfg"]["personagem"]

@@ -139,7 +139,10 @@ def rect(x, y, w, h, c):
             x0, y0 = _p(x, y)
             x1, y1 = _p(x + w, y + h)
             x, y, w, h = min(x0, x1), min(y0, y1), max(1, abs(x1 - x0)), max(1, abs(y1 - y0))
-    _fb.fill_rect(ri(x), ri(y), ri(w), ri(h), C(c))
+    if getattr(_fb, 'native_art', False):
+        _fb.fill_rect(x, y, w, h, C(c))
+    else:
+        _fb.fill_rect(ri(x), ri(y), ri(w), ri(h), C(c))
 
 
 def px(x, y, c):
@@ -160,14 +163,20 @@ def linha(x1, y1, x2, y2, c):
     if _T:
         x1, y1 = _p(x1, y1)
         x2, y2 = _p(x2, y2)
-    _fb.line(ri(x1), ri(y1), ri(x2), ri(y2), C(c))
+    if getattr(_fb, 'native_art', False):
+        _fb.line(x1, y1, x2, y2, C(c))
+    else:
+        _fb.line(ri(x1), ri(y1), ri(x2), ri(y2), C(c))
 
 
 def ell(x, y, rx, ry, c, cheia=True, m=0):
     if _T:
         x, y = _p(x, y)
         rx, ry = rx * abs(_T[2]), ry * _T[3]
-    _fb.ellipse(ri(x), ri(y), ri(max(0.5, rx)), ri(max(0.5, ry)), C(c), cheia, _MASK[m])
+    if getattr(_fb, 'native_art', False):
+        _fb.ellipse(x, y, max(0.5, rx), max(0.5, ry), C(c), cheia, _MASK[m])
+    else:
+        _fb.ellipse(ri(x), ri(y), ri(max(0.5, rx)), ri(max(0.5, ry)), C(c), cheia, _MASK[m])
 
 
 def arco(x, y, rx, ry, c, m, g=2):
@@ -176,13 +185,14 @@ def arco(x, y, rx, ry, c, m, g=2):
 
 
 def poly(x, y, pts, c):
-    a = array('h', bytes(2 * len(pts)))
+    native = getattr(_fb, 'native_art', False)
+    a = [0] * len(pts) if native else array('h', bytes(2 * len(pts)))
     for i in range(0, len(pts), 2):
         qx, qy = x + pts[i], y + pts[i + 1]
         if _T:
             qx, qy = _p(qx, qy)
-        a[i] = ri(qx)
-        a[i + 1] = ri(qy)
+        a[i] = qx if native else ri(qx)
+        a[i + 1] = qy if native else ri(qy)
     _fb.poly(0, 0, a, C(c), True)
 
 
@@ -738,22 +748,66 @@ def calopsita(cx, pe, olhos, boca, doente, s, ol):
 
 
 def cachorro(cx, pe, olhos, boca, doente, s, ol):
-    E, P, R, A = _rel(cx, pe, s, ol, lambda c: CAR_ESC if c == CAR else None)
-    E(28, -36, 6, 11, CAR, 1); E(31, -46, 4, 4, CAR_CL)                # rabo
-    E(-11, -2, 8, 4, CAR_ESC, 1); E(11, -2, 8, 4, CAR_ESC, 1)
-    E(0, -32, 27, 32, CAR, 1); E(0, -24, 16, 20, CAR_CL)
-    E(-19, -36, 6, 10, CAR_ESC); E(19, -36, 6, 10, CAR_ESC)
-    E(0, -74, 30, 27, CAR, 1)
-    E(-29, -70, 9, 17, CAR_ORELHA, 1); E(29, -70, 9, 17, CAR_ORELHA, 1)
-    E(0, -62, 13, 9, CAR_CL)
-    bc = ENJOADA if doente else (240, 150, 150)
-    E(-20, -63, 5, 3, bc); E(20, -63, 5, 3, bc)
-    _olhos(E, R, A, ((-12, -78, 7), (12, -78, 7)), olhos, PRETO, CAR)
-    E(0, -67, 4, 3, PRETO)
-    _boca(E, A, boca, 0, -61, 0.8, PRETO, True)
+    """Карамелька: warm caramel teddy. The old save/peer id is intentional."""
+    E, P, R, A = _rel(cx, pe, s, ol, None)
+    ink, rim = (70, 38, 30), (104, 53, 35)
+    shade, mid, fur = (135, 71, 43), (171, 93, 50), (204, 127, 62)
+    glow, gold = (228, 156, 81), (249, 187, 107)
+    milk, cream = (237, 178, 117), (255, 216, 152)
+    rose, blush = (181, 93, 77), (231, 128, 108)
+    # Back paws, round ears and a low belly give the bear a toy-like silhouette.
+    E(-22, -98, 12, 13, rim, 1); E(22, -98, 12, 13, rim, 1)
+    for x in (-22, 22):
+        E(x - 0.8, -99.5, 10.2, 10.5, mid)
+        E(x - 1.4, -101, 7.8, 8, glow)
+        E(x + 0.5, -98, 6.3, 7.2, rose)
+        E(x - 0.3, -100.1, 4.4, 4.9, blush)
+    E(0, -28, 30, 29, rim, 1)
+    E(-1, -29, 28, 26, shade)
+    E(-2, -32, 26, 22.5, mid)
+    E(-2, -24, 17.5, 18, glow)
+    E(-3.5, -25.5, 15.2, 15.5, milk)
+    E(-6, -29, 9, 8, cream)
+    for x in (-24, 24):
+        E(x, -31, 8.5, 13.5, rim)
+        E(x - 1, -32, 6.7, 11.1, mid)
+        E(x - 2, -35, 4.2, 6.5, glow)
+    for x in (-16.5, 16.5):
+        E(x, -5.5, 11, 8.5, rim, 1)
+        E(x - 0.35, -6.7, 9.6, 6.1, mid)
+        E(x - 0.75, -6.8, 6.8, 4.8, milk)
+    # Layered, asymmetrical values rather than a blurred gradient.
+    E(0, -76, 31, 27, rim, 1)
+    E(0, -76, 29, 26, shade)
+    E(-1.2, -78.5, 27.4, 23.2, fur)
+    E(-5.2, -84, 21, 16, glow)
+    E(-11.5, -90.4, 11.7, 7, gold)
+    E(0, -63, 17, 13, mid)
+    E(0, -65, 16.2, 11.6, milk)
+    E(-1.2, -67, 14, 9.1, cream)
+    bc = ENJOADA if doente else blush
+    E(-23, -67, 4.7, 2.7, bc); E(23, -67, 4.7, 2.7, bc)
+    eyes = ((-12, -81, 5.5), (12, -81, 5.5))
+    _olhos(E, R, A, eyes, olhos, ink, glow)
+    P(0, -69, (-5.8, -1.6, -3.8, -3.6, 3.8, -3.6, 5.8, -1.6,
+                2.6, 2.1, 0, 3.7, -2.6, 2.1), ink)
+    _boca(E, A, boca, 0, -62, 1.2, ink, True)
+    # Fine highlights/stitching are drawn at the panel's physical pitch.
+    if getattr(_fb, 'native_art', False) and s >= 0.43:
+        E(-1.6, -70.9, 1.6, 0.7, (255, 226, 169))
+        for x in (-16.5, 16.5):
+            for off, dy in ((-4.7, -9.8), (0, -11.2), (4.7, -9.8)):
+                E(x + off, dy, 1, 0.75, cream)
+        for x, y in ((-17.8, -95.1), (-14, -97), (-9.7, -97.5), (12.4, -97.2),
+                     (-23.7, -70.3), (-20.6, -69.8), (21.8, -69.9)):
+            E(x, y, 0.95, 0.76, cream if y < -90 else rose)
+        if olhos == 'normal':
+            E(-10.7, -84.2, 0.85, 0.9, cream)
+            E(13.3, -84.2, 0.85, 0.9, cream)
     if doente:
         termometro(cx + 34 * s, pe - 60 * s)
-    return pe - 74 * s, pe - 101 * s, 30 * s, [(cx + ox * s, pe + oy * s) for ox, oy, _ in ((-12, -78, 7), (12, -78, 7))]
+    return pe - 76 * s, pe - 112 * s, 34 * s, [
+        (cx + x * s, pe + y * s) for x, y, _ in eyes]
 
 
 def uses_pose_animation(id):
@@ -774,16 +828,30 @@ def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol, pip_state=None, motio
         if id == 'pip' and pip_state is not None and _T is None:
             try:
                 from zoo.pip import eyes as native_eyes
-                w, h = ri(54 * s), ri(32 * s)
-                x, y = ri(cx - w / 2), ri(pe - 94 * s)
-                tile = native_eyes.try_tile(_fb, x, y, w, h, olhos,
-                                            pip_state[0], pip_state[1], W, H)
-            except (ImportError, OSError, ValueError, MemoryError):
+                tile_dst, tile_screen_w, tile_screen_h = _fb, W, H
+                if getattr(_fb, 'native_art', False):
+                    # The native C rasterizer owns these exact panel pixels.
+                    # Bypass logical blit so the eyes are not upscaled twice.
+                    tile_dst = _fb.fb
+                    tile_screen_w, tile_screen_h = _fb.width, _fb.height
+                    x = _fb.map_x(cx - 27 * s)
+                    y = _fb.map_y(pe - 94 * s)
+                    w = _fb.map_x(cx + 27 * s) - x
+                    h = _fb.map_y(pe - 62 * s) - y
+                else:
+                    w, h = ri(54 * s), ri(32 * s)
+                    x, y = ri(cx - w / 2), ri(pe - 94 * s)
+                tile = native_eyes.try_tile(tile_dst, x, y, w, h, olhos,
+                                            pip_state[0], pip_state[1],
+                                            tile_screen_w, tile_screen_h)
+            except (ImportError, OSError, ValueError, MemoryError, AttributeError):
                 pass
         if tile is None:
             if info.get('animated') is True:
-                # Snap both edges together so fractional scales don't leave
-                # sky-coloured gaps between adjacent source rectangles.
+                # Snap both edges on the destination's actual pixel grid;
+                # native AMOLED keeps fractional coordinates until mapping.
+                native_art = getattr(_fb, 'native_art', False)
+
                 def sprite_rect(dx, dy, w, h, color):
                     x0, y0 = cx + dx * s, pe + dy * s
                     x1, y1 = x0 + w * s, y0 + h * s
@@ -793,7 +861,8 @@ def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol, pip_state=None, motio
                     if _T:
                         x0, y0 = _p(x0, y0)
                         x1, y1 = _p(x1, y1)
-                    x0, x1, y0, y1 = ri(x0), ri(x1), ri(y0), ri(y1)
+                    if not native_art:
+                        x0, x1, y0, y1 = ri(x0), ri(x1), ri(y0), ri(y1)
                     if x1 < x0:
                         x0, x1 = x1, x0
                     if y1 < y0:
@@ -806,7 +875,7 @@ def _animal_plugin(id, cx, pe, olhos, boca, doente, s, ol, pip_state=None, motio
         else:
             try:
                 points = fn(E, R, P, A, olhos, boca, doente, draw_eyes=False)
-                _fb.blit(tile, x, y, 0)
+                tile_dst.blit(tile, x, y, 0)
             except (AttributeError, OSError, TypeError, ValueError, MemoryError):
                 points = fn(E, R, P, A, olhos, boca, doente)
         if not isinstance(points, (tuple, list)) or len(points) != 2:
@@ -929,8 +998,8 @@ def personagem(id, cx, pe, olhos='normal', boca='sorriso', doente=False, contorn
         s *= 0.62
     global olhos_ult
     # A sprite is an optional skin installed in /zoo/packs/<character-id>/.
-    # Keep the procedural artist for missing/corrupt packs and for transformed
-    # animation frames: rotation/stretching is not yet supported by bitmap art.
+    # Keep the procedural artist for missing/corrupt packs and direct stretches.
+    # Whole-pose turns support packs by composing them before the transform.
     sprite_info = None
     if _T is None and id in ELENCO:
         sprite_info = zoo_sprites.draw(_fb, id, cx, pe, s, olhos, boca, doente,
@@ -1131,34 +1200,47 @@ def recobrir_chao(ph, x0, x1, base, X, t):
 _ROLL_W, _ROLL_H = 120, 136
 _ROLL_CX, _ROLL_FEET = 60, 123
 _ROLL_KEY = 0x1FF8  # wire-order RGB565 magenta (not in the game palettes)
-_roll_buf = _roll_fb = None
+_roll_buf = _roll_fb = _roll_native = None
 
 
 def _paint_roll(dst, src, x, y, kx, ky, cs, sn, pivot, sx0, sy0, sx1, sy1):
-    # Bound the work by the transformed sprite extent, not the full screen.
+    # All geometry remains logical, but sample and paint at the target's
+    # actual pixel pitch. The physical tile has the same aspect as its canvas.
+    native = getattr(dst, 'native_art', False)
+    dx, dy = (dst.sx, dst.sy) if native else (1, 1)
+    sw, sh = (dst.width, dst.height) if native else (W, H)
+    a_sx, a_sy = (src.sx, src.sy) if getattr(src, 'native_art', False) else (1, 1)
+    src_pixels = src.fb if a_sx != 1 or a_sy != 1 else src
+    dst_pixels = dst.fb if native else dst
     corners = []
     for tx, ty in ((sx0, sy0), (sx0, sy1), (sx1, sy0), (sx1, sy1)):
         u = (tx - _ROLL_CX) * kx
         v = y + (ty - _ROLL_FEET) * ky - pivot
-        corners.append((x + u * cs - v * sn, pivot + u * sn + v * cs))
+        corners.append(((x + u * cs - v * sn) * dx,
+                        (pivot + u * sn + v * cs) * dy))
     left = max(0, int(math.floor(min(c[0] for c in corners))) - 1)
-    right = min(W, int(math.ceil(max(c[0] for c in corners))) + 1)
+    right = min(sw, int(math.ceil(max(c[0] for c in corners))) + 1)
     top = max(0, int(math.floor(min(c[1] for c in corners))) - 1)
-    bottom = min(H, int(math.ceil(max(c[1] for c in corners))) + 1)
+    bottom = min(sh, int(math.ceil(max(c[1] for c in corners))) + 1)
     if left >= right or top >= bottom:
         return
     # Inverse nearest-neighbour. One source lookup gives color and coverage,
     # so independently rounded parts can never create compositing gaps.
-    step_x, step_y = ri(cs / kx * 4096), ri(-sn / ky * 4096)
-    start_x = _ROLL_CX + cs * (left - x) / kx
-    start_y = _ROLL_FEET + (pivot - y - sn * (left - x)) / ky
-    get_pixel, fill = src.pixel, dst.fill_rect
+    step_x = ri(cs * a_sx / (kx * dx) * 4096)
+    step_y = ri(-sn * a_sy / (ky * dx) * 4096)
+    start_x = _ROLL_CX + cs * (left / dx - x) / kx
+    start_y = _ROLL_FEET + (pivot - y - sn * (left / dx - x)) / ky
+    if src_pixels is not src:
+        sx0, sx1 = src.map_x(sx0), src.map_x(sx1)
+        sy0, sy1 = src.map_y(sy0), src.map_y(sy1)
+    get_pixel, fill = src_pixels.pixel, dst_pixels.fill_rect
     # The host Pillow fixture returns RGB tuples, MicroPython returns words.
     probe = get_pixel(0, 0)
     native_words = type(probe) is int
     for py in range(top, bottom):
-        a = ri((start_x + sn * (py - pivot) / kx) * 4096) + 2048
-        b = ri((start_y + cs * (py - pivot) / ky) * 4096) + 2048
+        row = py / dy - pivot
+        a = ri((start_x + sn * row / kx) * a_sx * 4096) + 2048
+        b = ri((start_y + cs * row / ky) * a_sy * 4096) + 2048
         run, run_x = _ROLL_KEY, left
         for px in range(left, right):
             tx, ty = a >> 12, b >> 12
@@ -1181,20 +1263,23 @@ def _paint_roll(dst, src, x, y, kx, ky, cs, sn, pivot, sx0, sy0, sx1, sy1):
 
 def _personagem_rolado(id, x, y, kx, ky, rot, pivot, olhos, boca, doente,
                        fase, pip_state, motion):
-    global _roll_buf, _roll_fb, _fb, olhos_ult
+    global _roll_buf, _roll_fb, _roll_native, _fb, olhos_ult
     if not 0.25 <= abs(kx) <= 2 or not 0.25 <= abs(ky) <= 2:
         return None
-    if _roll_fb is None:
-        try:
-            buf = bytearray(_ROLL_W * _ROLL_H * 2)
-            fb = framebuf.FrameBuffer(buf, _ROLL_W, _ROLL_H, framebuf.RGB565)
-        except (MemoryError, AttributeError, ValueError):
-            return None
-        _roll_buf, _roll_fb = buf, fb
     old_fb = _fb
     try:
-        _roll_fb.fill(_ROLL_KEY)
-        _fb = _roll_fb
+        if getattr(old_fb, 'native_art', False):
+            if _roll_native is None:
+                _roll_native = old_fb.new_tile(_ROLL_W, _ROLL_H)
+            tile = _roll_native
+        else:
+            if _roll_fb is None:
+                buf = bytearray(_ROLL_W * _ROLL_H * 2)
+                fb = framebuf.FrameBuffer(buf, _ROLL_W, _ROLL_H, framebuf.RGB565)
+                _roll_buf, _roll_fb = buf, fb
+            tile = _roll_fb
+        tile.fill(_ROLL_KEY)
+        _fb = tile
         cab, topo, meia = personagem(id, _ROLL_CX, _ROLL_FEET, olhos, boca,
                                      doente, fase=fase, pip_state=pip_state, motion=motion)
     except (MemoryError, AttributeError, ValueError):
@@ -1210,7 +1295,7 @@ def _personagem_rolado(id, x, y, kx, ky, rot, pivot, olhos, boca, doente,
     if sx0 < 0 or sx1 > _ROLL_W or sy0 < 0 or sy1 > _ROLL_H:
         return None
     cs, sn = math.cos(rot), math.sin(rot)
-    _paint_roll(old_fb, _roll_fb, x, y, kx, ky, cs, sn, pivot, sx0, sy0, sx1, sy1)
+    _paint_roll(old_fb, tile, x, y, kx, ky, cs, sn, pivot, sx0, sy0, sx1, sy1)
     transformar(x, y, kx, ky, rot, pivot)
     try:
         olhos_ult = [_p(x + ex - _ROLL_CX, y + ey - _ROLL_FEET) for ex, ey in olhos_ult]
@@ -1236,6 +1321,10 @@ def personagem_vivo(id, cx, pe, lp, ph, t, olhos, boca, doente=False, fase='adul
     for f in fx:
         _fx_antes(f, X, base, cx)
     rot = lp.get('rot', 0) * fl
+    # Exact closing pose: don't resample an already upright pose on a
+    # slightly different physical grid at 360°.
+    if rot and abs(rot % (2 * math.pi)) < 1e-7:
+        rot = 0
     cy = Y - alt * 0.45 * sy
     # A directional animation already faces the walking direction.
     draw_flip = 1 if motion and motion[0] in ('walk-right', 'walk-left') else fl

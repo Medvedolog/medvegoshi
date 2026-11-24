@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from ports import amoled_v1 as v1, emulate_v1 as panel_sim, v1_menu_font
 from ports.v1_full_game_emulate import (
-    SCRIPT, SWITCH_SCRIPT, _OPEN, _WireOverlayFrameBuffer, _remap_inputs, emulate,
+    SCRIPT, SWITCH_SCRIPT, _OPEN, _WireGameFrameBuffer, _remap_inputs, emulate,
 )
 
 
@@ -14,10 +14,12 @@ def _legacy_touch(x, y, **buttons):
 
 
 class LargeV1EmulatorTest(unittest.TestCase):
-    def test_native_overlay_rect_writes_directly_to_clipped_wire_buffer(self):
+    def test_native_overlay_rect_keeps_endianness_and_clips(self):
         data = bytearray(b"\xaa" * 12)
-        surface = _WireOverlayFrameBuffer(data, 3, 2)
+        surface = _WireGameFrameBuffer(data, 3, 2, panel_sim.RGB565)
+        surface.load_wire()
         surface.fill_rect(-1, 1, 3, 2, 0x00F8)
+        surface.flush()
         self.assertEqual(data, b"\xaa" * 6 + b"\xf8\x00\xf8\x00\xaa\xaa")
 
     def test_legacy_scripts_follow_the_same_touch_transform_as_large_display(self):
@@ -38,7 +40,8 @@ class LargeV1EmulatorTest(unittest.TestCase):
             _remap_inputs(samples, "stretched", False)
 
     def test_large_care_touch_and_boot_use_aligned_full_width_viewport(self):
-        image, result = emulate(SCRIPT, screen_mode=v1.SCALE_LARGE)
+        with patch.object(v1.Scaler, 'copy', side_effect=AssertionError('scaled gameplay')):
+            image, result = emulate(SCRIPT, screen_mode=v1.SCALE_LARGE)
         self.assertEqual(result["screen_mode"], v1.SCALE_LARGE)
         self.assertEqual(result["runtime_profile"], "amoled_1_8_v1")
         self.assertEqual((result["food_before"], result["food_after"]), (50, 75))
@@ -100,7 +103,7 @@ class LargeV1EmulatorTest(unittest.TestCase):
         original_draw = v1_menu_font.draw
 
         def record(surface, text, *rest):
-            self.assertIsInstance(surface, _WireOverlayFrameBuffer)
+            self.assertIsInstance(surface, _WireGameFrameBuffer)
             labels.append(text)
             return original_draw(surface, text, *rest)
 
