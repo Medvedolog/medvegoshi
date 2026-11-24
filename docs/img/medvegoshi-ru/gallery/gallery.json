@@ -156,7 +156,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "explore",
-      "sha256": "830440c970ebae65014672a112731cefa33c170bd7ebf7982419d679aa58026f"
+      "sha256": "cd1c5c05f5b390090ca9f3fb03da6a10f4d26e378aa52bdce79bb3754bc3383d"
     },
     {
       "file": "capi-settings.png",
@@ -171,7 +171,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "a7622f5c3be38da42a51aa843039f88bf306eb733fadde385db7f66fa847dcc2"
+      "sha256": "55d377b15cae2c59fb4be02397172120cd72d1826b79b74f233d0d89ad5cfbd9"
     },
     {
       "file": "elefante-settings.png",
@@ -321,7 +321,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "5577ab7535cbf9ed4c2ea4606e361bb0f5ede04c801131668e3b08b6c2477847"
+      "sha256": "807c9812d3d8f3091b71ddf771db77125243af410b741fd8f773fbb33bb11132"
     },
     {
       "file": "bjorni-settings.png",
@@ -336,7 +336,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "38cf31dfe6f39f8b9db2b86d71c17012a9fd5beef17cc522ab5d080b0947e592"
+      "sha256": "328da5ce2e57bb9e61660ebf1f65cd3f8cedf834fa8336985f3597487e3a55df"
     }
   ]
 }

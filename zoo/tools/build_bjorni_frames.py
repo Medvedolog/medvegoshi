@@ -1,7 +1,7 @@
 """Compile the original Bjorni game source sheet to compact device rectangles.
 
 Host-only: python -m zoo.tools.build_bjorni_frames [--check].
-The source uses transparent 44x48 cells and an 8-column fixed animation order.
+The source uses transparent 52x56 cells and an 8-column fixed animation order.
 """
 import argparse
 from base64 import b64encode
@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
-W, H = 44, 48
+W, H = 52, 56
 ANIMATIONS = (
     ('idle', 4), ('walk-right', 4), ('walk-left', 4), ('jump', 5),
     ('greeting', 4), ('sad', 4), ('thinking', 4), ('typing', 4), ('happy', 4),
@@ -27,18 +27,30 @@ def compile_data(source):
         img = img.convert('RGBA')
     if img.size != (COLS * W, ((FRAME_COUNT + COLS - 1) // COLS) * H):
         raise ValueError('wrong Bjorni sheet dimensions')
-    used = [(r, g, b) for r, g, b, alpha in img.getdata() if alpha > 127]
-    if not used:
-        raise ValueError('empty Bjorni sheet')
-    colors = Image.new('RGB', (len(used), 1))
-    colors.putdata(used)
-    quant = colors.quantize(colors=16, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
-    c = quant.getpalette()
-    palette = tuple(tuple(c[i:i+3]) for i in range(0, 48, 3))
+    # Lock the colors that give the original character its identity.
+    # A frequency-only palette used to spend most of its places on fur
+    # gradients, averaging away the cream muzzle, eye glints and mint key.
+    palette = (
+        (23, 14, 15), (42, 21, 18), (56, 28, 20), (76, 38, 26),
+        (98, 46, 30), (121, 58, 35), (143, 67, 41), (162, 77, 47),
+        (175, 86, 49), (186, 93, 54), (199, 104, 60), (222, 126, 72),
+        (224, 149, 91), (237, 174, 113), (246, 192, 135), (255, 210, 155),
+        (255, 226, 189), (255, 250, 236), (255, 255, 255), (246, 122, 94),
+        (13, 31, 31), (22, 47, 46), (32, 66, 65), (45, 92, 89),
+        (57, 113, 106), (69, 141, 132), (92, 159, 148),
+        (27, 25, 37), (46, 45, 61), (65, 65, 82), (87, 85, 104),
+        (113, 112, 131), (102, 242, 154), (71, 183, 118), (163, 183, 124),
+        (248, 153, 67), (250, 185, 81),
+    )
     lookup = {}
-    mapped = iter(quant.getdata())
-    for rgb in used:
-        lookup[rgb] = next(mapped)
+
+    def color_index(r, g, b):
+        rgb = (r, g, b)
+        if rgb not in lookup:
+            lookup[rgb] = min(range(len(palette)), key=lambda i:
+                3 * (r - palette[i][0]) ** 2 + 5 * (g - palette[i][1]) ** 2
+                + 2 * (b - palette[i][2]) ** 2)
+        return lookup[rgb]
 
     def rectangles(cell):
         pixels = cell.load()
@@ -51,11 +63,11 @@ def compile_data(source):
                 if a < 128:
                     x += 1
                     continue
-                idx = lookup[(r, g, b)]
+                idx = color_index(r, g, b)
                 end = x + 1
                 while end < W:
                     rr, gg, bb, aa = pixels[end, y]
-                    if aa < 128 or lookup[(rr, gg, bb)] != idx:
+                    if aa < 128 or color_index(rr, gg, bb) != idx:
                         break
                     end += 1
                 runs.add((x, end - x, idx))

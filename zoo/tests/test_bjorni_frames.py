@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest import TestCase
 
 from zoo.animals.bjorni import face
-from zoo.tools.build_bjorni_frames import compile_data
+from zoo.tools.build_bjorni_frames import H, W, compile_data
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -15,13 +15,20 @@ class BjorniFramesTest(TestCase):
         generated = compile_data(ROOT / 'zoo/assets/bjorni-poses.png')
         self.assertTrue(module.endswith(generated))
         self.assertEqual(len(face.FRAMES), 44)
-        self.assertLess((ROOT / 'zoo/animals/bjorni/face.py').stat().st_size, 200 * 1024)
+        self.assertLess((ROOT / 'zoo/animals/bjorni/face.py').stat().st_size, 234 * 1024)
         self.assertEqual(len(set(face.FRAMES)), len(face.FRAMES))
         for frame in face.FRAMES:
             data = a2b_base64(frame)
             self.assertTrue(data and len(data) % 5 == 0)
             for x, y, w, h, c in zip(data[0::5], data[1::5], data[2::5], data[3::5], data[4::5]):
-                self.assertTrue(0 <= x < x+w <= 44 and 0 <= y < y+h <= 48 and c < len(face.PALETTE))
+                self.assertTrue(0 <= x < x+w <= W and 0 <= y < y+h <= H and c < len(face.PALETTE))
+
+    def test_readable_face_and_keyboard_colors_survive_compilation(self):
+        colors = {face.PALETTE[i] for i in a2b_base64(face.FRAMES[0])[4::5]}
+        self.assertTrue(any(r > 245 and g > 230 and b > 225 for r, g, b in colors))
+        self.assertTrue(any(g >= 220 and r < 130 and b >= 130 for r, g, b in colors))
+        self.assertTrue(any(r >= 245 and 175 < g < 234 and b < 190 for r, g, b in colors))
+        self.assertTrue(any(r < 39 and g < 34 and b < 30 for r, g, b in colors))
 
     def test_game_poses_are_distinct(self):
         frame = face.select_frame
@@ -44,6 +51,6 @@ class BjorniFramesTest(TestCase):
         operations = []
         rect = lambda *args: operations.append(args)
         eye = face.render(None, rect, None, None, motion=('typing', 140))
-        self.assertEqual(eye, ((-16, -78), (16, -78)))
+        self.assertEqual(eye, ((-17, -83), (17, -83)))
         self.assertGreater(len(operations), 200)
-        self.assertLess(len(operations), 650)
+        self.assertLess(len(operations), 780)
