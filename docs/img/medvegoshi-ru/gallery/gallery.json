@@ -13,7 +13,7 @@
       ],
       "life_stage": "ovo",
       "game_mode": "pet",
-      "sha256": "f7cd8ee071472e57494eb1cc7ad1d5bc224702df81b7648458fd82d309ac881f"
+      "sha256": "ebc113eddc9a6c441b6cc121f97fe295dd56c19a4b7cf9af039892e94bb16b6d"
     },
     {
       "file": "elefante-play.png",
@@ -26,7 +26,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "722e854850028b2d9215521f2d9d33c0816e4eeba5f8f99a1376e14696c9a8fc"
+      "sha256": "9735d6b6414e7409dfd9c01783ad02363248cd942939d0996175f65698aff693"
     },
     {
       "file": "pato-play.png",
@@ -39,7 +39,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "09f19bc78f31ad783320e542f4fe0fbad4004e6db1b30ab508e7fa2616fc6215"
+      "sha256": "cf6533ce9e0585f6145aef040150f5c68aec35bcdcb287a93935116f7413375f"
     },
     {
       "file": "polvo-play.png",
@@ -52,7 +52,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "explore",
-      "sha256": "3b4542fb6fe98cef00ef99590fb8fdd0a1ef3431927d384f4605790e90c9f326"
+      "sha256": "bf9b44321e33fa5a773479651b2a93d21f127586a18732bccece8a03440454e6"
     },
     {
       "file": "calopsita-play.png",
@@ -65,7 +65,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "66191464eeeeeaceda150a2e2873fd66c4939e2ef9fdb62f9fefad5cf688bc34"
+      "sha256": "beb7ca0b75e15a2b6b71a540e95dcaf90bc5b3ab52264229fccb66d0b8febc26"
     },
     {
       "file": "cachorro-play.png",
@@ -78,7 +78,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "4ec92ba40827a52006532d10101e63cca7a852a3519a0312c2d915de5e6146b3"
+      "sha256": "52d364127f6ce62c9dedf5a2598236b822df1c575020f4e38270ee5cd78680c2"
     },
     {
       "file": "gato-play.png",
@@ -91,7 +91,7 @@
       ],
       "life_stage": "filhote",
       "game_mode": "pet",
-      "sha256": "9be7ce8c61a7a3fcc0721727b73eb36cabd001ee02fb7adb9118efd4709754fb"
+      "sha256": "a2bf5b385a9c096d75a50f84385d8d011f5c7aec47f9c24179f1d4ee6b372b5a"
     },
     {
       "file": "et-play.png",
@@ -104,7 +104,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "explore",
-      "sha256": "c1908a2b2f18f115065f3a1f4c5d2e07b8474c374ff296422699cf085cf7787f"
+      "sha256": "97267f739453a8e3f3a23d0287ded8343a2a345cd409851c58fde2f00c64f5cb"
     },
     {
       "file": "sapinho-play.png",
@@ -117,7 +117,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "4a14aee587d0a8d3465634f95ca29d0a047bec5b433a7f0cdab5618abb864cc8"
+      "sha256": "815d48dbb72a3e3425ee66f7d4386e54fa20c80a7c1eead279a42a82407f82dd"
     },
     {
       "file": "naufrago-play.png",
@@ -130,7 +130,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "pet",
-      "sha256": "e298573ca948ce8c8e89f2c93d3d64f60424f539b104c40aa8085c9f41ecb001"
+      "sha256": "b0b45daef930737aef16d132e24fede5e4f467c98ee445d84c98b716e528fdb7"
     },
     {
       "file": "pip-play.png",
@@ -143,7 +143,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "companion",
-      "sha256": "2729173a1a4a85d4cb0c46d96692637c976d74abd7c137394897ef59a4522e5d"
+      "sha256": "8cbcfea5920ac652f42ea0d0b72dac1fbc573596a856eb18bb93bf8f17000df1"
     },
     {
       "file": "girafa-play.png",
@@ -156,7 +156,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "explore",
-      "sha256": "ae4ea36f58cdd8f5ed0a8cc5327b34388525aac1986d4ebed07b28158ce8aca3"
+      "sha256": "6c0682f80c1dbd661ce823cf67ef8de8f41a562ca98ec43f93ce94d30ffd237e"
     },
     {
       "file": "bjorni-play.png",
@@ -169,7 +169,7 @@
       ],
       "life_stage": "adulto",
       "game_mode": "explore",
-      "sha256": "0b9fd088c4c7ad9d038516c086925ae42a3be2f825bc4beac677abdd3a49271f"
+      "sha256": "830440c970ebae65014672a112731cefa33c170bd7ebf7982419d679aa58026f"
     },
     {
       "file": "capi-settings.png",
