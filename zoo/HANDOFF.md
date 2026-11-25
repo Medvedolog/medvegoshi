@@ -397,3 +397,13 @@ zoo/
 **Первоначальный проект:** [rjcaubit/capigoshi](https://github.com/rjcaubit/capigoshi).  
 **Исследуемые источники:** [Giraffegotchi](https://github.com/elliotboney/giraffegotchi), [Pip-KeyPet](https://github.com/NovikovVisuals/Pip-KeyPet), [TamaPetchi](https://github.com/CyberXcyborg/ESP32-TamaPetchi).  
 **Права и SHA заимствованных тестов:** [UPSTREAM.md](UPSTREAM.md).
+
+### V1: аппаратный тест записи/воспроизведения и microSD
+
+- Отдельная ручная проверка ES8311: RAM-запись с микрофона, затем
+  воспроизведение через существующий ограниченный TX. Штатный запуск
+  по-прежнему не активирует микрофон. Из XiaoZhi сверены выводы и ALDO1;
+  нет переноса настроек зарядки, BOOT-обработчика, LVGL или Wi‑Fi.
+- Read-only microSD через SDMMC 1-bit по разводке Waveshare V1.
+- [Порядок проверки](../docs/PORT_AMOLED_V1.md). Имитация не заменяет
+  оценку разборчивости на V1 и тест памяти при Wi‑Fi. Установщик закрыт.

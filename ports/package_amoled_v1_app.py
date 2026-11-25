@@ -21,6 +21,7 @@ UNCHANGED_PATHS = (
     'companion/relogio.py', 'companion/reward.py', 'companion/snn.py',
     'ports/__init__.py', 'ports/amoled_v1.py', 'ports/amoled_v1_audio.py',
     'ports/amoled_v1_launch.py', 'ports/amoled_v1_runtime.py',
+    'ports/amoled_v1_sd_smoke.py', 'ports/amoled_v1_voice_smoke.py',
     'ports/runtime_handoff.py', 'ports/v1_bundle_guard.py', 'ports/v1_bringup.py',
     'ports/v1_game_hal.py', 'ports/v1_menu_font.py', 'ports/v1_native_canvas.py',
     'ports/v1_scale.py',

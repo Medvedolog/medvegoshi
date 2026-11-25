@@ -30,7 +30,8 @@ DAC_VOLUME, DAC_MUTE = 0x32, 0x31
 MUTE_BITS = 0x60
 # 0xBF is unity, 0.5 dB per step: default -14 dB, capped at -12 dB.
 DEFAULT_VOLUME, MAX_VOLUME = 0xA3, 0xA7
-_TONE, _PIP = 1, 2
+_TONE, _PIP, _PCM = 1, 2, 3
+MAX_PCM_BYTES = SAMPLE_RATE * 2 * 2
 
 _CODEC_PROFILE = (
     (0x01, 0xBF),             # SCLK/BCLK as clock source, no inversion
@@ -76,7 +77,7 @@ class V1Audio:
         self._codec_claimed = False
         self._active = self._amplifying = False
         self._enabled = True
-        self._pending = None
+        self._pending = self._pcm = None
         self._offset = self._end = 0
         self._drain_until = None
         self._warmup_until = None
@@ -148,7 +149,7 @@ class V1Audio:
     def ligado(self, value):
         enabled = bool(value)
         if not enabled and self._enabled and self.available:
-            self._pending = None
+            self._pending = self._pcm = None
             if self._active or self._amplifying:
                 try:
                     self._mute()
@@ -180,6 +181,20 @@ class V1Audio:
             return True
         return False
 
+    def play_pcm(self, clip):
+        """Queue bounded signed little-endian PCM16 mono at SAMPLE_RATE."""
+        if not isinstance(clip, bytes) or not 0 < len(clip) <= MAX_PCM_BYTES or len(clip) % 2:
+            raise ValueError("invalid PCM16 clip")
+        if not self.ligado or self.busy:
+            return False
+        self._pending = (_PCM, clip)
+        return True
+
+    @property
+    def busy(self):
+        return self.available and (self._pending is not None or self._active or
+                                   self._drain_until is not None)
+
     def _mute(self):
         try:
             self._pa.value(0)
@@ -194,6 +209,8 @@ class V1Audio:
         self._pending = None
         if self._kind == _PIP:
             self._native.voice_start(payload, SAMPLE_RATE)
+        elif self._kind == _PCM:
+            self._pcm, self._pcm_at = memoryview(payload), 0
         else:
             self._freq, duration = payload
             self._tone_total = duration * SAMPLE_RATE // 1000
@@ -210,6 +227,15 @@ class V1Audio:
         if self._kind == _PIP:
             self._more = bool(self._native.voice_render_into(mono))
             frames = FRAMES  # Native zero-fills the tail of the final chunk.
+        elif self._kind == _PCM:
+            end = min(len(self._pcm), self._pcm_at + len(mono))
+            count = end - self._pcm_at
+            mono[:count] = self._pcm[self._pcm_at:end]
+            frames = count // 2
+            self._pcm_at = end
+            self._more = end < len(self._pcm)
+            if not self._more:
+                self._pcm = None
         else:
             frames = min(FRAMES, self._tone_total - self._tone_at)
             for i in range(frames):
@@ -316,7 +342,7 @@ class V1Audio:
         if self._closed:
             return
         self._closed = True
-        self._pending = None
+        self._pending = self._pcm = None
         self._active = False
         try:
             self._mute()
