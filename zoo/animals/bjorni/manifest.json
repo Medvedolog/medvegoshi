@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "id": "bjorni",
+  "name_ru": "Бйорни",
+  "htop": 115,
+  "head": -83,
+  "top": -113,
+  "half": 41,
+  "eyes": [[-17, -83], [17, -83]],
+  "thermometer": [42, -62],
+  "ring": [85, 53, 39],
+  "animated": true,
+  "license": "MIT",
+  "author": "MedveGoshi contributors, original AI-assisted artwork",
+  "source_url": "https://github.com/Medvedolog/medvegoshi",
+  "phrases": {
+    "ocioso": ["Пишу код!", "Тесты зелёные!", "Где ягоды?", "Есть задачка?"],
+    "carinho": ["Ой, щекотно!", "Мишка рад!", "Спасибо, друг!"]
+  }
+}

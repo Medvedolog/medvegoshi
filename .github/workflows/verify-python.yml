@@ -1,0 +1,69 @@
+name: Python and Cyrillic checks
+
+on:
+  push:
+    branches: ["feature/russian-game-ui"]
+  pull_request:
+
+jobs:
+  firmware-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install host sprite tool dependency
+        run: python -m pip install "Pillow>=10,<13"
+      - name: Check Python syntax
+        run: python -m compileall -q main.py vida.py desenho.py font_ru.py portal.py companion ports zoo/sprites.py zoo/registry.py zoo/recovery.py zoo/animals zoo/pip zoo/giraffe zoo/tests zoo/tools
+      - name: Verify V1 source archive without touching hardware
+        run: |
+          mkdir -p build/v1
+          python -m ports.package_amoled_v1_app --output build/v1/app.zip
+          python -m ports.verify_amoled_v1_bundle build/v1/app.zip
+      - name: Check Cyrillic bitmap font and app tests
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run Zoo/Pip integration and regression tests
+        run: python -m unittest discover -s zoo/tests -p 'test_*.py'
+      - name: Generate original giraffe IPS and AMOLED preview resources
+        run: |
+          python -m zoo.tools.generate_giraffe --source-out build/giraffe/source --pack-out build/giraffe/ips
+          python -m zoo.tools.generate_giraffe --source-out build/giraffe/source-amoled --pack-out build/giraffe/amoled-v1 --target amoled-v1
+          python -m zoo.tools.preview_sprites --pack build/giraffe/ips --out build/giraffe/preview-ips-normal.png --board ips
+          python -m zoo.tools.preview_sprites --pack build/giraffe/ips --out build/giraffe/preview-ips-happy.png --board ips --frame happy
+          python -m zoo.tools.preview_sprites --pack build/giraffe/ips --out build/giraffe/preview-ips-sleeping.png --board ips --frame sleeping
+          python -m zoo.tools.preview_sprites --pack build/giraffe/amoled-v1 --out build/giraffe/preview-amoled-v1.png --board amoled-v1
+      - name: Create board-free visual QA bundle
+        run: |
+          python -m zoo.tools.offline_qa --pack build/giraffe/ips --out build/giraffe/qa-ips --board ips
+          python -m zoo.tools.offline_qa --pack build/giraffe/amoled-v1 --out build/giraffe/qa-amoled-v1 --board amoled-v1
+          python -m ports.preview_amoled_v1 --source build/giraffe/qa-ips/normal.png --out build/giraffe/qa-amoled-v1/v1-viewport-240x284.png
+          test -s build/giraffe/qa-amoled-v1/v1-viewport-240x284.png
+          test -s build/giraffe/qa-ips/report.md
+          test -s build/giraffe/qa-ips/all_expressions.png
+      - name: Upload reproducible giraffe pack and previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: medvegoshi-giraffe-preview-and-ips-pack
+          path: build/giraffe/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Run original Pip-KeyPet C reference tests
+        run: sh zoo/upstream/pip/run_tests.sh
+      - name: Check installer profile routing
+        run: |
+          sh -n install.sh
+          bash -n deploy.sh
+          sh tests/test_installer.sh
+      - name: Check brain dashboard JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          page = Path('companion/raiox.html').read_text(encoding='utf-8')
+          code = page.split('<script>', 1)[1].split('</script>', 1)[0]
+          Path('/tmp/medvegoshi-raiox.js').write_text(code, encoding='utf-8')
+          PY
+          node --check /tmp/medvegoshi-raiox.js
+      - name: Run companion unit tests
+        run: python -m unittest discover -s companion/testes -t .

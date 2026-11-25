@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "id": "girafa",
+  "name_ru": "Жирафик",
+  "htop": 125,
+  "head": -101,
+  "top": -128,
+  "half": 43,
+  "eyes": [
+    [
+      -2,
+      -108
+    ],
+    [
+      24,
+      -108
+    ]
+  ],
+  "thermometer": [
+    42,
+    -64
+  ],
+  "ring": [
+    160,
+    103,
+    43
+  ],
+  "license": "MIT",
+  "author": "MedveGoshi contributors (original giraffe artwork)",
+  "source_url": "https://github.com/Medvedolog/medvegoshi/blob/feature/zoo-giraffe-first-pack/zoo/giraffe/face.py",
+  "phrases": {
+    "ocioso": [
+      "Привет сверху!",
+      "Я всё вижу!",
+      "Где листья?",
+      "Поиграем?",
+      "Пятнышки|красивые!"
+    ],
+    "carinho": [
+      "Ой, приятно!",
+      "Погладь|шейку!"
+    ]
+  }
+}

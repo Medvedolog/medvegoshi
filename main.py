@@ -14,27 +14,11 @@
 # Direcao visual: design_handoff_capigoshi_1c (desenho.py).
 
 import time, math, json, random, gc
-
-# O firmware antigo tem um unico capi.json/brain.bin, sem ID do dono.
-def carregar(nome, padrao):
-    try:
-        with open(nome) as f:
-            padrao.update(json.load(f))
-    except Exception:
-        pass
-    return padrao
-
-
-cfg = carregar('config.json', {'modo': 'pet', 'som': True, 'personagem': 'capi',
-                               'hora': 'real', 'vel': 2, 'casa': 'pet'})
-if cfg['personagem'] == 'naufrago':
-    raise RuntimeError('Naufrago removido. Preserve config.json, capi.json e brain.bin; '
-                       'volte ao firmware anterior sem apagar a flash para recuperar o pet.')
-
 from machine import I2C, Pin
 import hw
 import desenho as d
 import vida as V
+from zoo import recovery as zoo_recovery, pet_slots, switch_pet, registry
 import rede
 from hw import W, H
 
@@ -66,32 +50,76 @@ BRINCAR_ALEGRIA, BRINCAR_CANSA = 20, 8
 BANHO_SAUDE, BANHO_ENERGIA = 10, 10
 
 # ------------------------------------------------------------ hardware
-i2c = I2C(0, scl=Pin(14), sda=Pin(15), freq=400000)
-tela = hw.Tela()
-d.usar(tela.fb)
-toque = hw.Toque(i2c)
-mov = hw.Movimento(i2c)
-relogio = hw.Relogio(i2c)
-som = hw.Som(i2c)
-bateria = hw.Bateria(i2c)
 try:
-    botao = Pin(PINO_BOTAO, Pin.IN, Pin.PULL_UP)
-except Exception:
-    botao = None
+    from ports.runtime_handoff import take as _take_profile
+except ImportError:
+    _v1_handoff = None  # normal IPS deploy has no V1 modules
+else:
+    _v1_handoff = _take_profile()
+
+if _v1_handoff is None:
+    if __name__ == 'v1_game_app':
+        raise RuntimeError('use the explicit AMOLED V1 launcher')
+    runtime_profile_id = 'ips'
+    runtime_clock_write, runtime_allow_wifi = True, True
+    i2c = I2C(0, scl=Pin(14), sda=Pin(15), freq=400000)
+    tela = hw.Tela()
+    d.usar(tela.fb)
+    toque = hw.Toque(i2c)
+    mov = hw.Movimento(i2c)
+    relogio = hw.Relogio(i2c)
+    som = hw.Som(i2c)
+    bateria = hw.Bateria(i2c)
+    try:
+        botao = Pin(PINO_BOTAO, Pin.IN, Pin.PULL_UP)
+    except Exception:
+        botao = None
+else:
+    profile, runtime_allow_wifi = _v1_handoff
+    if profile.profile_id != 'amoled_1_8_v1':
+        raise RuntimeError('unsupported hardware profile')
+    runtime_profile_id = profile.profile_id
+    runtime_clock_write = profile.capabilities['rtc_write']
+    i2c, tela, toque = profile.i2c, profile.tela, profile.toque
+    mov, relogio, som = profile.mov, profile.relogio, profile.som
+    bateria, botao = profile.bateria, profile.botao
+    d.usar(tela.fb)
 gc.collect()
 
 
 # ------------------------------------------------------------ arquivos
+def carregar(nome, padrao):
+    try:
+        with open(nome) as f:
+            padrao.update(json.load(f))
+    except Exception:
+        pass
+    return padrao
+
+
 def salvar(nome, dados):
     try:
-        with open(nome, 'w') as f:
-            json.dump(dados, f)
-    except Exception as e:
+        if nome.startswith('pet_saves/'):
+            pet_slots.save_pet(cfg['personagem'], dados)
+        elif nome == 'config.json':
+            pet_slots.save_json(nome, dados)
+        else:
+            # Unlike config and pet data, presentes.json is a JSON array.
+            with open(nome, 'w') as f:
+                json.dump(dados, f)
+        return True
+    except (OSError, ValueError, TypeError, MemoryError, zoo_recovery.RecoveryRequired) as e:
         print('Erro ao salvar', nome, e)
+        return False
 
 
-if cfg['personagem'] not in d.ELENCO:
-    cfg['personagem'] = 'capi'
+# A missing optional Zoo animal must NEVER silently become Capi:
+# the shared capi.json would be overwritten with a different pet.
+# Stop boot with a visible USB recovery message and NO save writes.
+cfg = zoo_recovery.require_config(
+    'config.json', {'modo': 'pet', 'som': True, 'personagem': 'capi',
+                    'hora': 'real', 'vel': 2, 'casa': 'pet'},
+    d.ELENCO, tela, d, retired=registry.RETIRED)
 if cfg['modo'] not in ('pet', 'companion', 'explore'):
     cfg['modo'] = 'pet'
 if cfg['vel'] not in (1, 2, 3):
@@ -113,10 +141,20 @@ AQUECER_MIN = AQUECER_SEG / 60 * FATOR_OVO
 
 
 def arquivo_pet(id):
-    return 'capi.json'      # um bichinho por vez: trocar de personagem comeca do zero
+    return pet_slots.pet_path(id)
 
 
-pet = carregar(arquivo_pet(cfg['personagem']), dict(PET_PADRAO))
+# A legacy save is copied exactly once, to the recorded active pet only.
+# Boot must stop if its owner or the active slot cannot be verified.
+try:
+    pet = pet_slots.load_selection(cfg, PET_PADRAO, retired=registry.RETIRED)
+except zoo_recovery.RecoveryRequired as exc:
+    try:
+        zoo_recovery.show_recovery(tela, d, exc)
+    except Exception as show_error:
+        print('Zoo recovery screen unavailable:', show_error)
+    print('Zoo slot recovery:', exc.reason)
+    raise RuntimeError('MedveGoshi data protected: ' + exc.reason)
 vt = 0                      # relogio continuo da vida (ms); nao da a volta como ticks_ms
 L = V.nova(cfg['personagem'], vt)
 vida_out = None             # pose do quadro devolvida por V.passo
@@ -166,8 +204,11 @@ def fator_tempo():
 
 def hora_de_silencio():
     """De noite o bichinho nao faz barulho, mesmo com o som ligado. Vale o relogio de verdade."""
-    h = hora_real()
-    return h >= SILENCIO_DE or h < SILENCIO_ATE
+    t = relogio.ler()
+    if t is None:
+        # V1 cannot prove that it is daytime when the read-only RTC is lost.
+        return not runtime_clock_write
+    return t[3] >= SILENCIO_DE or t[3] < SILENCIO_ATE
 
 
 def acertar_som():
@@ -188,6 +229,10 @@ ultima_reacao = 0
 ultimo_urgente = 0
 ultimo_save = time.ticks_ms()
 acc_pet = 0
+pip_session = pip_snapshot = None
+pip_reaction, pip_reaction_at = None, 0
+pip_tried = False
+pip_last_poll = -1000
 grito_seguidos = 0
 botao_antes = 1
 piso_mic = 2000.0           # ruido de fundo do microfone (se adapta)
@@ -207,7 +252,7 @@ limpou_presentes = 0
 # menu
 menu_borda, menu_alvo, menu_arrasta = 0.0, 0, False
 menu_pend = None                       # personagem escolhido nas setas, ainda sem confirmar
-menu_conf = None                       # 'trocar' ou 'zerar': pergunta 'comeca do zero'
+menu_conf = None                       # 'trocar' ou 'zerar': acoes distintas
 
 # baloes: um por personagem ('p' principal, 'v' vizinho)
 PRIOR = {'urgente': 5, 'grito': 4, 'fala': 3, 'chamado': 2, 'pensa': 1}
@@ -299,9 +344,124 @@ def noite_pet():
     return hora_de_dormir(hora_atual())
 
 
+def pip_em_uso():
+    # Experimental opt-in, real-time Care only. The legacy implementation
+    # remains the fallback for an unavailable clock, module, or state.
+    return (cfg['personagem'] == 'pip' and cfg.get('pip_native') is True and
+            cfg['modo'] == 'pet' and cfg['hora'] == 'real')
+
+
+def pip_atualizar(agora):
+    global pip_session, pip_snapshot, pip_tried, pip_last_poll
+    if not pip_em_uso() or fase_vida() in ('ovo', 'estrela'):
+        return
+    if time.ticks_diff(agora, pip_last_poll) < 1000:
+        return
+    pip_last_poll = agora
+    if pip_session is None and pip_tried:
+        return
+    try:
+        epoch = relogio.epoch()
+        if not epoch:
+            pip_snapshot = None
+            return
+        if pip_session is None:
+            from zoo.pip.game import open_pip
+            pip_tried = True
+            pip_session = open_pip('pip', epoch, enabled=True,
+                                   seed=random.randint(1, 0x7fffffff))
+        if pip_session is not None:
+            pip_snapshot = pip_session.tick(epoch)
+            pip_copiar_painel()
+    except (OSError, ValueError, RuntimeError, TypeError, ImportError, MemoryError) as exc:
+        pip_snapshot, pip_tried = None, True
+        print('Pip native inactive:', exc)
+
+
+def pip_copiar_painel():
+    if not pip_snapshot:
+        return
+    necessidades = pip_snapshot['needs']
+    pet['fome'] = lim(necessidades['food'] * 100)
+    pet['alegria'] = lim(necessidades['fun'] * 100)
+    pet['energia'] = lim(necessidades['energy'] * 100)
+    pet['dormindo'] = pip_snapshot['asleep']
+
+
+def pip_evento(name):
+    global pip_snapshot, pip_reaction, pip_reaction_at
+    if not pip_em_uso() or pip_session is None or not pip_snapshot:
+        return False, None
+    try:
+        reaction = pip_session.event(name)
+        if reaction:
+            pip_reaction, pip_reaction_at = reaction, time.ticks_ms()
+        pip_snapshot = pip_session.status()
+        if pip_snapshot is None:
+            return False, None
+        pip_copiar_painel()
+        return True, reaction
+    except (OSError, ValueError, RuntimeError, TypeError, MemoryError) as exc:
+        pip_snapshot = None
+        print('Pip native event unavailable:', exc)
+        return False, None
+
+
+def pip_som(nome, alternativo):
+    if pip_em_uso() and som.ligado:
+        player = getattr(som, 'play_pip', None)
+        if callable(player):
+            try:
+                if player(nome):
+                    return
+            except (OSError, ValueError, RuntimeError, TypeError, MemoryError) as exc:
+                print('Pip voice unavailable:', exc)
+    if alternativo:
+        som.tocar(alternativo)
+
+
+def pip_salvar():
+    global pip_session, pip_snapshot, pip_tried
+    if pip_session is None:
+        return True
+    # Native integrity failure closes the adapter; don't trap the selected
+    # pet forever. Fail the first unsaved write, then keep the sidecar intact.
+    valid = pip_session.status() is not None
+    if valid and pip_session.flush():
+        return True
+    pip_session.close()
+    pip_session = pip_snapshot = None
+    pip_tried = True
+    return not valid
+
+
+_PIP_STATES = {
+    'happy': ('feliz', 'sorriso'), 'love': ('feliz', 'sorriso'),
+    'smug': ('feliz', 'sorriso'), 'content': ('feliz', 'sorriso'),
+    'surprised': ('susto', 'o'), 'afraid': ('susto', 'o'),
+    'sad': ('sono', 'triste'), 'gloomy': ('sono', 'triste'),
+    'lonely': ('sono', 'triste'), 'sick': ('sono', 'triste'),
+    'sleepy': ('sono', 'o'), 'tired': ('sono', 'o'),
+    'asleep': ('fechados', 'dormindo'), 'nauseous': ('sono', 'triste'),
+    'disgusted': ('susto', 'triste'), 'no': ('sono', 'triste'),
+}
+
+
+def pip_expressao(agora, olhos, boca, usa_pose=False):
+    if not pip_em_uso() or not pip_snapshot:
+        return olhos, boca
+    if pip_reaction and 0 <= time.ticks_diff(agora, pip_reaction_at) < 1500:
+        return _PIP_STATES.get(pip_reaction, (olhos, boca))
+    if usa_pose:
+        return olhos, boca
+    return _PIP_STATES.get(pip_snapshot['mood'], (olhos, boca))
+
+
 def tick_pet(offline=False):
     if fase_vida() in ('ovo', 'estrela'):
         return
+    if not offline and pip_em_uso() and pip_snapshot:
+        return  # no second needs model while native Pip owns Care
     noite = noite_pet()
     if pet['dormindo']:
         pet['fome'] -= FOME_DORMINDO
@@ -309,7 +469,7 @@ def tick_pet(offline=False):
         acordar = (not noite and not pet['cochilo']) or (pet['cochilo'] and pet['energia'] >= 60)
         if acordar and not offline:
             pet['dormindo'] = pet['cochilo'] = False
-            falar('Bom dia!')
+            falar('Доброе утро!')
             som.tocar('feliz')
     else:
         pet['fome'] -= FOME_MIN
@@ -321,12 +481,12 @@ def tick_pet(offline=False):
             pet['dormindo'] = True
             pet['cochilo'] = not noite
             if not offline:
-                falar('Boa noite!' if noite else 'Cochilo...')
+                falar('Доброй ночи!' if noite else 'Вздремну...')
                 som.tocar('bocejo')
     if not pet['doente'] and (pet['cocos'] >= 2 or pet['fome'] < 15) and random.random() < CHANCE_DOENCA:
         pet['doente'] = True
         if not offline:
-            falar('To dodoi...')
+            falar('Я заболел...')
             som.tocar('triste')
     perda = pet['cocos'] * 0.2 + (0.6 if pet['fome'] < 15 else 0) + (0.6 if pet['doente'] else 0)
     pet['saude'] += -perda if perda else 0.3
@@ -341,15 +501,34 @@ def acao_pet(i):
     if f == 'estrela':
         return
     if f == 'ovo':
-        falar('Sou um ovo!|Me esquenta')
+        falar('Я в яйце!|Согрей меня!')
         return
     if dormindo():
-        falar('Shhh... zzz')
+        falar('Тс-с... хр-р')
         return
     som.tocar('clique')
+    if i in (0, 1):
+        native, reaction = pip_evento('feed' if i == 0 else 'play')
+        if native:
+            if i == 0:
+                if reaction in ('nauseous', 'disgusted'):
+                    falar('Я уже сыт!')
+                    pip_som('oh', None)
+                else:
+                    iniciar_anim('comer')
+                    pip_som('nom', 'comer')
+            elif reaction == 'no':
+                falar('Я устал...')
+                pip_som('yawn', None)
+            else:
+                iniciar_anim('pular')
+                pip_som('happy', 'feliz')
+            pip_salvar()
+            salvar(arquivo_pet(cfg['personagem']), pet)
+            return
     if i == 0:
         if pet['fome'] >= 99.5:
-            falar('To cheio!')
+            falar('Я уже сыт!')
         else:
             pet['fome'] = lim(pet['fome'] + COMER_FOME)
             pet['energia'] = lim(pet['energia'] + COMER_ENERGIA)
@@ -357,7 +536,7 @@ def acao_pet(i):
             som.tocar('comer')
     elif i == 1:
         if pet['energia'] < 15:
-            falar('Cansado...')
+            falar('Я устал...')
         else:
             pet['alegria'] = lim(pet['alegria'] + BRINCAR_ALEGRIA)
             pet['energia'] = lim(pet['energia'] - BRINCAR_CANSA)
@@ -368,17 +547,17 @@ def acao_pet(i):
         pet['saude'] = lim(pet['saude'] + BANHO_SAUDE)
         pet['energia'] = lim(pet['energia'] + BANHO_ENERGIA)
         iniciar_anim('banho')
-        falar('Que banho bom!')
+        falar('Как приятно!')
         som.tocar('banho')
     elif i == 3:
         if pet['doente']:
             pet['doente'] = False
             pet['saude'] = lim(pet['saude'] + 35)
             iniciar_anim('remedio')
-            falar('Melhorei!')
+            falar('Мне лучше!')
             som.tocar('remedio')
         else:
-            falar('Nao to doente!')
+            falar('Я не болею!')
     salvar(arquivo_pet(cfg['personagem']), pet)
 
 
@@ -411,7 +590,7 @@ def recuperar_tempo_desligado():
         for _ in range(minutos):
             tick_pet(offline=True)
         if minutos > 10:
-            falar('Senti saudade!')
+            falar('Я скучал!')
         pet['dormindo'] = noite_pet()
         pet['cochilo'] = False
 
@@ -437,35 +616,82 @@ def fase_vida():
 def legenda_vida():
     f = fase_vida()
     if f == 'ovo':
-        return '%s, ovo' % nome()
+        return '%s: яйцо' % nome()
     if f == 'estrela':
-        return '%s, estrela' % nome()
+        return '%s: звезда' % nome()
     dias = int(pet['idade_min'] // DIA_MIN)
-    return '%s, %d dia%s' % (nome(), dias, '' if dias == 1 else 's')
+    return '%s: %d дн.' % (nome(), dias)
 
 
-def novo_ovo(id=None):
-    """Comeca do zero: ovo novo (do mesmo bichinho ou de outro)."""
-    if id:
-        cfg['personagem'] = id
+def preparar_ovo(epoch):
+    estado = dict(PET_PADRAO)
+    estado['vida_adulto'] = random.randint(VIDA_ADULTO[0], VIDA_ADULTO[1])
+    estado['epoch'] = epoch
+    return estado
+
+
+def novo_ovo():
+    """Reset the current lifecycle only; selecting another pet is not a reset."""
+    estado = preparar_ovo(relogio.epoch())
+    vida = V.nova(cfg['personagem'], vt)
+    try:
+        pet_slots.save_pet(cfg['personagem'], estado)
+    except (OSError, zoo_recovery.RecoveryRequired) as exc:
+        print('Zoo egg save:', exc)
+        return False
     pet.clear()
-    pet.update(PET_PADRAO)
+    pet.update(estado)
     L.clear()
-    L.update(V.nova(cfg['personagem'], vt))
-    pet['vida_adulto'] = random.randint(VIDA_ADULTO[0], VIDA_ADULTO[1])
-    pet['epoch'] = relogio.epoch()
+    L.update(vida)
     baloes.clear()
-    salvar(arquivo_pet(cfg['personagem']), pet)
-    salvar('config.json', cfg)
+    return True
+
+
+def trocar_pet(id):
+    global ponte, cer_seg, cer_lido, cer_ativ, vida_out, toque_vida
+    global anim, anim_ini, acc_pet, ultimo_save
+    global pip_session, pip_snapshot, pip_tried, pip_last_poll, pip_reaction
+    if id not in d.ELENCO or id == cfg['personagem']:
+        raise ValueError('pet selection')
+    epoch = relogio.epoch()
+    vida = V.nova(id, vt)
+
+    def guardar_cerebro(pasta):
+        if ponte is not None:
+            # Ponte.salvar swallows I/O failures; switching must abort on one.
+            from companion.placa import gravar
+            gravar(ponte.cer, epoch or cer_seg, pasta)
+
+    if not pip_salvar():
+        raise OSError('Pip native save not committed')
+    estado, novo = switch_pet.activate(
+        cfg, pet, id, PET_PADRAO, epoch, lambda: preparar_ovo(epoch),
+        guardar_cerebro)
+    if pip_session is not None:
+        pip_session.close()
+    pip_session = pip_snapshot = pip_reaction = None
+    pip_tried, pip_last_poll = False, -1000
+    cfg['personagem'] = id
+    pet.clear()
+    pet.update(estado)
+    L.clear()
+    L.update(vida)
+    ponte = V.OCIOSO = None
+    cer_seg, cer_lido, cer_ativ = 0, -1000, ''
+    vida_out = toque_vida = None
+    anim, anim_ini, acc_pet = '', 0, 0
+    ultimo_save = time.ticks_ms()
+    baloes.clear()
+    return novo
 
 
 def envelhecer(dt):
     antes = fase_vida()
     if antes == 'estrela':
         if not hora_de_dormir(hora_atual()):         # de manha aparece um ovo novo
-            novo_ovo()
-            sistema('Um ovo novo!')
-            som.tocar('feliz')
+            if novo_ovo():
+                sistema('Новое яйцо!')
+                som.tocar('feliz')
         return
     pet['idade_min'] += dt / 60000 * (FATOR_OVO if antes == 'ovo' else fator_tempo())
     if antes == 'idoso' and pet['idade_min'] >= fim_da_vida() and hora_de_dormir(hora_atual()):
@@ -479,13 +705,13 @@ def envelhecer(dt):
     if agora != antes:
         if agora == 'filhote':
             L.update(V.nova(cfg['personagem'], vt))
-            V.tocar(L, vt, 'comemorar', say='oi! nasci!')
+            V.tocar(L, vt, 'comemorar', say='Ура! Я родился!')
             som.tocar('feliz')
         elif agora == 'adulto':
-            falar('Cresci!')
+            falar('Я вырос!')
             som.tocar('feliz')
         elif agora == 'idoso':
-            falar('To velhinho!')
+            falar('Я старенький!')
         salvar(arquivo_pet(cfg['personagem']), pet)
 
 
@@ -499,8 +725,8 @@ ROTINA = ((0, 'dormindo'), (ACORDA, 'espreguicando'), (6.5, 'passeando'),
           (17.5, 'por do sol'), (18, 'passeando'),      # o sol se poe as 18h
           (DORME, 'dormindo'))
 AMIGOS_DIA = ('passarinho', 'tartaruga', 'borboleta', 'sapo', 'vizinho', 'vizinho')
-FALAS = {'passarinho': 'Piu pra voce!', 'tartaruga': 'Oi, Tata!',
-         'borboleta': 'Que linda!', 'sapo': 'Oi, Sapinho!'}
+FALAS = {'passarinho': 'Чик-чирик!', 'tartaruga': 'Привет, Тата!',
+         'borboleta': 'Как красиво!', 'sapo': 'Привет, Ква!'}
 PENSAMENTOS = ('capim', 'bola', 'nota', 'coracao', 'peixe')
 VIZ_TURNO = 2600                       # conversa: um balao por vez
 
@@ -516,8 +742,8 @@ def atividade_companion():
 
 def conversa():
     """Falas da visita de um vizinho, alternando visitante (v) e principal (p)."""
-    return (('v', 'oi, %s!' % nome()), ('p', 'oi! tudo|bem?'),
-            ('v', 'vamos|brincar?'), ('p', 'oba!'))
+    return (('v', 'Привет, %s!' % nome()), ('p', 'Привет!|Как дела?'),
+            ('v', 'Поиграем?'), ('p', 'Ура!'))
 
 
 def atualizar_companion(dt, agora):
@@ -670,6 +896,11 @@ def cerebro_ativo():
 
 
 def cerebro_evento(nome):
+    if pip_em_uso() and pip_snapshot:
+        name = {'carinho': 'stroke', 'toque': 'poke', 'barulho': 'fright',
+                'sacudida_forte': 'shake', 'sacudida_leve': 'shake'}.get(nome)
+        if name:
+            pip_evento(name)
     if cerebro_ativo():
         ponte.evento(nome, cer_seg)
 
@@ -679,7 +910,7 @@ def texto_clima():
     if w is None:
         return ''
     g = rede.clima.get('temp')
-    return rede.tipo_de(w) + ('|%d graus' % g if g is not None else '')
+    return NOME_TEMPO.get(rede.tipo_de(w), 'Погода') + ('|%d C' % g if g is not None else '')
 
 
 def leitura_sentidos():
@@ -736,7 +967,7 @@ def atualizar_cerebro(agora):
     if ponte is None:
         from companion.placa import Ponte
         gc.collect()
-        ponte = Ponte(cer_seg)
+        ponte = Ponte(cer_seg, pasta=pet_slots.brain_dir(cfg['personagem']))
         print('cerebro: semente', ponte.cer.semente, 'idade', ponte.cer.idade_s // 3600, 'h')
     V.OCIOSO = ocioso_cerebro
     ativ = atividade_companion()
@@ -751,19 +982,19 @@ def atualizar_cerebro(agora):
 # ------------------------------------------------------------ internet, clima e amigos (rede.py)
 # (movimento, fala) que ele sorteia de vez em quando conforme o tempo la fora
 FALAS_CLIMA = {
-    'chuva': (('olhar', 'que chuva!'), ('tremer', 'to todo|molhado!'), ('pular', 'banho de|chuva!')),
-    'tempestade': (('susto', 'trovao!'), ('tremer', 'que medo|de raio')),
-    'neve': (('tremer', 'ta nevando!'), ('comemorar', 'neve!')),
-    'neblina': (('olhar', 'cade tudo?'),),
-    'vento': (('tonto', 'que|ventania!'), ('olhar', 'quase|voei!')),
-    'nublado': (('olhar', 'sera que|chove?'),),
-    'sol': (('dancar', 'que sol|gostoso!'), ('espreguicar', 'dia lindo|la fora')),
-    'noite': (('olhar', 'ceu limpo|hoje!'),),
-    'calor': (('bocejar', 'que calor!'), ('olhar', 'quero um|sorvete')),
-    'frio': (('tremer', 'que frio!'), ('tremer', 'cade meu|casaco?')),
+    'chuva': (('olhar', 'Дождик!'), ('tremer', 'Я промок!'), ('pular', 'Люблю дождь!')),
+    'tempestade': (('susto', 'Гром!'), ('tremer', 'Ой, молния!')),
+    'neve': (('tremer', 'Идёт снег!'), ('comemorar', 'Снежок!')),
+    'neblina': (('olhar', 'Туман!'),),
+    'vento': (('tonto', 'Ух, ветер!'), ('olhar', 'Чуть|не улетел!')),
+    'nublado': (('olhar', 'Будет дождь?'),),
+    'sol': (('dancar', 'Какое|солнце!'), ('espreguicar', 'Хороший день!')),
+    'noite': (('olhar', 'Звёздное|небо!'),),
+    'calor': (('bocejar', 'Как жарко!'), ('olhar', 'Хочу|мороженое!')),
+    'frio': (('tremer', 'Как холодно!'), ('tremer', 'Где куртка?')),
 }
-NOME_TEMPO = {'chuva': 'Chuva', 'tempestade': 'Tempestade', 'neve': 'Neve', 'neblina': 'Neblina',
-              'vento': 'Vento', 'nublado': 'Nublado', 'sol': 'Ceu limpo'}
+NOME_TEMPO = {'chuva': 'Дождь', 'tempestade': 'Гроза', 'neve': 'Снег', 'neblina': 'Туман',
+              'vento': 'Ветер', 'nublado': 'Облачно', 'sol': 'Ясно'}
 
 
 def ler_presentes():
@@ -789,10 +1020,10 @@ def chegou_amigo(char):
     som.tocar('festa')
     if vida_ativa():
         L['queue'] = []
-        V.tocar(L, vt, 'comemorar', say='oi, %s!' % d.NOMES.get(char, 'amigo'))
+        V.tocar(L, vt, 'comemorar', say='Привет, %s!' % d.NOMES.get(char, 'друг'))
     else:
         iniciar_anim('festa')
-        balao('p', 'grito', 'AMIGO!', 2200)
+        balao('p', 'grito', 'ДРУГ!', 2200)
 
 
 def ganhar_presente(tipo):
@@ -802,9 +1033,9 @@ def ganhar_presente(tipo):
     pet['alegria'] = lim(pet['alegria'] + 8)
     som.tocar('amor')
     if vida_ativa():
-        V.falar(L, vt, 'presente!', 'shout')
+        V.falar(L, vt, 'Подарок!', 'shout')
     else:
-        balao('p', 'grito', 'OBA!', 2200)
+        balao('p', 'grito', 'УРА!', 2200)
 
 
 def limpar_presentes():
@@ -834,23 +1065,29 @@ def falar_do_tempo():
 
 def atualizar_rede(agora):
     global wx_agora, amigo_perto, limpou_presentes
+    if time.ticks_diff(agora, limpou_presentes) > 10000:
+        limpou_presentes = agora
+        limpar_presentes()
+    if not runtime_allow_wifi:
+        return
     vivo = fase_vida() not in ('ovo', 'estrela')
     epoch = relogio.epoch()
     for ev in rede.passo(agora, epoch, cfg['personagem'], vivo):
         k = ev[0]
         if k == 'hora':
-            relogio.acertar(*ev[1])
-            sistema('Hora certa!')
+            if runtime_clock_write:
+                relogio.acertar(*ev[1])
+                sistema('Время точное!')
         elif k == 'clima':
             sistema('%s, %dC' % (NOME_TEMPO[ev[2]], d.ri(ev[1])), 4000)
         elif k == 'sem_wifi':
-            sistema('Sem internet')
+            sistema('Нет интернета')
         elif not vivo:
             pass                                          # ovo e estrela nao fazem festa
         elif k == 'chegou':
             chegou_amigo(ev[1])
         elif k == 'mandei':
-            falar('toma um|presente!')
+            falar('Тебе подарок!')
             som.tocar('amor')
         elif k == 'presente':
             ganhar_presente(ev[1])
@@ -865,25 +1102,37 @@ def atualizar_rede(agora):
             iniciar_anim('festa')
     elif wx_agora and vt >= prox_fala_clima and vida_livre() and not L['asleep'] and not sono_vida():
         falar_do_tempo()
-    if time.ticks_diff(agora, limpou_presentes) > 10000:
-        limpou_presentes = agora
-        limpar_presentes()
+
 
 
 def trocar_offline():
+    if not runtime_allow_wifi:
+        sistema('Радио выкл.', 3000)
+        return
     cfg['offline'] = not cfg.get('offline')
     rede.ficar_offline(cfg['offline'])
     salvar('config.json', cfg)
-    sistema('Offline: sem radio' if cfg['offline'] else 'Online de novo!', 3000)
+    sistema('Радио выкл.' if cfg['offline'] else 'Радио вкл.', 3000)
     som.tocar('bocejo' if cfg['offline'] else 'feliz')
 
 
 def abrir_wifi():
     """Para o jogo e abre a configuracao do Wi-Fi pelo celular (portal.py)."""
     global reancorar
-    pet['epoch'] = relogio.epoch()
+    if not runtime_allow_wifi:
+        sistema('Радио выкл.', 3000)
+        return
+    if not runtime_clock_write:
+        # The existing open provisioning AP targets the stock IPS boot path
+        # and calls machine.reset() on save. V1 is not an autoboot app.
+        sistema('Wi-Fi: через ПК', 3000)
+        return
+    epoch = relogio.epoch()
+    if epoch:
+        pet['epoch'] = epoch
     salvar(arquivo_pet(cfg['personagem']), pet)
     salvar('config.json', cfg)
+    pip_salvar()
     som.tocar('feliz')
     try:
         import portal
@@ -902,7 +1151,7 @@ def abrir_wifi():
         import machine
         machine.reset()
     rede.ler_wifi()
-    sistema('Wi-Fi: depois!')
+    sistema('Wi-Fi: позже!')
     reancorar = True
     gc.collect()
 
@@ -967,13 +1216,13 @@ def verificar_sensores(agora):
     cerebro_evento(('sacudida_forte' if abs(g - 1.0) > 1.6 else 'sacudida_leve') if sacudiu else 'barulho')
     if dormindo():
         iniciar_anim('susto')
-        falar('Que susto!')
+        falar('Ой, напугал!')
         som.tocar('susto')
         pet['alegria'] = lim(pet['alegria'] - 5)
         V.acordar(L, vt)                                  # fica 1 min acordado e volta a dormir
     else:
         iniciar_anim('festa')
-        balao('p', 'grito', 'OBA!' if sacudiu else 'UHU!', 2200)
+        balao('p', 'grito', 'УРА!' if sacudiu else 'ОГО!', 2200)
         som.tocar('feliz')
         pet['alegria'] = lim(pet['alegria'] + 10)
 
@@ -1042,11 +1291,23 @@ def desenhar_passeio(agora, ph):
             pe -= int(math.sin(math.pi * f) * 40)
         elif andando:
             pe -= int(abs(math.sin(agora / 90)) * 6)
+    motion = None
+    if d.uses_pose_animation(cfg['personagem']):
+        if dorme:
+            motion = ('asleep', agora)
+        elif 0 <= f < 1:
+            motion = ('jump', int(f * 600))
+        elif andando:
+            held = tocando and menu_borda < 1 and time.ticks_diff(agora, toque_ini[2]) > 200
+            step = (1 if toque_ult[0] >= W // 2 else -1) if held else ex_auto
+            motion = ('walk-right' if step > 0 else 'walk-left', agora)
+        else:
+            motion = ('idle', agora)
     d.passeio(ph, ex_off, agora, cfg['personagem'], pe, ex_moedas, ex_off // (W * 4) + 1, ex_mundo,
-              olhos, boca, ex_auto, fase_vida())
+              olhos, boca, ex_auto, fase_vida(), motion=motion)
     if dorme:
         z = (agora // 450) % 3
-        d.texto('z', 136 + z * 4, pe - 76 - z * 7, d.CREME, 2)
+        d.texto_jogo('z', 136 + z * 4, pe - 76 - z * 7, d.CREME, 2)
     atual = baloes.get('p')
     if atual and time.ticks_diff(atual[2], agora) > 0 and atual[0] in ('fala', 'grito'):
         topo = pe - 75
@@ -1177,8 +1438,25 @@ def desenhar_jogo(agora):
             cx += int(math.sin(da / 40) * 3)
     elif not na_agua:
         d.sombra(cx, ph, 12 if vida == 'filhote' else 20)
+    motion = None
+    if d.uses_pose_animation(cfg['personagem']):
+        action, tick = 'idle', agora
+        if comendo:
+            action = 'eating'
+        elif anim in ('festa', 'pular'):
+            action, tick = 'jump', da
+        elif anim == 'carinho':
+            action = 'greeting'
+        elif correndo or andando:
+            action = 'walk-right' if alvo_x > capi_x else 'walk-left'
+        elif modo == 'pet' and pet['fome'] < 25:
+            action = 'hungry'
+        elif modo == 'companion' and not dorme and not viz:
+            action = 'typing'
+        motion = (action, tick)
     cab_y, topo, meia = d.personagem(cfg['personagem'], cx, pe, olhos, boca, doente, fase=vida,
-                                     racha=pet['idade_min'] >= DIA_MIN * DIAS_OVO / 2, grama=ph['grama'])
+                                     racha=pet['idade_min'] >= DIA_MIN * DIAS_OVO / 2, grama=ph['grama'],
+                                     motion=motion)
     if anim == 'aquece' and da < 900:
         for i in range(2):
             d.coracao(cx - 14 + i * 28, topo - 4 - (da // 30) % 30, d.STAT['fome'])
@@ -1201,10 +1479,10 @@ def desenhar_jogo(agora):
     if anim == 'remedio' and da < 800:
         d.pilula(cx + 20, cab_y + 15 - da // 60)
     if anim == 'susto':
-        d.texto('!', cx + 30, topo - 6, d.VERMELHO, 2)
+        d.texto_jogo('!', cx + 30, topo - 6, d.VERMELHO, 2)
     if dorme and anim != 'susto':
         z = (agora // 450) % 3
-        d.texto('z', cx + meia + z * 4, topo - 4 - z * 7, d.CREME, 2)
+        d.texto_jogo('z', cx + meia + z * 4, topo - 4 - z * 7, d.CREME, 2)
 
     vtopo = None
     if viz:
@@ -1238,7 +1516,7 @@ def verificar_bateria(agora):
     bat_pct, bat_carregando = bateria.porcentagem(), bateria.carregando()
     fraca = bat_pct is not None and bat_pct <= BATERIA_FRACA and not bat_carregando
     if fraca and not bat_avisou:
-        sistema('Bateria fraca!', 4000)
+        sistema('Заряди меня!', 4000)
         som.tocar('triste')
     bat_avisou = fraca
 
@@ -1257,16 +1535,41 @@ def desenhar_vivo(agora, ph, hora, modo):
         olhos, boca = 'normal', 'triste' if triste else 'sorriso'
     olhos = lp.get('eyes') or olhos
     boca = lp.get('mouth') or boca
+    olhos, boca = pip_expressao(agora, olhos, boca, bool(lp.get('eyes') or lp.get('mouth')))
     if olhos == 'normal' and (agora % 3800) < 150:
         olhos = 'fechados'                               # piscadinha
     pe = d.FEET + (int(math.sin(agora / 900)) if dorme else 0)
     if modo == 'pet':
         d.cocos(pet['cocos'])
-    r = d.personagem_vivo(cfg['personagem'], L['x'], pe, lp, ph, agora, olhos, boca, doente, fase_vida())
+    pip_state = None
+    if pip_em_uso() and pip_snapshot:
+        mood = pip_snapshot['mood']
+        if pip_reaction and 0 <= time.ticks_diff(agora, pip_reaction_at) < 1500:
+            mood = pip_reaction
+        pip_state = (mood, agora)
+    motion = None
+    if d.uses_pose_animation(cfg['personagem']):
+        move = vida_out.get('move')
+        action, tick = 'idle', agora
+        if not dorme and move == 'andar':
+            action = 'walk-left' if lp.get('flip', 1) < 0 else 'walk-right'
+        elif move in ('pular', 'comemorar'):
+            action, tick = 'jump', lp.get('ms', 0) % 820
+        elif move in ('chegarPerto', 'rir'):
+            action = 'greeting'
+        elif move == 'olhar':
+            action = 'thinking'
+        elif modo == 'pet' and pet['fome'] < 25:
+            action = 'hungry'
+        elif modo == 'companion' and not dorme and not move:
+            action = 'typing'
+        motion = (action, tick)
+    r = d.personagem_vivo(cfg['personagem'], L['x'], pe, lp, ph, agora, olhos, boca, doente,
+                        fase_vida(), pip_state=pip_state, motion=motion)
     cx, topo, meia = r['cx'], r['top'], r['half']
     if dorme:
         z = (agora // 450) % 3
-        d.texto('z', cx + meia + z * 4, topo - 4 - z * 7, d.CREME, 2)
+        d.texto_jogo('z', cx + meia + z * 4, topo - 4 - z * 7, d.CREME, 2)
     if modo == 'companion' and visita:
         desenhar_visita(agora, int(cx), topo, ph, False)
     desenhar_tempo_e_presentes(agora, modo)
@@ -1280,14 +1583,17 @@ def desenhar_vivo(agora, ph, hora, modo):
 def desenhar_sobreposicoes(agora):
     if bat_avisou:
         d.bateria_fraca(agora)
-    if sis_txt and time.ticks_diff(sis_ate, agora) > 0:
-        d.sistema(sis_txt)
+    aviso_visivel = sis_txt and time.ticks_diff(sis_ate, agora) > 0
     if menu_borda >= 1:
+        menu_text = getattr(tela, 'menu_text', None)
         d.menu(int(menu_borda), cfg['modo'], cfg['personagem'], cfg['hora'], cfg['vel'],
                relogio_txt(hora_real()), cfg['som'], menu_pend, menu_conf, legenda_vida(), fase_vida(),
-               rede.situacao())
+               rede.situacao() if runtime_allow_wifi else 0, runtime_clock_write, menu_text)
     else:
         d.alca()
+    # Show save/switch results above the settings panel, not behind it.
+    if aviso_visivel:
+        d.sistema(sis_txt, getattr(tela, 'menu_notice', None))
 
 
 # ------------------------------------------------------------ menu de ajustes
@@ -1295,12 +1601,13 @@ def fechar_menu():
     global menu_alvo, menu_pend, menu_conf
     menu_alvo = 0
     menu_pend = menu_conf = None
-    salvar('config.json', cfg)
+    if not salvar('config.json', cfg):
+        sistema('Не удалось сохранить')
 
 
-def acao_menu(x, y):
+def acao_menu(x, y, hit=None):
     global menu_pend, menu_conf
-    r = d.menu_toque(x, y, cfg['hora'], menu_conf)
+    r = hit or d.menu_toque(x, y, cfg['hora'], menu_conf, runtime_clock_write)
     if not r:
         return
     k, v = r
@@ -1317,20 +1624,28 @@ def acao_menu(x, y):
         atual = menu_pend or cfg['personagem']
         prox = d.ELENCO[(d.ELENCO.index(atual) + v) % len(d.ELENCO)]
         menu_pend = None if prox == cfg['personagem'] else prox
-        menu_conf = 'trocar' if menu_pend else None      # trocar comeca do zero: pergunta antes
+        menu_conf = 'trocar' if menu_pend else None      # confirm without resetting either pet
     elif k == 'zerar':
         menu_pend, menu_conf = None, 'zerar'
     elif k == 'sim':
-        novo_ovo(menu_pend if menu_conf == 'trocar' else None)
+        alvo, confirma = menu_pend, menu_conf
         menu_pend = menu_conf = None
-        sistema('Um ovo novo!')
+        try:
+            if confirma == 'trocar' and alvo:
+                novo = trocar_pet(alvo)
+                sistema('Новое яйцо!' if novo else 'Друг вернулся!')
+            elif confirma == 'zerar':
+                sistema('Новое яйцо!' if novo_ovo() else 'Ошибка сохранения')
+        except (OSError, ValueError, TypeError, MemoryError, zoo_recovery.RecoveryRequired) as exc:
+            print('Zoo switch:', exc)
+            sistema('Не удалось сменить' if confirma == 'trocar' else 'Ошибка сохранения')
     elif k == 'nao':
         menu_pend = menu_conf = None
     elif k == 'hora' and v != cfg['hora']:
         if v == 'sim':
             iniciar_sim(hora_real())
         cfg['hora'] = v
-    elif k == 'ajuste':
+    elif k == 'ajuste' and runtime_clock_write:
         relogio.somar_minutos(v)
     elif k == 'vel' and v != cfg['vel']:
         iniciar_sim(hora_atual())
@@ -1360,10 +1675,15 @@ def pressionar(x, y, agora):
             menu_borda = float(y + 14)
             return
     elif menu_alvo:
-        if y >= 250 and (x >= 68 or menu_conf):
-            menu_arrasta = True                       # arrastar a alca para cima
-        else:
-            acao_menu(x, y)
+        # Drawn positions shift with the slide animation. Match the hit
+        # coordinate system to where the controls are on this frame.
+        if y < int(menu_borda):
+            local_y = y + d.MENU_FUNDO - int(menu_borda)
+            hit = d.menu_toque(x, local_y, cfg['hora'], menu_conf, runtime_clock_write)
+            if hit and hit[0] == 'fechar':
+                menu_arrasta = True                   # arrastar a alca para cima
+            elif hit:
+                acao_menu(x, local_y, hit)
         return
     if time.ticks_diff(agora, ultimo_toque) < 250:
         return
@@ -1421,11 +1741,11 @@ def soltar(agora):
                 if t[2]:                               # estrela: elogio para o que ela acabou de fazer
                     cerebro_evento('estrela')
                     V.acordar(L, vt)
-                    V.tocar(L, vt, 'comemorar', say='uma estrela!|eba!')
+                    V.tocar(L, vt, 'comemorar', say='Звёздочка!|Ура!')
                     som.tocar('moeda')
                 else:                                  # shh: bronca
                     cerebro_evento('shh')
-                    V.tocar(L, vt, 'esconder', say='ta bom...|shh')
+                    V.tocar(L, vt, 'esconder', say='Ладно...|тс-с')
                 return
             V.toque(L, vt, t[2])
             cerebro_evento('carinho' if t[2] else 'toque')
@@ -1510,6 +1830,7 @@ def passo(agora, dt):
     verificar_botao(agora)
     animar_menu()
     verificar_bateria(agora)
+    pip_atualizar(agora)
     envelhecer(dt)
     verificar_sensores(agora)
     atualizar_rede(agora)
@@ -1538,33 +1859,62 @@ def passo(agora, dt):
         vida_out = None
     if time.ticks_diff(agora, ultimo_save) > 60000:
         ultimo_save = agora
-        pet['epoch'] = relogio.epoch()
+        epoch = relogio.epoch()
+        if epoch:
+            pet['epoch'] = epoch
+        pip_salvar()
         salvar(arquivo_pet(cfg['personagem']), pet)
-    desenhar_jogo(agora)
-    desenhar_sobreposicoes(agora)
+    put = getattr(tela, 'scene_text', None)
+    if put is None:
+        desenhar_jogo(agora)  # IPS and V1 diagnostic 1:1 retain original geometry
+        desenhar_sobreposicoes(agora)
+        return
+    begin = getattr(tela, 'begin_native_frame', None)
+    canvas = begin() if begin is not None else None
+    complete = False
+    if canvas is not None:
+        d.usar(canvas)
+    try:
+        d.usar_texto_jogo(put, tela.scene_metrics)
+        try:
+            desenhar_jogo(agora)
+        finally:
+            d.usar_texto_jogo()
+        tela.scene_cover(int(menu_borda) if menu_borda >= 1 else 0)
+        desenhar_sobreposicoes(agora)
+        complete = True
+    finally:
+        if canvas is not None:
+            d.usar(tela.fb)
+            tela.end_native_frame(complete)
 
 
 def principal():
     global reancorar
-    rede.iniciar()
-    if cfg.get('offline'):
-        rede.ficar_offline(True)
     if relogio.ler() is None:
+        if not runtime_clock_write:
+            raise RuntimeError('AMOLED V1 RTC stopped or unreadable; refusing game loop')
         relogio.acertar(2026, 1, 1, 12, 0, 0)
-    iniciar_sim(hora_real())
-    recuperar_tempo_desligado()
-    anterior = ultimo_gc = time.ticks_ms()
-    while True:
-        agora = time.ticks_ms()
-        if reancorar:
-            reancorar, anterior = False, agora
-        dt = time.ticks_diff(agora, anterior)
-        anterior = agora
-        passo(agora, dt)
-        tela.mostrar()
-        if time.ticks_diff(agora, ultimo_gc) > 1000:     # limpar a memoria a cada quadro custava caro
-            ultimo_gc = agora
-            gc.collect()
+    try:
+        if runtime_allow_wifi:
+            rede.iniciar(sync_clock=runtime_clock_write, start_radio=not bool(cfg.get('offline')))
+        iniciar_sim(hora_real())
+        recuperar_tempo_desligado()
+        anterior = ultimo_gc = time.ticks_ms()
+        while True:
+            agora = time.ticks_ms()
+            if reancorar:
+                reancorar, anterior = False, agora
+            dt = time.ticks_diff(agora, anterior)
+            anterior = agora
+            passo(agora, dt)
+            tela.mostrar()
+            if time.ticks_diff(agora, ultimo_gc) > 1000:     # limpar a memoria a cada quadro custava caro
+                ultimo_gc = agora
+                gc.collect()
+    finally:
+        if runtime_allow_wifi and not runtime_clock_write:
+            rede.ficar_offline(True)
 
 
 if __name__ == '__main__':

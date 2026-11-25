@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "id": "ryska",
+  "name_ru": "Рыська",
+  "htop": 91,
+  "head": -87,
+  "top": -124,
+  "half": 42,
+  "eyes": [[-14, -88], [14, -88]],
+  "thermometer": [37, -58],
+  "ring": [103, 65, 48],
+  "animated": true,
+  "license": "MIT",
+  "author": "MedveGoshi contributors, original AI-assisted artwork",
+  "source_url": "https://github.com/Medvedolog/medvegoshi",
+  "phrases": {
+    "ocioso": ["Мур-р!", "Кисточки тут!", "Пойду гулять!", "Вижу следы!"],
+    "carinho": ["Мур, спасибо!", "Я рада тебе!", "Ещё немножко!"]
+  }
+}

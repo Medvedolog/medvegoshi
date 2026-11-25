@@ -1,5 +1,5 @@
 # Testa e grava as telas das novidades: amigos por perto e presentes, clima de verdade,
-# portal do Wi-Fi e botoes (BOOT segurado e BOOT + PWR).
+# portal do Wi-Fi, botoes (BOOT segurado e BOOT + PWR).
 # Uso: cd previa && micropython novidades.py   (depois: python3 montar.py)
 import sys
 sys.path.insert(0, '.')
@@ -217,7 +217,8 @@ segundos(7, -38); assert main.amigo_perto == 'pato' and R.enviados
 segundos(3, -80); avancar(8000)
 print('botoes ok')
 
-# --- menu: apenas os nove personagens ativos
-assert 'naufrago' not in d.ELENCO and len(d.ELENCO) == 9
-preparar('pet', 10, 'capi'); main.menu_borda, main.menu_alvo = 272.0, 272; gravar('novo_menu')
+# --- preview of the current settings roster
+preparar('pet', 10, 'capi')
+main.menu_borda, main.menu_alvo = 272.0, 272
+gravar('novo_menu')
 print('tudo ok')

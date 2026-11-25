@@ -7,11 +7,6 @@
 # placas estejam no mesmo canal (o 1); conectada ao roteador a placa iria para o canal dele.
 import time, json, random
 
-try:
-    import network
-except ImportError:
-    network = None                      # MicroPython do computador (previa): sem radio
-
 # ------------------------------------------------------------ ajustes
 RSSI_PERTO = -45            # dBm: acima disso estao "bem pertinho" (uns dois palmos)
 RSSI_LONGE = -58            # abaixo disso se afastaram
@@ -44,6 +39,8 @@ _avisou_falha = False
 _ping = 0
 _seq = 0
 _iniciado = False
+_sync_clock = True
+_radio_ativo = False
 
 
 # ------------------------------------------------------------ clima
@@ -149,10 +146,12 @@ def _hora_da_internet():
 
 
 # ------------------------------------------------------------ ligar
-def iniciar():
-    """Chame uma vez ao ligar. Sem radio (previa) ou sem wifi.json, o resto continua funcionando."""
-    global sta, en, eu, wifi, _iniciado, _proxima
-    _iniciado = True
+def iniciar(*, sync_clock=True, start_radio=True):
+    """Load local preferences; open the radio only when explicitly requested by the caller."""
+    global _iniciado, _proxima, _sync_clock, offline
+    if type(sync_clock) is not bool or type(start_radio) is not bool:
+        raise ValueError('sync_clock and start_radio must be bool')
+    _iniciado, _sync_clock, offline = True, sync_clock, not start_radio
     try:
         with open('clima.json') as f:
             clima.update(json.load(f))
@@ -161,19 +160,69 @@ def iniciar():
         pass
     ler_wifi()
     _proxima = time.ticks_add(time.ticks_ms(), 3000)
-    if network is None:
+    if start_radio:
+        _ligar_radio()
+    elif _radio_ativo:
+        _desativar_radio()
+
+
+def _desativar_radio():
+    global _radio_ativo
+    _radio_ativo = False
+    # No single failure may skip checking the other cleanup paths.
+    for obj, method, args in ((en, 'active', (False,)), (sta, 'disconnect', ()),
+                              (sta, 'active', (False,))):
+        if obj is not None:
+            try:
+                getattr(obj, method)(*args)
+            except (AttributeError, OSError, ValueError, RuntimeError) as e:
+                print('Radio:', e)
+
+
+def _ligar_radio():
+    global sta, en, eu, _radio_ativo
+    if _radio_ativo:
         return
     try:
-        sta = network.WLAN(network.STA_IF)
+        if sta is None:
+            # Without networking opt-in, even the WLAN singleton is untouched.
+            import network
+            iface = getattr(network, 'STA_IF', None)
+            if iface is None:
+                iface = network.WLAN.IF_STA
+            sta = network.WLAN(iface)
         sta.active(True)
         eu = sta.config('mac')
         _canal_dos_amigos()
-        import espnow
-        en = espnow.ESPNow()
+        _radio_ativo = True
+    except (ImportError, AttributeError, OSError, ValueError, RuntimeError) as e:
+        print('Wi-Fi indisponivel:', e)
+        _desativar_radio()
+        return
+
+    try:
+        if en is None:
+            import espnow
+            en = espnow.ESPNow()
         en.active(True)
-        en.add_peer(TODOS)
-    except Exception as e:
-        print('Radio indisponivel:', e)
+        try:
+            en.add_peer(TODOS)
+        except OSError as e:
+            # The ESP32 singleton may already have registered this peer.
+            if len(e.args) < 2 or e.args[1] != 'ESP_ERR_ESPNOW_EXIST':
+                raise
+    except (ImportError, AttributeError, OSError, ValueError, RuntimeError) as e:
+        _desativar_amigos(e)
+
+
+def _desativar_amigos(error):
+    global en
+    print('ESP-NOW indisponivel:', error)
+    if en is not None:
+        try:
+            en.active(False)
+        except (AttributeError, OSError, ValueError, RuntimeError):
+            pass
         en = None
 
 
@@ -202,26 +251,11 @@ def ficar_offline(sim):
     offline = sim
     _estado = 'parado'
     pares.clear()
-    if sta is None:
-        return
-    try:
-        if sim:
-            sta.disconnect()
-            if en is not None:
-                en.active(False)
-            sta.active(False)
-        else:
-            sta.active(True)
-            _canal_dos_amigos()
-            if en is not None:
-                en.active(True)
-                try:
-                    en.add_peer(TODOS)
-                except Exception:
-                    pass                            # ja estava na lista
-            _proxima = time.ticks_add(time.ticks_ms(), 2000)
-    except Exception as e:
-        print('Radio:', e)
+    if sim:
+        _desativar_radio()
+    elif _iniciado:
+        _ligar_radio()
+        _proxima = time.ticks_add(time.ticks_ms(), 2000)
 
 
 def _canal_dos_amigos():
@@ -345,7 +379,14 @@ def _internet(agora, epoch, ev):
             return
         _estado, _prazo = 'conectando', time.ticks_add(agora, CONECTAR_MS)
         return
-    if sta.isconnected():
+    try:
+        conectado = sta.isconnected()
+    except (OSError, RuntimeError) as e:
+        # Driver disappearance is equivalent to a failed connection, not a
+        # reason to unwind the game or retry in the next frame.
+        print('Wi-Fi:', e)
+        conectado, _prazo = False, agora
+    if conectado:
         novo = False
         try:
             baixar_clima()
@@ -353,14 +394,18 @@ def _internet(agora, epoch, ev):
             novo = True
         except Exception as e:
             print('Clima:', e)
-        try:
-            t = _hora_da_internet()
-            if novo:
-                clima['epoch'] = time.mktime(t + (0, 0))   # a hora acabou de mudar: remarca a previsao
-            ev.append(('hora', t))
+        if _sync_clock:
+            try:
+                t = _hora_da_internet()
+                if novo:
+                    clima['epoch'] = time.mktime(t + (0, 0))   # a hora acabou de mudar
+                ev.append(('hora', t))
+                internet_ok = True
+            except Exception as e:
+                print('Hora:', e)
+        elif novo:
+            # V1 weather is anchored to the caller's PCF85063A, never ntptime.
             internet_ok = True
-        except Exception as e:
-            print('Hora:', e)
         if novo:
             _guardar_clima()
             ev.append(('clima', clima['temp'], tipo_de(_wx)))
@@ -381,7 +426,7 @@ def passo(agora, epoch, char, acordado=True):
     ('chegou', personagem) ('saiu', personagem) ('mandei', presente, personagem)
     ('presente', presente, personagem) ('clima', graus, tipo) ('hora', (a, m, d, h, min, s)) ('sem_wifi',)"""
     ev = []
-    if not _iniciado or offline:
+    if not _iniciado or offline or not _radio_ativo:
         return ev
     if sta is not None and wifi:
         _internet(agora, epoch, ev)

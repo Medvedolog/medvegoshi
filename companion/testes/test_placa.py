@@ -8,6 +8,7 @@ from companion import actions as A
 from companion import placa as P
 from companion.expressao import EXPRESSAO
 import vida as V
+import font_ru
 
 SONS = ('amor', 'banho', 'bocejo', 'clique', 'comer', 'feliz', 'festa', 'moeda', 'piu', 'remedio', 'susto', 'triste')
 MEIA_NOITE = 10 * 86400                            # um dia qualquer, alinhado com a meia-noite local
@@ -36,13 +37,15 @@ class TestExpressao(unittest.TestCase):
             self.assertLessEqual(len(linhas), 2, nome)
             for l in linhas:
                 self.assertLessEqual(len(l), 14, nome + ': ' + l)
-                self.assertTrue(all(32 <= ord(c) < 127 for c in l), nome)
+                self.assertTrue(all(32 <= ord(c) < 127 or font_ru.is_cyrillic(c)
+                                    for c in l), nome)
 
     def test_falas_dinamicas(self):
         p = P.Ponte(MEIA_NOITE, pasta=self.pasta, semente=3)
-        self.assertEqual(p.expressao(A.INDICE['mostrar_hora'], '14:05')[1], 'sao 14:05')
+        self.assertEqual(p.expressao(A.INDICE['mostrar_hora'], '14:05')[1], 'Сейчас 14:05')
         self.assertEqual(p.expressao(A.INDICE['mostrar_clima'], '', 'sol, 25|graus')[1], 'sol, 25|graus')
-        self.assertIn('to', p.expressao(A.INDICE['mostrar_humor'])[1])
+        self.assertTrue(any(word in p.expressao(A.INDICE['mostrar_humor'])[1]
+                            for word in ('рад', 'хорошо', 'грустно', 'плохо')))
 
     def setUp(self):
         self.pasta = tempfile.mkdtemp() + '/'

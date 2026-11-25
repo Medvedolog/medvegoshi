@@ -55,9 +55,9 @@ open an **X-ray** of its brain on your phone.
 - **A day-long diorama:** 6 sky phases, sun and moon on an arc, stars, clouds, mountains and a lake. It
   sleeps from 10 pm to 6 am.
 - **Three modes:**
-  - **Care:** hunger, joy, energy, health, poop and sickness.
-  - **Watch:** it lives on its own, guided by its brain, with a routine and visitors.
-  - **Walk:** a side-scroller with coins.
+  - **Care (`Забота`):** hunger, joy, energy, health, poop and sickness.
+  - **Watch (`Сам`):** it lives on its own, guided by its brain, with a routine and visitors.
+  - **Walk (`Гуляшки`):** a side-scroller with coins.
 - **Online, if you want:** Wi-Fi set up from your phone (QR code, like a smart bulb), clock and weather
   from the internet, and two boards close together recognize each other and swap gifts, with no internet
   needed.
@@ -202,7 +202,7 @@ password and you are done. With Wi-Fi the board sets its clock and fetches the w
 | Walk | Hold one side of the screen to walk. Short tap jumps. 3 quick taps on the same side: auto-walk |
 | BOOT button | Closes the menu and leaves Walk. Hold 3 s: Wi-Fi and brain X-ray. 3 quick taps: offline mode |
 
-Changing the character or tapping **reset** starts over with a new egg, and the game asks first.
+Each pet has its own save in the MedveGoshi draft. Returning pets keep their progress; a first-time pet starts as an egg. **Reset** starts only the current pet over, after confirmation.
 
 ## Try it without the board
 

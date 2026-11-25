@@ -20,8 +20,8 @@ QR = (0x1fc517f, 0x1054341, 0x174145d, 0x175de5d, 0x174875d, 0x105b241, 0x1fd557
       0x1256df7, 0x1b91f, 0x1fdcd5f, 0x1045712, 0x175fff0, 0x175a5d3, 0x175daa9, 0x1059559,
       0x1fdbc97)
 
-PASSO_1 = ('1. aponte a camera', 'do celular pro QR', '> rede: ' + REDE, 'BOOT cancela')
-PASSO_2 = ('2. escolha sua rede', 'na pagina que abriu', '> ou abra ' + IP, 'BOOT cancela')
+PASSO_1 = ('1. Наведи камеру', 'телефона на QR', '> сеть: ' + REDE, 'BOOT: выход')
+PASSO_2 = ('2. Выбери Wi-Fi', 'на телефоне', '> адрес ' + IP, 'BOOT: выход')
 
 _CSS = ('body{margin:0;padding:20px 16px 40px;background:#bfe6ff;color:#3a2a10;'
         'font:18px/1.4 system-ui,sans-serif}main{max-width:420px;margin:0 auto}'
@@ -45,26 +45,26 @@ def _html(s):
 
 
 def _pagina(redes, erro='', raiox=False):
-    p = ['<!doctype html><html lang="pt-BR"><meta charset="utf-8">'
+    p = ['<!doctype html><html lang="ru"><meta charset="utf-8">'
          '<meta name="viewport" content="width=device-width,initial-scale=1">'
-         '<title>Wi-Fi do Capigoshi</title><style>', _CSS, '</style><main>'
-         '<h1>Oi! Me põe na internet? 🐾</h1>'
-         '<p>Com Wi-Fi eu acerto a hora sozinho e fico sabendo se lá fora chove ou faz sol.</p>']
+         '<title>Wi-Fi для MedveGoshi</title><style>', _CSS, '</style><main>'
+         '<h1>Привет! Подключи меня к Wi-Fi! 🐾</h1>'
+         '<p>По Wi-Fi я сам настрою часы и узнаю погоду за окном.</p>']
     if raiox:
-        p.append('<p><a class="rx" href="/raiox">🧠 Ver o raio-X do meu cérebro</a></p>')
+        p.append('<p><a class="rx" href="/raiox">🧠 Заглянуть в мой мозг</a></p>')
     if erro:
         p.append('<p class="e">%s</p>' % _html(erro))
     p.append('<form class="c" method="post" action="/salvar">')
     if redes:
-        p.append('<label>Redes que eu achei</label><div class="r">')
+        p.append('<label>Найденные сети</label><div class="r">')
         for r in redes:
             p.append('<button type="button">%s</button>' % _html(r))
         p.append('</div>')
-    p.append('<label for="s">Nome da rede</label>'
+    p.append('<label for="s">Имя сети</label>'
              '<input id="s" name="ssid" maxlength="32" required autocapitalize="none" autocorrect="off">'
-             '<label for="p">Senha</label>'
-             '<input id="p" name="senha" type="password" maxlength="63" placeholder="vazia se a rede for aberta">'
-             '<button class="ok">Conectar o bichinho!</button></form></main>'
+             '<label for="p">Пароль</label>'
+             '<input id="p" name="senha" type="password" maxlength="63" placeholder="оставь пустым, если сеть открытая">'
+             '<button class="ok">Подключить питомца!</button></form></main>'
              '<script>document.querySelectorAll(".r button").forEach(function(b){b.onclick=function(){'
              'document.getElementById("s").value=b.textContent;document.getElementById("p").focus()}})'
              '</script></html>')
@@ -72,11 +72,11 @@ def _pagina(redes, erro='', raiox=False):
 
 
 def _pagina_salvo(ssid):
-    return ('<!doctype html><html lang="pt-BR"><meta charset="utf-8">'
+    return ('<!doctype html><html lang="ru"><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            '<title>Prontinho!</title><style>' + _CSS + '</style><main><div class="c">'
-            '<h1>Prontinho! 🎉</h1><p>Vou reiniciar e entrar na rede <b>' + _html(ssid) + '</b>.</p>'
-            '<p>Se eu não conseguir, é só abrir o Wi-Fi do bichinho de novo e conferir a senha.</p>'
+            '<title>Готово!</title><style>' + _CSS + '</style><main><div class="c">'
+            '<h1>Готово! 🎉</h1><p>Перезагружаюсь и подключаюсь к сети <b>' + _html(ssid) + '</b>.</p>'
+            '<p>Если не вышло подключиться, открой Wi-Fi питомца ещё раз и проверь пароль.</p>'
             '</div></main></html>')
 
 
@@ -157,9 +157,9 @@ def tratar(pedido, redes, resumo=None):
         f = formulario(corpo)
         ssid, senha = f.get('ssid', '').strip(), f.get('senha', '')
         if not ssid or len(ssid.encode()) > 32:
-            html = _pagina(redes, 'Faltou o nome da rede.', resumo is not None)
+            html = _pagina(redes, 'Укажи имя сети.', resumo is not None)
         elif senha and not 8 <= len(senha.encode()) <= 63:
-            html = _pagina(redes, 'A senha do Wi-Fi tem de 8 a 63 letras. Confere e tenta de novo?', resumo is not None)
+            html = _pagina(redes, 'В пароле Wi-Fi от 8 до 63 символов. Проверь и попробуй снова.', resumo is not None)
         else:
             salvo = {'ssid': ssid, 'senha': senha}
             html = _pagina_salvo(ssid)
@@ -219,7 +219,7 @@ def abrir(tela, botao=None, resumo=None):
     import network, socket
     sta = network.WLAN(network.STA_IF)
     sta.active(True)
-    _mostrar(tela, ('procurando', 'redes...'))
+    _mostrar(tela, ('Поиск сетей', 'Wi-Fi...'))
     redes = _procurar_redes(sta)
     ap = network.WLAN(network.AP_IF)
     ap.active(True)
@@ -278,7 +278,7 @@ def abrir(tela, botao=None, resumo=None):
             if salvo:
                 with open('wifi.json', 'w') as f:
                     json.dump(salvo, f)
-                _mostrar(tela, ('> salvo!', 'reiniciando...'), True)
+                _mostrar(tela, ('> сохранено!', 'перезапуск...'), True)
                 time.sleep_ms(1500)                  # da tempo do celular mostrar a pagina
                 break
     finally:
